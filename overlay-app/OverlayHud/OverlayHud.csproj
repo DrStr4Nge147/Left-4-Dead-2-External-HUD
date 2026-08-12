@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms is pulled in only for NotifyIcon: the overlay has no window chrome, so
+         the tray icon is the only way to quit it. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>OverlayHud</AssemblyName>
+    <RootNamespace>OverlayHud</RootNamespace>
+    <AssemblyTitle>Left 4 Dead 2 Customized Overlay HUD - External</AssemblyTitle>
+    <Product>Left 4 Dead 2 Customized Overlay HUD - External</Product>
+    <!-- Same author string the exporter's addoninfo.txt carries. -->
+    <Authors>DrStr4nge</Authors>
+    <Company>DrStr4nge</Company>
+    <Copyright>DrStr4nge</Copyright>
+    <Description>External customized survivor HUD for Left 4 Dead 2</Description>
+    <!-- Read at runtime for the menu/lobby badge. Keep this as the app version source. -->
+    <Version>1.0.2</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- WFO0003 tells WinForms apps to set DPI mode in code. This is a WPF app that only
+         borrows NotifyIcon; WPF needs PerMonitorV2 declared in the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <EmbeddedResource Include="..\..\workshop assets\item-icons\*.png">
+      <LogicalName>OverlayHud.Assets.ItemIcons.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

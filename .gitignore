@@ -1,0 +1,15 @@
+*.vpk
+*.vpk_dir
+compiled vpks/
+version output/
+_decompile/
+_test/
+.DS_Store
+Thumbs.db
+console.log
+*.log
+
+# overlay app build output
+overlay-app/**/bin/
+overlay-app/**/obj/
+overlay-app/dist/

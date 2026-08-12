@@ -1,0 +1,403 @@
+<Window x:Class="OverlayHud.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Left 4 Dead 2 Customized Overlay HUD - External"
+        Width="1360" Height="980"
+        MinWidth="960" MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Background="#111419"
+        Foreground="#F0F2F5"
+        Topmost="True">
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+        <Style x:Key="ControlCard" TargetType="Border">
+            <Setter Property="Background" Value="#20252D" />
+            <Setter Property="BorderBrush" Value="#343B46" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Margin" Value="5" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="MinWidth" Value="92" />
+        </Style>
+
+        <!-- The stock WPF scrollbar is a thin grey sliver on this dark background and reads
+             as decoration, so the settings below the fold went unnoticed. This one is wide,
+             always present, and uses the same blue as the value text. -->
+        <Style x:Key="VisibleScrollBar" TargetType="ScrollBar">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="MinWidth" Value="16" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="#171C23">
+                            <Border Margin="3,2" CornerRadius="5" Background="#0D1116"
+                                    BorderBrush="#39414D" BorderThickness="1" />
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                  Opacity="0" Focusable="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb x:Name="ScrollThumb" MinHeight="44">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Margin="4,2" CornerRadius="4"
+                                                        Background="#8EC5FF" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                  Opacity="0" Focusable="False" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="PreviewRow" Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="22,18,22,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Left 4 Dead 2 Customized Overlay HUD - External"
+                           FontSize="24" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="The preview uses the exact survivor-card template from the live overlay."
+                               Foreground="#AAB2BE" FontSize="13" />
+                    <TextBlock x:Name="AuthorText" Margin="10,0,0,0"
+                               Foreground="#8EC5FF" FontSize="13" FontWeight="SemiBold" />
+                </StackPanel>
+            </StackPanel>
+            <Border Grid.Column="1" Margin="0,0,8,0" Background="#26303A"
+                    CornerRadius="12" Padding="12,6" VerticalAlignment="Center">
+                <TextBlock x:Name="GameStatusText" Text="L4D2: CHECKING"
+                           Foreground="#F1B85B" FontWeight="SemiBold" />
+            </Border>
+            <Border Grid.Column="2" Background="#26303A" CornerRadius="12"
+                    Padding="12,6" VerticalAlignment="Center">
+                <TextBlock x:Name="VersionText" Foreground="#BFD9F2" FontWeight="SemiBold" />
+            </Border>
+        </Grid>
+
+        <Border x:Name="PreviewHost" Grid.Row="1" Margin="22,0,22,12" Padding="10"
+                Background="#090B0E" BorderBrush="#343B46" BorderThickness="1"
+                CornerRadius="8">
+            <Viewbox Stretch="Uniform">
+                <Canvas x:Name="PreviewSurface" Width="720" Height="405"
+                        Background="#171B20" ClipToBounds="True">
+                    <Border x:Name="PreviewSidebar" Canvas.Left="0" Canvas.Top="0"
+                            Height="405" Background="#B0000000" />
+                    <Border x:Name="PreviewScoreboard" Canvas.Left="0" Canvas.Top="0"
+                            Background="#3D6A624F" BorderBrush="#557E7460"
+                            BorderThickness="0,0,1,1">
+                        <TextBlock Text="VANILLA SCOREBOARD AREA"
+                                   Margin="14" Foreground="#88FFFFFF" FontSize="10"
+                                   VerticalAlignment="Bottom" />
+                    </Border>
+                    <Border x:Name="PreviewBottomReserve" Canvas.Left="0"
+                            Background="#3D514535" BorderBrush="#557E7460"
+                            BorderThickness="0,1,1,0">
+                        <TextBlock Text="VANILLA HUD RESERVED"
+                                   Margin="14,7" Foreground="#88FFFFFF" FontSize="10" />
+                    </Border>
+
+                    <Border x:Name="PreviewPanel"
+                            Padding="10,8"
+                            CornerRadius="4"
+                            Background="#8C05070A"
+                            BorderBrush="#40FFFFFF"
+                            BorderThickness="1">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="PreviewPanelScale" ScaleX="1" ScaleY="1" />
+                        </Border.LayoutTransform>
+                        <StackPanel>
+                            <DockPanel Margin="2,0,2,6">
+                                <TextBlock x:Name="PreviewHeader"
+                                           DockPanel.Dock="Left"
+                                           Margin="0,0,24,0"
+                                           FontFamily="{StaticResource HudFont}"
+                                           FontSize="11"
+                                           Foreground="#99FFFFFF" />
+                                <TextBlock DockPanel.Dock="Right"
+                                           Text="PREVIEW"
+                                           HorizontalAlignment="Right"
+                                           FontFamily="{StaticResource HudFont}"
+                                           FontSize="11"
+                                           Foreground="#E0A830" />
+                            </DockPanel>
+                            <ItemsControl x:Name="PreviewColumns">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ItemsControl ItemsSource="{Binding}"
+                                                      Margin="0,0,8,0"
+                                                      ItemTemplate="{StaticResource SurvivorTemplate}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Canvas>
+            </Viewbox>
+        </Border>
+
+        <!-- A sunken well around the settings. The cards sit on a background darker than the
+             window, so the region reads as a bounded list with its own edges rather than as
+             the bottom of the page - which is what made the settings below the fold
+             invisible. Capped height, so the controls scroll instead of squeezing the
+             preview; the bar is always present rather than Auto; and the fade at the bottom
+             edge says there is more under it. -->
+        <Border x:Name="ControlWell" Grid.Row="2" Margin="22,0,22,12" Padding="6"
+                Background="#090B0E" BorderBrush="#343B46" BorderThickness="1"
+                CornerRadius="8">
+        <Grid>
+        <ScrollViewer x:Name="ControlScroller" MaxHeight="300"
+                      VerticalScrollBarVisibility="Visible"
+                      PanningMode="VerticalOnly">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource VisibleScrollBar}" />
+            </ScrollViewer.Resources>
+            <UniformGrid Columns="3">
+                <UniformGrid.Resources>
+                    <!-- A final child normally fills a DockPanel even when Dock.Right is
+                         set, placing the value directly on top of/against its label. -->
+                    <Style TargetType="{x:Type DockPanel}">
+                        <Setter Property="LastChildFill" Value="False" />
+                    </Style>
+                </UniformGrid.Resources>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <TextBlock Text="Preview" FontWeight="SemiBold" />
+                        <RadioButton x:Name="SimulatedPreviewRadio" GroupName="PreviewMode"
+                                     Margin="0,6,0,0" Foreground="#F0F2F5"
+                                     Click="OnPreviewModeChanged">
+                            <TextBlock Text="Simulated, in this window" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <RadioButton x:Name="LivePreviewRadio" GroupName="PreviewMode"
+                                     Margin="0,4,0,0" Foreground="#F0F2F5"
+                                     Click="OnPreviewModeChanged">
+                            <TextBlock Text="Live, on the real overlay" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <CheckBox x:Name="ShowScoreboardCheckBox"
+                                  IsChecked="True"
+                                  Margin="0,8,0,0"
+                                  Foreground="#F0F2F5"
+                                  Click="OnPreviewModeChanged">
+                            <TextBlock Text="Hold the game's scoreboard open" Foreground="#F0F2F5" />
+                        </CheckBox>
+                        <TextBlock x:Name="PreviewModeNote"
+                                   Text="Live draws the actual panel over the game window. Holding the scoreboard brings L4D2 forward and keeps its real scoreboard on screen while the game is in front, so the panel is seen against the genuine article. Click back here and it releases; the region is marked out instead."
+                                   Margin="22,6,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <TextBlock Text="Who to show" FontWeight="SemiBold" />
+                        <RadioButton x:Name="RosterAllRadio" GroupName="RosterFilter"
+                                     Margin="0,6,0,0" Foreground="#F0F2F5"
+                                     Click="OnOptionChanged">
+                            <TextBlock Text="All survivors" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <RadioButton x:Name="RosterSoldiersRadio" GroupName="RosterFilter"
+                                     Margin="0,4,0,0" Foreground="#F0F2F5"
+                                     Click="OnOptionChanged">
+                            <TextBlock Text="Mortal soldiers + followers" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <RadioButton x:Name="RosterFollowersRadio" GroupName="RosterFilter"
+                                     Margin="0,4,0,0" Foreground="#F0F2F5"
+                                     Click="OnOptionChanged">
+                            <TextBlock Text="Followers only" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown."
+                                   Margin="22,6,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="UI size" FontWeight="SemiBold" />
+                            <TextBlock x:Name="ScaleValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="ScaleSlider" Minimum="0.60" Maximum="1.00"
+                                TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Panel opacity" FontWeight="SemiBold" />
+                            <TextBlock x:Name="OpacityValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="OpacitySlider" Minimum="0.20" Maximum="1.00"
+                                TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Horizontal inset" FontWeight="SemiBold" />
+                            <TextBlock x:Name="OffsetXValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="OffsetXSlider" Minimum="0.00" Maximum="0.10"
+                                TickFrequency="0.005" IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Vertical start" FontWeight="SemiBold" />
+                            <TextBlock x:Name="OffsetYValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="OffsetYSlider" Minimum="0.35" Maximum="0.80"
+                                TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Optional bottom clearance" FontWeight="SemiBold" />
+                            <TextBlock x:Name="BottomReserveValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="BottomReserveSlider" Minimum="0" Maximum="0.25"
+                                TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Maximum columns" FontWeight="SemiBold" />
+                            <TextBlock x:Name="MaxColumnsValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="MaxColumnsSlider" Minimum="1" Maximum="2"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Preview roster size" FontWeight="SemiBold" />
+                            <TextBlock x:Name="PreviewCountValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                        </DockPanel>
+                        <Slider x:Name="PreviewCountSlider" Minimum="1" Maximum="27"
+                                Value="6" TickFrequency="1" IsSnapToTickEnabled="True"
+                                IsMoveToPointEnabled="True"
+                                ValueChanged="OnSettingChanged" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <CheckBox x:Name="ShowStatusBadgeCheckBox"
+                                  FontWeight="SemiBold"
+                                  Foreground="#F0F2F5"
+                                  Click="OnOptionChanged">
+                            <TextBlock Text="Show status badge"
+                                       Foreground="#F0F2F5"
+                                       FontWeight="SemiBold" />
+                        </CheckBox>
+                        <TextBlock Text="The top-right name and version, shown while L4D2 is focused and nothing is exporting. It means the addon is not writing — useful during setup, noise afterwards."
+                                   Margin="22,4,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <CheckBox x:Name="AlwaysShowCheckBox"
+                                  FontWeight="SemiBold"
+                                  Foreground="#F0F2F5"
+                                  Click="OnOptionChanged">
+                            <TextBlock Text="Show HUD consistently"
+                                       Foreground="#F0F2F5"
+                                       FontWeight="SemiBold" />
+                        </CheckBox>
+                        <TextBlock Text="Displays the HUD persistently during play instead of only while the hold key is down. It still hides when L4D2 loses focus."
+                                   Margin="22,4,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
+                        <CheckBox x:Name="ExitWhenGameClosesCheckBox"
+                                  FontWeight="SemiBold"
+                                  Foreground="#F0F2F5"
+                                  Click="OnOptionChanged">
+                            <TextBlock Text="Exit when L4D2 closes"
+                                       Foreground="#F0F2F5"
+                                       FontWeight="SemiBold" />
+                        </CheckBox>
+                        <TextBlock Text="Turn off to keep the overlay app running for the next game session."
+                                   Margin="22,4,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </ScrollViewer>
+
+            <!-- Right margin clears the scrollbar so the thumb is never dimmed. -->
+            <Rectangle x:Name="ScrollFade" Height="28" Margin="0,0,18,0"
+                       VerticalAlignment="Bottom" IsHitTestVisible="False"
+                       Visibility="Collapsed">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00090B0E" Offset="0" />
+                        <GradientStop Color="#F0090B0E" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+        </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" Margin="22,0,22,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="SaveStatus" Foreground="#F1B85B" />
+                <TextBlock x:Name="ScrollHint"
+                           Text="More settings below — scroll the panel above"
+                           Foreground="#8EC5FF" FontSize="12"
+                           Visibility="Collapsed" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Reset UI" Click="OnResetClick" />
+                <Button Content="Cancel" Click="OnCancelClick" />
+                <Button Content="Save &amp; Apply" Click="OnSaveClick"
+                        FontWeight="SemiBold" IsDefault="True" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

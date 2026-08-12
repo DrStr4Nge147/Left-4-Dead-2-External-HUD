@@ -1,0 +1,9 @@
+"AddonInfo"
+{
+	addonSteamAppID		550
+	addontitle			"Overlay HUD Export"
+	addonversion		"1.0.2"
+	addonauthor			"DrStr4nge"
+	addonDescription	"Exports live survivor state (health, temp health, downed state, inventory) so an external overlay application can display every survivor present, not just the first four. Script only - changes no gameplay."
+	addonContent_Script	1
+}
