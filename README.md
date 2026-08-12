@@ -97,3 +97,19 @@ overlay-custom-hud/
 ├── compiled vpks/        # versioned build output - the only delivery surface
 └── workshop assets/      # images
 ```
+
+## License
+
+Copyright © 2026 DrStr4nge. Licensed under the **GNU General Public License v3.0** — see
+[LICENSE](LICENSE).
+
+Use it, study it, fork it. If you distribute a modified version, or anything built on this
+source, it has to ship under the same license with its source available. That is the whole
+condition.
+
+Two things the license does not cover:
+
+- **The item icons** under `workshop assets/item-icons/` are monochrome masks derived from
+  Left 4 Dead 2's own HUD artwork, which belongs to Valve. They are here because the overlay
+  has to look like the game it sits next to; they are not mine to license.
+- **Left 4 Dead 2 itself**, and anything Valve. This project is an unofficial addon.
