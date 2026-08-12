@@ -1,4 +1,4 @@
-# Testing — exporter v1.0.2 + overlay app v1.0.2
+# Testing — exporter v1.0.3 + overlay app v1.0.3
 
 The exporter is live-tested. This run is about the overlay app: whether it appears over the
 game, follows Tab, and stays out of the way.
@@ -9,7 +9,7 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.0.2.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.0.3.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -112,7 +112,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.2` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.3` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab.** The panel should appear at top left, directly below the scoreboard, within

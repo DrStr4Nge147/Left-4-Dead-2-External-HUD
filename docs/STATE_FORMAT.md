@@ -12,7 +12,7 @@ Write path verified live by `v0.1.0-probe1`.
 
 ```json
 {
-  "v": "1.0.2",
+  "v": "1.0.3",
   "seq": 412,
   "time": 183.40,
   "count": 8,

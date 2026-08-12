@@ -2,6 +2,21 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.0.3 - 2026-08-13: the addon says it needs the app
+
+- Rewrites the addon's Workshop description to open with the requirement: the separate
+  overlay application is mandatory and the addon does nothing without it, with the download
+  link, the host-only requirement, and the windowed-borderless requirement. A subscriber
+  who reads only the first line now knows what they are getting.
+- Adds `tools/Publish-Release.ps1`, which produces the two single-file release shapes:
+  self-contained (~71 MB, no runtime to install) and framework-dependent (~0.5 MB, needs the
+  .NET 9 Desktop Runtime). The ordinary `dist` build is a launcher stub plus a DLL and
+  cannot be distributed as one file.
+- App and exporter advance together to v1.0.3. No behavior change in either half.
+
+**Verification**: warning-free build; all 20 checks pass. The self-contained exe was
+launched from a clean folder, stayed running, and extracted nothing beside itself.
+
 ## Overlay HUD v1.0.2 - 2026-08-13: say when the addon is not writing
 
 Reported as three separate faults — the scoreboard hold not working, the badge showing

@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.0.2"
+::OvlHud.VERSION   <- "1.0.3"
 ::OvlHud.OUT_FILE  <- "overlay_hud_state.json"
 
 // Reverse channel. The overlay app writes "<want> <seq>" here; this script reads it on the
