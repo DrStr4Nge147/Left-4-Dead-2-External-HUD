@@ -49,7 +49,9 @@ the hold key is down. It still hides when L4D2 loses focus.
 
 ## Who the panel shows
 
-**Who to show** in the editor picks one of three rosters:
+**Who to show** in the editor picks one of three rosters. The lower two are grouped under
+**For Finale Soldiers Mod** — without that addon nothing is ever classified as a soldier or
+a follower, so they would show an empty panel:
 
 | Option | Shows |
 |---|---|

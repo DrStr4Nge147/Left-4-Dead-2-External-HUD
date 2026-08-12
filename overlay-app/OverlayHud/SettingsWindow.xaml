@@ -224,8 +224,18 @@
                                      Click="OnOptionChanged">
                             <TextBlock Text="All survivors" Foreground="#F0F2F5" />
                         </RadioButton>
+                        <!-- Same GroupName, so the three stay mutually exclusive. The rule
+                             below is only a divider: the two options under it mean nothing
+                             without Finale Soldiers installed. -->
+                        <Border x:Name="RosterSectionRule"
+                                Height="1" Background="#343B46" Margin="0,10,0,0" />
+                        <TextBlock x:Name="RosterSectionHeading"
+                                   Text="FOR FINALE SOLDIERS MOD"
+                                   Margin="0,6,0,0"
+                                   FontSize="10" FontWeight="SemiBold"
+                                   Foreground="#8EC5FF" />
                         <RadioButton x:Name="RosterSoldiersRadio" GroupName="RosterFilter"
-                                     Margin="0,4,0,0" Foreground="#F0F2F5"
+                                     Margin="0,6,0,0" Foreground="#F0F2F5"
                                      Click="OnOptionChanged">
                             <TextBlock Text="Mortal soldiers + followers" Foreground="#F0F2F5" />
                         </RadioButton>
@@ -234,7 +244,7 @@
                                      Click="OnOptionChanged">
                             <TextBlock Text="Followers only" Foreground="#F0F2F5" />
                         </RadioButton>
-                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown."
+                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the three."
                                    Margin="22,6,0,0" TextWrapping="Wrap"
                                    Foreground="#AAB2BE" FontSize="11" />
                     </StackPanel>

@@ -16,6 +16,9 @@ is not reloaded**; the mounted pack goes away and the script does not come back.
 - Adds a **Show status badge** editor checkbox for the top-right name/version, default on.
   It reports "the exporter is not writing", which is useful during setup and noise
   afterwards.
+- Sections the **Who to show** card: **All survivors** on its own, then a rule and a
+  **FOR FINALE SOLDIERS MOD** heading above the two options that only mean anything with
+  that addon installed. All three stay in one radio group, so the split is purely visual.
 - Makes **Live, on the real overlay** the default preview on a fresh install. The simulated
   canvas remains as the fallback for laying out with L4D2 closed.
 - Adds a `no-export` regression check for both, and an `editor-controls` assertion that a

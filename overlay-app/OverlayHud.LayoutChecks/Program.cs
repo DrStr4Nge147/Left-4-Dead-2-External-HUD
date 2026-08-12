@@ -408,6 +408,21 @@ internal static class Program
         var remembered = new SettingsWindow(
             new AppConfig { PreviewMode = "live", PreviewScoreboard = false }, () => { });
         Invoke(remembered, "LoadControls", BindingFlags.Instance | BindingFlags.NonPublic);
+        // The two Finale Soldiers options are visually sectioned off, but they must stay in
+        // the same radio group as All survivors - splitting the group would let two filters
+        // be selected at once.
+        bool rosterSectionIsCosmetic =
+            settings.FindName("RosterSectionRule") is Border
+            && settings.FindName("RosterSectionHeading") is TextBlock
+            {
+                Text: "FOR FINALE SOLDIERS MOD"
+            }
+            && settings.FindName("RosterAllRadio") is RadioButton allRadio
+            && settings.FindName("RosterSoldiersRadio") is RadioButton soldiersRadio
+            && settings.FindName("RosterFollowersRadio") is RadioButton followersRadio
+            && allRadio.GroupName == soldiersRadio.GroupName
+            && soldiersRadio.GroupName == followersRadio.GroupName;
+
         bool previewChoiceRemembered =
             remembered.FindName("LivePreviewRadio") is RadioButton { IsChecked: true }
             && remembered.FindName("SimulatedPreviewRadio") is RadioButton { IsChecked: false }
@@ -432,7 +447,8 @@ internal static class Program
         bool passed = enlargementRemoved && sidebarRemoved && policyRetained
             && previewLimitIs27 && userScaleRangeIsUseful && slidersJumpToClick
             && resetRestoresSix && obviousScrollBar && tabAndScoreboardOptions
-            && resetKeepsBehaviorOptions && previewChoiceRemembered && livePreviewIsDefault;
+            && resetKeepsBehaviorOptions && previewChoiceRemembered && livePreviewIsDefault
+            && rosterSectionIsCosmetic;
 
         Console.WriteLine(
             $"enlargementControlAndConfigRemoved={enlargementRemoved} " +
@@ -447,7 +463,8 @@ internal static class Program
             $"tabAndScoreboardOptions={tabAndScoreboardOptions} " +
             $"resetKeepsBehaviorOptions={resetKeepsBehaviorOptions} " +
             $"previewChoiceRemembered={previewChoiceRemembered} " +
-            $"livePreviewIsDefault={livePreviewIsDefault}");
+            $"livePreviewIsDefault={livePreviewIsDefault} " +
+            $"rosterSectionIsCosmetic={rosterSectionIsCosmetic}");
         Console.WriteLine(passed
             ? "PASS"
             : "FAIL: fixed layout policy must not be exposed as editor settings");
