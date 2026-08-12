@@ -105,6 +105,11 @@ covers. 1.0.0 marks feature completeness, not a completed test pass.
   icon, instead of exiting silently as v0.6.2 did.
 - Adds a blue **FOLLOW** marker to follower cards in **All survivors** and **Mortal
   soldiers + followers**. Followers-only mode does not mark them: every card would carry it.
+- Adds an application icon — three survivor health bars on the panel's own dark plate, in
+  the panel's own green/amber/red — used by the executable, the tray, and the editor window
+  from one embedded `.ico`. Replaces the borrowed Windows shield on the tray.
+- Adds `tools/Build-AppIcon.ps1`, which draws the icon from code at seven sizes, so it can
+  always be regenerated.
 - Credits **DrStr4nge** as author in the editor header, the tray menu, and the assembly's
   Company/Copyright metadata, from one `AppIdentity.Author` constant.
 - Adds `live-preview` and `scoreboard-hold` regression checks, and extends `roster-filter`

@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         _endLivePreview = endLivePreview;
 
         Title = AppIdentity.Name;
+        Icon = AppIcon.ForWindow();
         VersionText.Text = $"v{DisplayVersion()}";
         AuthorText.Text = $"by {AppIdentity.Author}";
         _gameStatusTimer = new DispatcherTimer(DispatcherPriority.Background)

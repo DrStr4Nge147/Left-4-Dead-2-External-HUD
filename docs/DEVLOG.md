@@ -132,6 +132,20 @@ this window's dark background and reads as a border, so a capped control area qu
 settings; it is now a 16 px bar that is always present rather than `Auto`, with a hint line
 that disappears once the list is scrolled to the end.
 
+The app icon is drawn from code rather than from a supplied image, deliberately: the item
+icons lost their source screenshots and can no longer be regenerated, and this one can be
+rebuilt by running `tools/Build-AppIcon.ps1`. It is the product rather than a symbol - three
+health bars on the panel's plate, in the panel's own colours - and it owes nothing to Valve
+artwork.
+
+Two things that cost a build each. **GDI+ cannot decode PNG-compressed frames**, which is
+how `System.Drawing.Icon` loads the tray icon, so an all-PNG `.ico` renders correctly in
+Explorer and throws at runtime; frames up to 128px are now BMP/DIB and only 256 is PNG. And
+**PowerShell unrolls a `byte[]` returned from a function** into an `Object[]` of boxed
+bytes. `Length` still read correctly, so the directory entries were right while
+`BinaryWriter.Write` bound to another overload and emitted one byte per frame: a 5 KB file
+whose own header claimed 107 KB. Both are recorded in the script.
+
 `alwaysShow` existed in config from v0.1.0 and had no way to reach it but a text editor.
 It is now **Show HUD consistently**, and it sits outside `CopyUiFrom` next to
 `exitWhenGameCloses` for the reason v0.6.0 recorded: Reset UI restores visual layout, and

@@ -915,19 +915,32 @@ internal static class Program
             && company == author
             && copyright != null && copyright.Contains(author, StringComparison.Ordinal);
 
+        // One embedded icon behind the executable, the tray, and the editor window. The
+        // tray path is the fragile one: System.Drawing cannot read PNG-compressed frames,
+        // so this fails loudly if the .ico is ever rebuilt as all-PNG.
+        using var trayIcon = AppIcon.ForTray();
+        var windowIcon = AppIcon.ForWindow();
+        bool iconUsable = trayIcon.Width > 0 && trayIcon.Height > 0
+            && windowIcon.Width >= 256
+            && settings.Icon == windowIcon
+            && trayIcon.ToBitmap().Width == trayIcon.Width;
+
         bool passed = AppIdentity.Name == expected
             && main.Title == expected
             && settings.Title == expected
             && badge.Text.StartsWith(expected + " v", StringComparison.Ordinal)
             && product == expected
             && title == expected
-            && authorShown;
+            && authorShown
+            && iconUsable;
 
         Console.WriteLine(
             $"identityExact={AppIdentity.Name == expected} mainTitle={main.Title == expected} " +
             $"settingsTitle={settings.Title == expected} badge={badge.Text.StartsWith(expected + " v", StringComparison.Ordinal)} " +
             $"productMetadata={product == expected} titleMetadata={title == expected} " +
-            $"author={authorShown} companyMetadata=\"{company}\"");
+            $"author={authorShown} companyMetadata=\"{company}\" " +
+            $"icon={iconUsable} trayIcon={trayIcon.Width}x{trayIcon.Height} " +
+            $"windowIcon={windowIcon.Width:0}");
         Console.WriteLine(passed ? "PASS" : "FAIL: app name or author is inconsistent");
 
         settings.Close();

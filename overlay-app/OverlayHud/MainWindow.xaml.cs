@@ -125,7 +125,7 @@ public partial class MainWindow : Window
 
         _tray = new System.Windows.Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Shield,
+            Icon = AppIcon.ForTray(),
             Text = AppIdentity.Name,
             Visible = true,
             ContextMenuStrip = menu
