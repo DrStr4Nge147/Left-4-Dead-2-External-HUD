@@ -88,7 +88,25 @@ exclusive fullscreen.
 | Middle slot: white medkit / lightning / ammo box | Medkit, defibrillator, explosive ammo, incendiary ammo |
 | Right slot: white bottle / syringe | Pills, adrenaline |
 | Dim empty box | Nothing carried in that slot |
-| `STALE` | The addon has stopped writing — game paused, at a menu, or closed |
+
+A roster is only ever drawn from a live export. When the addon stops writing — a menu, a
+lobby, a load, a paused game — the panel draws nothing at all rather than the last roster it
+saw. The panel is a roster and carries no messages.
+
+The top-right badge reports the state instead, and a line under it says why, based on what
+is actually in `left4dead2\addons`:
+
+| Line | Meaning |
+|---|---|
+| *(nothing)* | The addon has exported before and is simply between rounds |
+| `WAITING FOR A ROUND` | Addon installed, no round has exported yet. Not a fault |
+| `ADDON NOT INSTALLED` | No pack containing the exporter is installed, subscribed or manual |
+| `MORE THAN ONE COPY` | Installed twice — one mounts, unpredictably. Keep one |
+| `ADDON TURNED OFF` | Installed but disabled in the game's Add-ons screen |
+| `GAME NOT FOUND` | No install located. Set `statePath` by hand |
+
+Packs are identified by their contents, not their filenames: a Workshop subscription lives
+at `addons\workshop\<publishedfileid>.vpk`, which says nothing about what is inside it.
 
 Only roster positions 5 and up receive cards; the first four remain on L4D2's vanilla HUD.
 When there are four or fewer survivors, holding Tab draws no roster panel. Extra cards use
@@ -119,7 +137,9 @@ Sits next to the exe. Edit and restart the app.
 | `opacity` | `0.92` | Panel opacity |
 | `cardsPerColumn` | `0` | `0` measures the real one-column height first; positive values override it |
 | `maxColumns` | `2` | Hard horizontal column limit; overflow is balanced and scaled vertically |
-| `staleAfterSeconds` | `2.0` | Seconds without a new `seq` before showing `STALE` |
+| `staleAfterSeconds` | `2.0` | Seconds without a new `seq` before the export counts as stopped |
+| `exporterProven` | `false` | Written by the app the first time it sees this install export. Once set, the `WAITING FOR A ROUND` line stays off — the addon has been observed working, so there is nothing left to explain |
+| `debug` | `false` | Open the debug console at startup. Also toggled from the editor or the tray menu |
 
 Set `alwaysShow` and `ignoreForeground` to `true` together to lay the panel out on the
 desktop without launching the game.
@@ -134,3 +154,20 @@ The status line says why, and includes the path it is watching:
 | `WAITING FOR THE ADDON - NO STATE FILE YET` | Game found, exporter has not written yet. Check the addon VPK is in `addons\` |
 | `STATE FILE DID NOT PARSE` | Shows the failure count and the parser message |
 | `GAME PAUSED OR NOT RUNNING` | The file exists but `seq` has stopped advancing |
+
+## Debug console
+
+**Customize UI... → Debug console**, or the same item on the tray menu. It answers whether
+the app is working when the panel cannot, because the panel is the thing missing.
+
+The top block is current state, refreshed twice a second: whether the exporter is live,
+stopped, or has never been seen; the state file being watched; polls completed and the size
+of the last roster read; whether L4D2 is in front and at what size; whether the hold key is
+down and how many times the keyboard hook has had to be reinstalled; and whether the panel
+is drawing.
+
+Underneath is the history — focus and resolution changes, the export starting and stopping,
+hook loss and recovery, and the reason the panel is hidden whenever it is. Only changes are
+recorded, so the log stays readable, and it is capped at 600 lines. **Save to file** writes
+`debug-<timestamp>.log` beside the exe, which is the thing to attach when reporting a
+problem. Closing the window turns the console off; the setting is remembered.

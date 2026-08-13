@@ -2,6 +2,87 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.0.5 - 2026-08-13: the hold key stops dying mid-session
+
+Reported as the overlay showing at first and then never again after an alt-tab, with a
+restart of the app as the only fix. Windows removes a `WH_KEYBOARD_LL` hook whose callback
+overruns `LowLevelHooksTimeout` — no notification, no error, and the handle stays valid. The
+callback was running a full WPF layout pass on a layered window before returning, which is
+exactly the kind of budget that gets a hook killed under a game load spike.
+
+- The hook callback now decides whether to swallow the key and returns. `HeldChanged` and
+  `ShortcutPressed` are posted to the UI thread instead of being raised inside it, so a
+  render pass is never charged against the hook timeout.
+- The 250 ms geometry timer now checks the hook's health: the tracked hold state is compared
+  against the physical key, corrected immediately when they disagree, and the hook is
+  reinstalled when the disagreement survives two polls. One replacement per failure.
+- That poll is also a fallback. If the reinstall fails the panel still follows the hold key;
+  only the Tab+Insert suppression needs the hook to be live.
+- The overlay re-asserts itself topmost when the game takes focus back. A fullscreen window
+  can come up above a topmost overlay on alt-tab, and nothing was putting it back.
+
+Holding Tab at the main menu also brought up a panel full of the previous session's
+survivors. `state.json` is still on disk between sessions, and reading it once was being
+treated as an export:
+
+- A stale read now contributes no roster at all. Old cards are never drawn, in any state.
+- The first sighting of the file is no longer counted as an advance. Only watching `seq`
+  move proves an exporter is running, so a leftover file no longer looks freshly written
+  for a whole staleness window.
+- Once a live export has been seen, staleness is the menu, a lobby, a load, or the end of a
+  map, and the panel stays hidden there. The top-right badge reports the state either way.
+- **The `NO EXPORT` message is gone from the panel.** It claimed the addon might not be
+  loaded whenever the state file was not advancing, but a file that is not advancing is also
+  exactly what a main menu looks like - so on a healthy install it fired at the first Tab of
+  every session and was simply wrong. It was also unreadable: a long single line beside the
+  header made the panel's natural width several times the sidebar, and the fit pass shrank
+  the whole panel to about a third to compensate.
+- In its place, a line **under the top-right badge**, and it is backed by evidence rather
+  than inference — the app now looks in `left4dead2\addons`:
+  - nothing installed → `ADDON NOT INSTALLED`
+  - two copies (a subscription and a manual drop, say) → `MORE THAN ONE COPY`
+  - installed but switched off in the Add-ons screen → `ADDON TURNED OFF`
+  - installed and no round running yet → `WAITING FOR A ROUND`, which is a statement of
+    fact rather than an accusation
+  - proven install, currently at a menu → nothing at all; the badge already says it
+- Packs are identified by **content, not filename**. A Workshop subscription is stored as
+  `addons\workshop\<publishedfileid>.vpk`, so name matching would report a subscribed addon
+  as missing. Each pack's VPK directory tree is read for the exporter's script; the tree
+  sits at the front of the file, so a 200 MB map pack costs no more than a small one. The
+  scan runs off the UI thread and is cached until the folder's contents change.
+- `addonlist.txt` is read for the enabled flag, so an addon that is installed but turned off
+  is named as such instead of looking like a silent exporter. Turning it back on is picked
+  up within five seconds: the cache is keyed on that file's contents as well as the packs,
+  because enabling an addon rewrites one character of it and touches no VPK at all.
+- The panel is now a roster and nothing else. Being seen working is still remembered, as
+  `exporterProven` in `config.json`, and that is what retires the waiting line for good.
+
+New **Debug console**, from the editor checkbox or the tray menu:
+
+- A live block at the top answers "is this actually working": whether the exporter is live,
+  stopped or never seen, the state file being watched, poll count and last roster size,
+  whether L4D2 is in front and at what size, whether the hold key is down, how many times
+  the keyboard hook has had to be reinstalled, and whether the panel is drawing.
+- Under it, a log of transitions rather than polls — focus changes, resolution changes, the
+  export starting and stopping, hook loss and recovery, and why the panel is hidden when it
+  is. **Copy all** and **Save to file** produce something to attach to a report.
+- Kept honest by construction: the sources are 100 ms and 250 ms timers, so the log records
+  only what changed, and the buffer is bounded at 600 lines. Nothing is written from the
+  keyboard hook callback, for the timeout reason above.
+- App and exporter advance together to v1.0.5. No behavior change in the exporter.
+
+**Verification**: warning-free build; every check passes, including a new `hook-recovery`
+one covering the detection policy and the stuck-hold repair, a new `menu-stale` one driving
+a real reader over a leftover file, an exporter starting, the return to the menu and a
+relaunch on a proven install, and a new `debug-log` one covering the change-only rule, the
+bounded buffer and the console window itself. The `no-export` check was rebuilt around real
+VPK fixtures: a Workshop-style `addons\workshop\<id>.vpk`, a duplicate install, a disabled
+entry in `addonlist.txt`, and a decoy named like the addon with nothing in it - which a
+filename match would have called installed. The probe was also run against this machine's
+real install: 135 packs, one identified, enabled, in 1.2 s including process start. Live: the hold key survived alt-tabbing across a session, which is the fault this
+release exists for. The dead-hook case itself cannot be produced in the harness, so
+`docs/TESTING.md` still asks for a full campaign before calling it settled.
+
 ## Overlay HUD v1.0.4 - 2026-08-13: the transport gets its own folder
 
 - Both transport files move into `ems\overlay_hud\`: `state.json` and `cmd.txt`. They were

@@ -39,6 +39,19 @@ internal static class Native
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
+    // --- z-order -----------------------------------------------------------
+
+    public static readonly IntPtr HWND_TOPMOST = new(-1);
+
+    public const uint SWP_NOSIZE     = 0x0001;
+    public const uint SWP_NOMOVE     = 0x0002;
+    public const uint SWP_NOACTIVATE = 0x0010;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+                                           int X, int Y, int cx, int cy, uint uFlags);
+
     // --- low level keyboard hook ------------------------------------------
 
     public const int WH_KEYBOARD_LL = 13;
@@ -69,6 +82,10 @@ internal static class Native
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    /// <summary>High bit is set while the key is physically down, hook or no hook.</summary>
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern IntPtr GetModuleHandle(string? lpModuleName);

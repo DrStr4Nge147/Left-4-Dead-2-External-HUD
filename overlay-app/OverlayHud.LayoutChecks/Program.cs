@@ -41,6 +41,12 @@ internal static class Program
         return RunSingleInstanceCheck();
     if (args.Length > 0 && string.Equals(args[0], "game-status", StringComparison.OrdinalIgnoreCase))
         return RunGameStatusCheck();
+    if (args.Length > 0 && string.Equals(args[0], "hook-recovery", StringComparison.OrdinalIgnoreCase))
+        return RunHookRecoveryCheck();
+    if (args.Length > 0 && string.Equals(args[0], "menu-stale", StringComparison.OrdinalIgnoreCase))
+        return RunMenuStaleCheck();
+    if (args.Length > 0 && string.Equals(args[0], "debug-log", StringComparison.OrdinalIgnoreCase))
+        return RunDebugLogCheck();
 
     int count = args.Length > 0 ? int.Parse(args[0]) : 11;
     double width = args.Length > 1 ? double.Parse(args[1]) : 1920;
@@ -491,44 +497,169 @@ internal static class Program
         config.AlwaysShow = true;          // stands in for the hold key being down
         config.IgnoreForeground = true;
         config.ShowStatusBadge = true;
+        config.ExporterProven = false;     // a setup that has never worked is the case here
 
         Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
-
-        // The badge's own condition is L4D2 focused with nothing exporting. The reader is
-        // the one the window would have built on load, pointed at a file that is not there
-        // and never started, which is exactly the "addon not writing" state.
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
-        typeof(MainWindow).GetField("_reader", flags)!.SetValue(window,
-            new StateReader(System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-                                                   "OverlayHudCheck", "ems", "absent.json"),
-                            TimeSpan.FromMilliseconds(100), 2.0));
 
         var panel = (Border)GetField(window, "Panel", flags);
         var badge = (Border)GetField(window, "MenuBadge", flags);
-        var status = (TextBlock)GetField(window, "StatusText", flags);
+        var notice = (Border)GetField(window, "Notice", flags);
+        var noticeTitle = (TextBlock)GetField(window, "NoticeTitle", flags);
+        var noticeBody = (TextBlock)GetField(window, "NoticeBody", flags);
 
+        // A fake install, because the whole point of this check is that the app looks at
+        // the addons folder instead of inferring from a file that is not moving.
+        var install = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "OverlayHudCheck",
+                                             $"install-{Guid.NewGuid():N}");
+
+        // Real VPKs, built the way the exporter's own pack is: identification is by content,
+        // so a file with the right name and nothing in it must not count as installed.
+        string Case(string name, int loose, int workshop, bool disabled = false,
+                    bool decoy = false)
+        {
+            var game = System.IO.Path.Combine(install, name, "left4dead2");
+            var addons = System.IO.Path.Combine(game, "addons");
+            System.IO.Directory.CreateDirectory(addons);
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(game, "ems", "overlay_hud"));
+
+            var entries = new List<string>();
+
+            for (int i = 0; i < loose; i++)
+            {
+                var file = $"overlay_hud_export_v1.0.{i}.vpk";
+                WritePack(System.IO.Path.Combine(addons, file), withExporter: true);
+                entries.Add(file);
+            }
+
+            for (int i = 0; i < workshop; i++)
+            {
+                // What Steam actually stores: a publishedfileid, no addon name anywhere.
+                var folder = System.IO.Path.Combine(addons, "workshop");
+                System.IO.Directory.CreateDirectory(folder);
+                var file = $"31415926{i}.vpk";
+                WritePack(System.IO.Path.Combine(folder, file), withExporter: true);
+                entries.Add($"workshop\\{file}");
+            }
+
+            if (decoy)
+            {
+                // Right name, wrong contents. A name match would call this installed.
+                WritePack(System.IO.Path.Combine(addons, "overlay_hud_export_fake.vpk"),
+                          withExporter: false);
+            }
+
+            var list = new System.Text.StringBuilder("\"AddonList\"\n{\n");
+            foreach (var entry in entries)
+                list.Append($"\t\t\"{entry}\"\t\t\"{(disabled ? 0 : 1)}\"\n");
+            list.Append("}\n");
+            System.IO.File.WriteAllText(System.IO.Path.Combine(game, "addonlist.txt"),
+                                        list.ToString());
+
+            return System.IO.Path.Combine(game, "ems", "overlay_hud", "state.json");
+        }
+
+        void Watch(string statePath)
+        {
+            typeof(MainWindow).GetField("_reader", flags)!.SetValue(window,
+                new StateReader(statePath, TimeSpan.FromMilliseconds(100), 2.0));
+
+            // The overlay scans in the background so a hundred-pack install cannot stall
+            // its UI thread; a check wants the answer settled before it looks.
+            AddonProbe.Refresh(statePath);
+
+            typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+            Invoke(window, "Render", flags);
+        }
+
+        // Nothing installed, plus a decoy named like the addon and empty inside: the one
+        // case that really is a broken setup.
+        Watch(Case("missing", loose: 0, workshop: 0, decoy: true));
+        bool missingIsNamed = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("NOT INSTALLED", StringComparison.Ordinal)
+            && noticeBody.Text.Contains("addons", StringComparison.OrdinalIgnoreCase);
+
+        // A Workshop subscription: stored under a publishedfileid with the addon's name
+        // nowhere in it. Matching on filename would report this as missing.
+        Watch(Case("subscribed", loose: 0, workshop: 1));
+        bool workshopIsFound = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("WAITING", StringComparison.Ordinal)
+            && noticeBody.Text.Contains("Subscribed", StringComparison.OrdinalIgnoreCase);
+
+        // Subscribed and dragged in by hand: both mount, one wins, unpredictably.
+        Watch(Case("duplicated", loose: 1, workshop: 1));
+        bool duplicatesAreNamed = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("MORE THAN ONE", StringComparison.Ordinal);
+
+        // Installed and switched off in the Add-ons screen: present, and never runs.
+        var toggled = Case("disabled", loose: 1, workshop: 0, disabled: true);
+        Watch(toggled);
+        bool disabledIsNamed = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("TURNED OFF", StringComparison.Ordinal);
+
+        // ...and switched back on. Enabling an addon rewrites addonlist.txt and touches no
+        // VPK, so a cache keyed on the packs alone kept insisting it was off.
+        var list = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(
+                System.IO.Path.GetDirectoryName(toggled)!)!)!, "addonlist.txt");
+        System.IO.File.WriteAllText(list,
+            System.IO.File.ReadAllText(list).Replace("\"0\"", "\"1\""));
+
+        AddonProbe.Refresh(toggled);
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
         Invoke(window, "Render", flags);
-        bool explainsItself = panel.Visibility == Visibility.Visible
-            && status.Text.Contains("NO EXPORT", StringComparison.Ordinal)
-            && status.Text.Contains("RESTART L4D2", StringComparison.Ordinal);
+        bool reEnablingIsSeen = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("WAITING", StringComparison.Ordinal);
+
+        // Installed, never seen exporting: a main menu, not a fault. This is the case the
+        // old NO EXPORT message got wrong on a perfectly good install.
+        Watch(Case("installed", loose: 1, workshop: 0));
+        bool waitingIsNotAnAccusation = notice.Visibility == Visibility.Visible
+            && noticeTitle.Text.Contains("WAITING", StringComparison.Ordinal)
+            && !noticeBody.Text.Contains("not writing", StringComparison.OrdinalIgnoreCase);
+
+        // The panel itself carries no explanation any more - it draws a roster or nothing.
+        bool panelStaysARoster = panel.Visibility == Visibility.Visible
+            && !panel.IsAncestorOf(notice);
+
         bool badgeShownByDefault = badge.Visibility == Visibility.Visible;
 
+        // Proven install with nothing exporting: the badge says it, and there is nothing
+        // to add underneath.
+        config.ExporterProven = true;
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "Render", flags);
+        bool quietOnceProven = notice.Visibility != Visibility.Visible
+            && badge.Visibility == Visibility.Visible;
+
+        // Badge off means the whole status corner is off, notice included.
+        config.ExporterProven = false;
         config.ShowStatusBadge = false;
         typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
         Invoke(window, "Render", flags);
-        bool badgeCanBeTurnedOff = badge.Visibility != Visibility.Visible;
+        bool badgeCanBeTurnedOff = badge.Visibility != Visibility.Visible
+            && notice.Visibility != Visibility.Visible;
 
-        bool passed = explainsItself && badgeShownByDefault && badgeCanBeTurnedOff;
+        bool passed = missingIsNamed && workshopIsFound && duplicatesAreNamed
+            && disabledIsNamed && reEnablingIsSeen && waitingIsNotAnAccusation
+            && panelStaysARoster && badgeShownByDefault && quietOnceProven
+            && badgeCanBeTurnedOff;
 
         Console.WriteLine(
-            $"explainsItself={explainsItself} badgeShownByDefault={badgeShownByDefault} " +
-            $"badgeCanBeTurnedOff={badgeCanBeTurnedOff} status=\"{status.Text}\"");
+            $"missingIsNamed={missingIsNamed} workshopIsFound={workshopIsFound} " +
+            $"duplicatesAreNamed={duplicatesAreNamed} disabledIsNamed={disabledIsNamed} " +
+            $"reEnablingIsSeen={reEnablingIsSeen} " +
+            $"waitingIsNotAnAccusation={waitingIsNotAnAccusation} " +
+            $"panelStaysARoster={panelStaysARoster} badgeShownByDefault={badgeShownByDefault} " +
+            $"quietOnceProven={quietOnceProven} badgeCanBeTurnedOff={badgeCanBeTurnedOff}");
         Console.WriteLine(passed
             ? "PASS"
-            : "FAIL: a silent exporter must be explained, and the badge must be optional");
+            : "FAIL: the status corner must report what is on disk, not guess from a quiet file");
 
         window.Close();
         app.Shutdown();
+        try { System.IO.Directory.Delete(install, true); } catch { }
+
         return passed ? 0 : 1;
     }
 
@@ -1079,6 +1210,343 @@ internal static class Program
         runningWindow.Close();
         absentWindow.Close();
         app.Shutdown();
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// At the main menu the state file is last session's, sitting there unchanged. Holding
+    /// Tab used to bring up a panel full of that dead roster. Reading a file is not proof of
+    /// an exporter; only watching it advance is.
+    /// </summary>
+    private static int RunMenuStaleCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                                            "OverlayHudCheck", $"menu-stale-{Guid.NewGuid():N}");
+        System.IO.Directory.CreateDirectory(folder);
+        var file = System.IO.Path.Combine(folder, "state.json");
+
+        string Snapshot(long seq) =>
+            $"{{\"v\":\"1.0.5\",\"seq\":{seq},\"time\":1,\"count\":2,\"survivors\":[" +
+            // Soldiers, so the vanilla-four skip does not decide the count for us.
+            "{\"uid\":1,\"name\":\"Leftover A\",\"cls\":\"soldier\",\"hp\":100,\"maxhp\":100}," +
+            "{\"uid\":2,\"name\":\"Leftover B\",\"cls\":\"soldier\",\"hp\":80,\"maxhp\":100}]}";
+
+        System.IO.File.WriteAllText(file, Snapshot(5));
+
+        var reader = new StateReader(file, TimeSpan.FromMilliseconds(100), 5.0);
+
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.AlwaysShow = false;          // the hold key is the only reason to draw
+        config.IgnoreForeground = true;
+        config.RosterFilter = "all";
+
+        // Stated rather than inherited. The window loads whatever config.json sits beside
+        // the harness, and the overlay writes exporterProven into it the moment a check
+        // drives a live export - so an earlier run must not decide this one.
+        config.ExporterProven = false;
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+
+        // Stand in for Tab being held, without a real hook.
+        var keys = new KeyWatcher(0x09, 0x2D, () => true);
+        ((KeyboardChordState)GetField(keys, "_state", flags)).Sync(true);
+        typeof(MainWindow).GetField("_keys", flags)!.SetValue(window, keys);
+        typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, reader);
+        typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+
+        var panel = (Border)GetField(window, "Panel", flags);
+        var columns = (ItemsControl)GetField(window, "Columns", flags);
+        var notice = (Border)GetField(window, "Notice", flags);
+
+        int CardCount() => ((IEnumerable?)columns.ItemsSource)?.Cast<IEnumerable>()
+            .Sum(column => column.Cast<object>().Count()) ?? 0;
+
+        void Draw()
+        {
+            typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+            Invoke(window, "Render", flags);
+        }
+
+        // A file that has only ever been read once is not an export, however recently the
+        // game wrote it. The setup is unproven, so the panel still explains itself - but
+        // with no roster on it.
+        Invoke(reader, "Poll", flags);
+        Invoke(reader, "Poll", flags);
+        Draw();
+        bool leftoverIsNotAnExport = !reader.HasExported && reader.IsStale;
+        bool noDeadRoster = CardCount() == 0;
+
+        // The panel is a roster and nothing else now. With no live export there is nothing
+        // to draw, so it stays away entirely; the status corner carries the explanation.
+        bool panelIsQuiet = panel.Visibility != Visibility.Visible;
+
+        // The exporter starts writing: the file advances, and the roster is real.
+        System.IO.File.WriteAllText(file, Snapshot(6));
+        Invoke(reader, "Poll", flags);
+        Draw();
+        bool advanceIsAnExport = reader.HasExported && !reader.IsStale;
+        bool drawsLiveRoster = panel.Visibility == Visibility.Visible && CardCount() == 2
+            && notice.Visibility != Visibility.Visible;
+
+        // Back to the menu: the file stops advancing. Nothing is owed now - the setup is
+        // proven, and the top-right badge already reports the state.
+        typeof(StateReader).GetField("_lastSeqChangeUtc", flags)!
+            .SetValue(reader, DateTime.UtcNow.AddMinutes(-1));
+        Invoke(reader, "Poll", flags);
+        Draw();
+        bool quietAtTheMenu = reader.IsStale && panel.Visibility != Visibility.Visible;
+
+        // Seeing it work is remembered on disk, so the next launch does not open by
+        // suggesting the addon might be missing. A fresh app run, a fresh reader that has
+        // seen nothing, and a config that says this install has exported before.
+        var proven = new StateReader(file, TimeSpan.FromMilliseconds(100), 5.0);
+        var provenWindow = new MainWindow { Width = 1920, Height = 1080 };
+        var provenConfig = (AppConfig)GetField(provenWindow, "_cfg", flags);
+        provenConfig.AlwaysShow = false;
+        provenConfig.IgnoreForeground = true;
+        provenConfig.ExporterProven = true;
+
+        var provenKeys = new KeyWatcher(0x09, 0x2D, () => true);
+        ((KeyboardChordState)GetField(provenKeys, "_state", flags)).Sync(true);
+        typeof(MainWindow).GetField("_keys", flags)!.SetValue(provenWindow, provenKeys);
+        typeof(MainWindow).GetField("_reader", flags)!.SetValue(provenWindow, proven);
+        typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(provenWindow, true);
+        Invoke(proven, "Poll", flags);
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(provenWindow, true);
+        Invoke(provenWindow, "Render", flags);
+
+        var provenPanel = (Border)GetField(provenWindow, "Panel", flags);
+        bool quietOnRelaunch = !proven.HasExported
+            && provenPanel.Visibility != Visibility.Visible;
+
+        bool passed = leftoverIsNotAnExport && noDeadRoster && panelIsQuiet
+            && advanceIsAnExport && drawsLiveRoster && quietAtTheMenu && quietOnRelaunch;
+
+        Console.WriteLine(
+            $"leftoverIsNotAnExport={leftoverIsNotAnExport} noDeadRoster={noDeadRoster} " +
+            $"panelIsQuiet={panelIsQuiet} advanceIsAnExport={advanceIsAnExport} " +
+            $"drawsLiveRoster={drawsLiveRoster} quietAtTheMenu={quietAtTheMenu} " +
+            $"quietOnRelaunch={quietOnRelaunch}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: a stale file must not draw a roster, and a proven setup must stay quiet");
+
+        keys.Dispose();
+        provenKeys.Dispose();
+        reader.Dispose();
+        proven.Dispose();
+        window.Close();
+        provenWindow.Close();
+        app.Shutdown();
+        try { System.IO.Directory.Delete(folder, true); } catch { }
+
+        // Written by the overlay when this check drove its first live export. It belongs to
+        // the harness folder, not to a user, and leaving it there changes what the next
+        // check sees.
+        try { System.IO.File.Delete(AppConfig.ConfigPath); } catch { }
+
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Writes a real VPK v2 whose directory tree either carries the exporter's script or
+    /// does not. Fixtures have to be real packs: the app identifies an addon by opening it,
+    /// because a Workshop subscription's filename is a publishedfileid and says nothing.
+    /// </summary>
+    private static void WritePack(string path, bool withExporter)
+    {
+        var tree = new System.IO.MemoryStream();
+        using (var writer = new System.IO.BinaryWriter(tree, System.Text.Encoding.ASCII, true))
+        {
+            void Text(string value)
+            {
+                writer.Write(System.Text.Encoding.ASCII.GetBytes(value));
+                writer.Write((byte)0);
+            }
+
+            void Entry()
+            {
+                writer.Write((uint)0);        // crc
+                writer.Write((ushort)0);      // preload bytes
+                writer.Write((ushort)0x7FFF); // archive index
+                writer.Write((uint)0);        // entry offset
+                writer.Write((uint)0);        // entry length
+                writer.Write((ushort)0xFFFF); // terminator
+            }
+
+            Text(withExporter ? "nut" : "txt");
+            Text(withExporter ? "scripts/vscripts" : "materials/readme");
+            Text(withExporter ? "overlay_hud_export" : "notes");
+            Entry();
+            Text("");                          // end of names
+            Text("");                          // end of directories
+            Text("");                          // end of extensions
+        }
+
+        var bytes = tree.ToArray();
+
+        using var file = System.IO.File.Create(path);
+        using var header = new System.IO.BinaryWriter(file);
+        header.Write(0x55AA1234u);             // signature
+        header.Write(2u);                      // version
+        header.Write((uint)bytes.Length);      // tree size
+        header.Write(0u);                      // file data section
+        header.Write(0u);                      // archive md5 section
+        header.Write(0u);                      // other md5 section
+        header.Write(0u);                      // signature section
+        header.Write(bytes);
+    }
+
+    /// <summary>
+    /// The debug console is driven by polls, so an honest log depends entirely on only
+    /// recording changes. A console that reprints the same line four times a second is one
+    /// nobody reads.
+    /// </summary>
+    private static int RunDebugLogCheck()
+    {
+        DebugLog.Clear();
+
+        var seen = new List<string>();
+        void Watch(string line) => seen.Add(line);
+        DebugLog.LineAdded += Watch;
+
+        DebugLog.Note("exporter", "state", "exporting");
+        DebugLog.Note("exporter", "state", "exporting");
+        DebugLog.Note("exporter", "state", "exporting");
+        bool repeatsAreDropped = seen.Count == 1;
+
+        DebugLog.Note("exporter", "state", "export stopped");
+        DebugLog.Note("exporter", "state", "exporting");
+        bool changesAreKept = seen.Count == 3;
+
+        // Different keys do not mask each other, or one busy poll silences the rest.
+        DebugLog.Note("panel", "render", "exporting");
+        bool keysAreIndependent = seen.Count == 4;
+
+        DebugLog.Write("input", "hook installed");
+        DebugLog.Write("input", "hook installed");
+        bool writeIsAlwaysKept = seen.Count == 6;
+
+        bool timestamped = seen.All(line => line.Length > 13 && line[2] == ':' && line[5] == ':');
+
+        // After a clear, the first line of a state is new information again.
+        DebugLog.Clear();
+        DebugLog.Note("exporter", "state", "exporting");
+        bool clearForgetsNotes = seen.Count == 7 && DebugLog.Snapshot().Count == 1;
+
+        DebugLog.LineAdded -= Watch;
+
+        // The buffer is bounded, so a long session cannot grow it without limit.
+        DebugLog.Clear();
+        for (int i = 0; i < DebugLog.Capacity + 50; i++) DebugLog.Write("state", $"line {i}");
+        var snapshot = DebugLog.Snapshot();
+        bool bounded = snapshot.Count == DebugLog.Capacity
+            && snapshot[^1].EndsWith($"line {DebugLog.Capacity + 49}", StringComparison.Ordinal);
+
+        DebugLog.Clear();
+
+        // The window itself: it must load, start from the buffer rather than empty, and
+        // follow lines logged after it opened.
+        var app = new App();
+        app.InitializeComponent();
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        DebugLog.Write("state", "before the console opened");
+        var console = new DebugWindow(() => "summary");
+        var logText = (TextBox)GetField(console, "LogText", flags);
+        var summaryText = (TextBlock)GetField(console, "SummaryText", flags);
+
+        bool opensWithHistory = logText.Text.Contains("before the console opened",
+                                                      StringComparison.Ordinal)
+            && summaryText.Text == "summary";
+
+        DebugLog.Write("state", "after the console opened");
+        bool followsNewLines = logText.Text.Contains("after the console opened",
+                                                     StringComparison.Ordinal);
+
+        console.Close();
+        DebugLog.Write("state", "after the console closed");
+        bool detachesOnClose = !logText.Text.Contains("after the console closed",
+                                                      StringComparison.Ordinal);
+        app.Shutdown();
+        DebugLog.Clear();
+
+        bool passed = repeatsAreDropped && changesAreKept && keysAreIndependent
+            && writeIsAlwaysKept && timestamped && clearForgetsNotes && bounded
+            && opensWithHistory && followsNewLines && detachesOnClose;
+
+        Console.WriteLine(
+            $"repeatsAreDropped={repeatsAreDropped} changesAreKept={changesAreKept} " +
+            $"keysAreIndependent={keysAreIndependent} writeIsAlwaysKept={writeIsAlwaysKept} " +
+            $"timestamped={timestamped} clearForgetsNotes={clearForgetsNotes} bounded={bounded} " +
+            $"opensWithHistory={opensWithHistory} followsNewLines={followsNewLines} " +
+            $"detachesOnClose={detachesOnClose}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: the debug log must record changes, not polls, and stay bounded");
+
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The overlay stopping mid-session was a keyboard hook Windows had silently removed,
+    /// leaving the hold state stuck at false with nothing to notice or repair it.
+    /// </summary>
+    private static int RunHookRecoveryCheck()
+    {
+        const int tab = 0x09;
+        const int insert = 0x2D;
+
+        // Agreement is the common case and must never churn the hook.
+        var quiet = new HookWatchdog();
+        var quietUp = quiet.Observe(false, false);
+        var quietDown = quiet.Observe(true, true);
+
+        // A single disagreeing sample is a poll-boundary race: fix the state, keep the hook.
+        var boundary = new HookWatchdog();
+        var firstMiss = boundary.Observe(true, false);
+        var recovered = boundary.Observe(true, true);
+
+        // A hook that is really gone keeps disagreeing.
+        var dead = new HookWatchdog();
+        dead.Observe(false, true);
+        var deadSecond = dead.Observe(false, true);
+
+        // ...and after the reinstall the count starts over, so one replacement per failure.
+        dead.Reset();
+        var afterReset = dead.Observe(false, true);
+
+        // The stuck state itself has to be repairable, in both directions.
+        var state = new KeyboardChordState(tab, insert);
+        state.Process(tab, true, false, true);
+        bool? releaseMissed = state.Sync(false);
+        bool clearedHold = !state.IsHeld;
+        bool? pressMissed = state.Sync(true);
+        bool? noChange = state.Sync(true);
+
+        bool passed = !quietUp.Resync && !quietUp.Reinstall
+            && !quietDown.Resync && !quietDown.Reinstall
+            && firstMiss.Resync && !firstMiss.Reinstall
+            && !recovered.Resync && !recovered.Reinstall
+            && deadSecond.Resync && deadSecond.Reinstall
+            && !afterReset.Reinstall
+            && releaseMissed == false && clearedHold
+            && pressMissed == true && noChange == null;
+
+        Console.WriteLine(
+            $"agreementIsQuiet={!quietUp.Reinstall && !quietDown.Reinstall} " +
+            $"singleMissResyncsOnly={firstMiss.Resync && !firstMiss.Reinstall} " +
+            $"persistentMissReinstalls={deadSecond.Reinstall} " +
+            $"reinstallCountResets={!afterReset.Reinstall} " +
+            $"stuckHoldIsRepaired={releaseMissed == false && pressMissed == true} " +
+            $"syncIsIdempotent={noChange == null}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: a dead keyboard hook is no longer detected or repaired");
         return passed ? 0 : 1;
     }
 

@@ -19,7 +19,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "1.0.4",
+  "v": "1.0.5",
   "seq": 412,
   "time": 183.40,
   "count": 8,

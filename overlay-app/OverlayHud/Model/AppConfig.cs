@@ -97,6 +97,17 @@ public sealed class AppConfig
     /// <summary>Seconds without a new seq before the panel is marked stale.</summary>
     [JsonPropertyName("staleAfterSeconds")] public double StaleAfterSeconds { get; set; } = 2.0;
 
+    /// <summary>
+    /// Set by the app the first time it sees this install export, and never cleared. It is
+    /// what stops the `NO EXPORT` help from reappearing at every menu on every launch: that
+    /// message is for a setup that has never worked, and once the addon has been seen
+    /// working the app has no business claiming it might be missing.
+    /// </summary>
+    [JsonPropertyName("exporterProven")] public bool ExporterProven { get; set; }
+
+    /// <summary>Open the debug console at startup. Turned on and off from the editor.</summary>
+    [JsonPropertyName("debug")] public bool Debug { get; set; }
+
     public static string ConfigPath =>
         Path.Combine(AppContext.BaseDirectory, "config.json");
 

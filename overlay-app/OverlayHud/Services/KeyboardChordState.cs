@@ -23,6 +23,19 @@ internal sealed class KeyboardChordState
 
     public bool IsHeld { get; private set; }
 
+    /// <summary>
+    /// Forces the tracked hold state to match the physical key. Used when the hook has
+    /// missed an event - or has been removed by Windows - so the panel is not left waiting
+    /// for a release that already happened. Returns the new value when it changed.
+    /// </summary>
+    public bool? Sync(bool held)
+    {
+        if (held == IsHeld) return null;
+
+        IsHeld = held;
+        return held;
+    }
+
     public KeyboardChordDecision Process(int vkCode, bool isDown, bool isUp,
                                           bool shortcutEnabled)
     {

@@ -1,5 +1,89 @@
 # Dev log
 
+## Overlay HUD v1.0.5 - 2026-08-13: a hook can be gone without anything saying so
+
+The report was "it showed, I alt-tabbed, it never came back, restarting the app fixed it".
+Restart-fixes-it narrows the field hard: it is state held in the app, not the game, not the
+addon, and not the state file — the exporter kept writing throughout.
+
+Two candidates fitted. A fullscreen window can come up above a topmost overlay after an
+alt-tab, and `Topmost="True"` in XAML is a one-time assertion. And `WH_KEYBOARD_LL` is
+removed by Windows when its callback overruns `LowLevelHooksTimeout`, silently, with the
+handle left non-null and no way to ask whether the hook is still installed. The second one
+explains the restart perfectly, and the callback here was raising `HeldChanged`, which ran
+`Render()` — measure, arrange, fit — on a layered, software-rendered window, synchronously,
+inside the hook. Under a load spike that is not a hypothetical overrun.
+
+What made this fixable was giving up on detecting the hook directly. There is no query for
+it. `GetAsyncKeyState` reports the physical key regardless, so the disagreement between it
+and the tracked hold state is the evidence, and correcting the state is worth doing on its
+own — it also repairs a keyup missed during the focus switch. Reinstalling waits for the
+disagreement to survive two polls, because a key pressed on the poll boundary can be seen
+before the callback has run and one sample is not proof.
+
+The part worth keeping as a habit: the repair is a poll, so it is also a fallback. If every
+reinstall failed the overlay would still follow Tab at 250 ms granularity, because the same
+comparison that detects the fault also supplies the answer. A watchdog that only restarts
+something is worth less than one that can carry the feature while the restart is failing.
+
+Both fixes shipped. The z-order re-assert is cheap, fires only on the focus transition, and
+if it was never the cause it costs one API call per alt-tab.
+
+The same session turned up the menu panel: hold Tab at the main menu and last session's
+roster appears. Two separate mistakes, one symptom. The reader treated the first successful
+read as an advance, so a file written an hour ago looked live for a full staleness window;
+and the renderer kept drawing `Current` while stale, on the reasoning that a stale roster is
+better than none. It is not. A stale roster is wrong and looks exactly as authoritative as a
+correct one, which is the worst thing a HUD can be.
+
+The question worth asking was whether the `NO EXPORT` panel from v1.0.2 should go with it.
+The first answer was that it should be earned rather than removed: it exists so a broken
+setup is not a blank screen, and that is only owed while the setup is unproven. Once `seq`
+has been seen to move, the app knows the addon works, so staleness after that is the menu or
+a load and the panel keeps quiet. Explain yourself until you have been proven right, then be
+silent — a rule that reads well as a sentence, which is usually the sign, and which turned
+out to be only half the fix. See below.
+
+Proven had to outlive the process, though. Held only in memory it resets every launch, so
+the first Tab of every session — at the menu, before any map has loaded — showed the help
+again on an install that has worked for weeks. `exporterProven` in `config.json` is one bool
+and it makes the message mean what it says.
+
+Then the message turned out to be wrong on its own terms. Reported as confusing, and it was:
+the game was running, the addon was in `addons`, the exporter was writing every round, and
+holding Tab at a main menu still produced "IS THE ADDON LOADED?". Checked on this machine
+and the accusation was baseless - one `overlay_hud_export_v1.0.5.vpk`, enabled, and a
+`state.json` at seq 677. The message was inferring "not installed" from "not advancing",
+and those are the same observation at every menu.
+
+So look at the addons folder. That is the evidence, and it was available the whole time.
+The one trap is that filenames cannot identify a pack: a Workshop subscription is stored as
+`addons\workshop\<publishedfileid>.vpk`, a number with nothing of the addon's name in it,
+and matching on the name would report a subscribed install as missing - the same false
+alarm one layer down. So packs are identified by opening them and reading the VPK directory
+tree for the exporter's script. The tree is at the front of the file with its size in the
+header, so identifying a 200 MB map pack costs the same as a small one. This install has 135
+of them and the whole sweep takes about a second, cached until the folder changes and run
+off the UI thread regardless.
+
+`addonlist.txt` came along with it, since "installed but switched off in the Add-ons screen"
+is a real cause and looks identical to everything else from the transport's side.
+
+The lesson worth keeping is not about VPKs. Every version of this message has been a guess
+dressed as a diagnosis, and each one was wrong in the same way: the app knew the difference
+between a fault and a menu was unavailable to it, and said something confident anyway. The
+fix was not better wording, it was finding a second source.
+
+That leaves the honest gap: a setup that used to work and has since broken now gets silence
+where it used to get an explanation. Which is the argument for the debug console rather than
+against the rule. The panel is a HUD - it has room for a state, not a diagnosis - and it is
+also the thing that goes missing when something is wrong, so it is the worst possible place
+to put the answer. The console is the opposite: a live block of current values first,
+because "is it working" is a question about now, and the log of transitions under it for how
+it got there. Both are built on the same discipline the log itself needs - everything here
+is a 100 ms or 250 ms poll, so recording every sample would bury the one line that matters.
+`Note` keeps changes only, per key.
+
 ## Overlay HUD v1.0.4 - 2026-08-13: the answer was already in the same ems folder
 
 Whether `StringToFile` accepts a subpath, and whether the engine creates the directory, are

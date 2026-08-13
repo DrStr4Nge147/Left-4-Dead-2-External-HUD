@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.0.4"
+::OvlHud.VERSION   <- "1.0.5"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the

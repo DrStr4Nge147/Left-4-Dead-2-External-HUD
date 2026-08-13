@@ -20,6 +20,8 @@ public partial class MainWindow : Window
     private DispatcherTimer _geometry = null!;
     private System.Windows.Forms.NotifyIcon? _tray;
     private SettingsWindow? _settings;
+    private DebugWindow? _debug;
+    private System.Windows.Forms.ToolStripMenuItem? _debugMenuItem;
 
     private Native.RECT _lastRect;
     private bool _gameForeground;
@@ -51,7 +53,7 @@ public partial class MainWindow : Window
             ?? (string.IsNullOrWhiteSpace(_cfg.StatePath) ? StateLocator.Locate() : _cfg.StatePath));
 
         Panel.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
-        MenuBadge.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
+        StatusStack.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
         Title = AppIdentity.Name;
         MenuBadgeText.Text = $"{AppIdentity.Name} v{DisplayVersion()}";
 
@@ -70,16 +72,30 @@ public partial class MainWindow : Window
         MakeClickThrough();
         CreateTrayIcon();
 
+        DebugLog.Write("startup", $"{AppIdentity.Name} v{DisplayVersion()}");
+        DebugLog.Write("startup", $"config: {AppConfig.ConfigPath}");
+        DebugLog.Write("startup",
+            $"game process: {_cfg.GameProcess} | hold key: 0x{_cfg.HoldKey:X2} | " +
+            $"editor key: 0x{_cfg.EditorKey:X2} | exporter proven before: {_cfg.ExporterProven}");
+
         _reader = new StateReader(_cfg.StatePath, TimeSpan.FromMilliseconds(100),
                                   _cfg.StaleAfterSeconds);
         _reader.Updated += () => { _dirty = true; Render(); };
         _reader.Start();
 
+        DebugLog.Write("state", _reader.Path == null
+            ? "no state file located - is L4D2 installed where Steam says?"
+            : $"watching {_reader.Path}");
+
+        if (_cfg.Debug) ShowDebugConsole(true);
+
         _keys = new KeyWatcher(_cfg.HoldKey, _cfg.EditorKey,
                                () => _gameForeground || _settingsActive
                                                      || _cfg.IgnoreForeground);
+        // Both events are already marshalled onto this thread by the watcher, which keeps
+        // the hook callback itself short enough to survive LowLevelHooksTimeout.
         _keys.HeldChanged += _ => Render();
-        _keys.ShortcutPressed += () => Dispatcher.BeginInvoke(ToggleSettings);
+        _keys.ShortcutPressed += ToggleSettings;
         _keys.Start();
 
         // Normal priority for the same reason as the state poll - see StateReader.
@@ -111,6 +127,19 @@ public partial class MainWindow : Window
                | Native.WS_EX_TOOLWINDOW);
     }
 
+    /// <summary>
+    /// Puts the overlay back on top of the game. WS_EX_NOACTIVATE plus SWP_NOACTIVATE means
+    /// this cannot pull focus away from the game while doing it.
+    /// </summary>
+    private void RaiseAboveGame()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        Native.SetWindowPos(hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0,
+                            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+    }
+
     private void CreateTrayIcon()
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
@@ -118,6 +147,18 @@ public partial class MainWindow : Window
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Customize UI...", null,
             (_, _) => Dispatcher.BeginInvoke(OpenSettings));
+
+        // Reachable without the editor: the console is most wanted when nothing is drawing,
+        // and the editor is one more thing that could be failing at that moment.
+        var debugItem = new System.Windows.Forms.ToolStripMenuItem("Debug console")
+        {
+            CheckOnClick = true,
+            Checked = _cfg.Debug
+        };
+        debugItem.CheckedChanged += (_, _) =>
+            Dispatcher.BeginInvoke(() => ShowDebugConsole(debugItem.Checked));
+        menu.Items.Add(debugItem);
+        _debugMenuItem = debugItem;
         menu.Items.Add("Open config folder", null,
             (_, _) => Process.Start(new ProcessStartInfo(AppContext.BaseDirectory)
                                     { UseShellExecute = true }));
@@ -143,7 +184,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        _settings = new SettingsWindow(_cfg, ApplyUiConfig, UpdateLivePreview, EndLivePreview);
+        _settings = new SettingsWindow(_cfg, ApplyUiConfig, UpdateLivePreview, EndLivePreview,
+                                       ShowDebugConsole);
         _settings.Activated += (_, _) => _settingsActive = true;
         _settings.Deactivated += (_, _) => _settingsActive = false;
         _settings.Closed += (_, _) =>
@@ -175,6 +217,82 @@ public partial class MainWindow : Window
     }
 
     public void ShowSettings() => OpenSettings();
+
+    /// <summary>
+    /// Opens or closes the debug console. Every route in and out - the editor checkbox, the
+    /// tray item, the window's own close button - lands here, so the two indicators and the
+    /// saved setting cannot drift apart.
+    /// </summary>
+    private void ShowDebugConsole(bool on)
+    {
+        if (on == (_debug != null))
+        {
+            SyncDebugIndicators(on);
+            return;
+        }
+
+        if (!on)
+        {
+            var closing = _debug;
+            _debug = null;
+            closing?.Close();
+            SyncDebugIndicators(false);
+            return;
+        }
+
+        _debug = new DebugWindow(DebugSummary);
+        _debug.Closed += (_, _) =>
+        {
+            // Closed from its own title bar: that is the user turning it off.
+            if (_debug == null) return;
+
+            _debug = null;
+            _cfg.Debug = false;
+            _cfg.TrySave(out _);
+            SyncDebugIndicators(false);
+        };
+        _debug.Show();
+        SyncDebugIndicators(true);
+    }
+
+    private void SyncDebugIndicators(bool on)
+    {
+        if (_debugMenuItem != null && _debugMenuItem.Checked != on) _debugMenuItem.Checked = on;
+
+        _settings?.SetDebugChecked(on);
+    }
+
+    /// <summary>
+    /// The console's top block: what someone actually needs to answer "is this working".
+    /// Read live rather than logged, because these are the current values.
+    /// </summary>
+    private string DebugSummary()
+    {
+        string exporting = _reader == null
+            ? "no reader"
+            : _reader.IsStale
+                ? _reader.HasExported ? "stopped (menu, load, or paused)" : "nothing seen yet"
+                : "live";
+
+        string path = _reader?.Path ?? "not located";
+        string status = string.IsNullOrEmpty(_reader?.Status) ? "ok" : _reader!.Status;
+        string diagnostic = string.IsNullOrEmpty(_reader?.Diagnostic) ? "" : $"  |  {_reader!.Diagnostic}";
+        int survivors = _reader?.Current?.Survivors.Count ?? 0;
+
+        return string.Join(Environment.NewLine, new[]
+        {
+            $"exporter    {exporting}   status: {status}{diagnostic}",
+            $"state file  {path}",
+            $"polls       {_reader?.Polls ?? 0}   survivors in last read: {survivors}   " +
+                $"proven: {(_cfg.ExporterProven ? "yes" : "no")}",
+            $"game        {_cfg.GameProcess}   foreground: {(_gameForeground ? "yes" : "no")}   " +
+                $"window: {_lastRect.Width}x{_lastRect.Height}",
+            $"input       hold key down: {(_keys?.IsHeld == true ? "yes" : "no")}   " +
+                $"hook reinstalls: {_keys?.Recoveries ?? 0}",
+            $"panel       {(Panel.Visibility == Visibility.Visible ? "drawing" : "hidden")}   " +
+                $"scale: {PanelScale.ScaleX:0.000}   surface: {_surfaceWidth:0}x{_surfaceHeight:0}"
+        });
+    }
 
     /// <summary>
     /// Draws the running overlay with the editor's unsaved draft, over the real game window
@@ -225,7 +343,7 @@ public partial class MainWindow : Window
     private void ApplyUiConfig()
     {
         Panel.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
-        MenuBadge.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
+        StatusStack.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
 
         _fitScale = 1.0;
         _lastCardCount = -1;
@@ -241,16 +359,37 @@ public partial class MainWindow : Window
 
     private void TrackGameWindow()
     {
+        bool wasForeground = _gameForeground;
         _gameForeground = IsGameWindow(Native.GetForegroundWindow());
         UpdateScoreboardHold();
+
+        // Windows can drop the keyboard hook without telling anyone; this is the only place
+        // that finds out. See KeyWatcher.Pulse.
+        _keys?.Pulse();
+
+        // Alt-tabbing back into a fullscreen game puts its window above ours, and topmost
+        // alone does not survive that. Re-assert on the way back in rather than every tick.
+        if (_gameForeground && !wasForeground)
+        {
+            RaiseAboveGame();
+            DebugLog.Write("focus", "game came forward - overlay re-asserted topmost");
+        }
+        else if (!_gameForeground && wasForeground)
+        {
+            DebugLog.Write("focus", "game lost focus");
+        }
 
         // Geometry is tracked by process, not by focus. Following only the foreground
         // window means a resolution change made while alt-tabbed is missed, and the panel
         // comes back at the old size.
         var hwnd = FindGameWindow(out bool gameProcessRunning);
 
+        DebugLog.Note("process", "game",
+            gameProcessRunning ? $"{_cfg.GameProcess} is running" : $"{_cfg.GameProcess} not running");
+
         if (_gameLifetime.ShouldExit(gameProcessRunning, _cfg.ExitWhenGameCloses))
         {
+            DebugLog.Write("game", "game closed and exitWhenGameCloses is on - exiting");
             Close();
             return;
         }
@@ -363,6 +502,9 @@ public partial class MainWindow : Window
         if (width <= 0 || height <= 0) return;
         if (Math.Abs(width - _surfaceWidth) < 1 && Math.Abs(height - _surfaceHeight) < 1) return;
 
+        DebugLog.Write("layout",
+            $"surface {_surfaceWidth:0}x{_surfaceHeight:0} -> {width:0}x{height:0}");
+
         _surfaceWidth = width;
         _surfaceHeight = height;
 
@@ -387,9 +529,10 @@ public partial class MainWindow : Window
         PanelScale.ScaleX = PanelScale.ScaleY = scale;
         MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = baseScale;
 
-        // The badge has its own fixed corner: roster anchor settings must not move it.
-        MenuBadge.Margin = new Thickness(0, _surfaceHeight * 0.025,
-                                         _surfaceWidth * 0.02, 0);
+        // The badge and its notice have their own fixed corner: roster anchor settings must
+        // not move them.
+        StatusStack.Margin = new Thickness(0, _surfaceHeight * 0.025,
+                                           _surfaceWidth * 0.02, 0);
 
         ApplyAnchor();
         UpdateGuides();
@@ -510,6 +653,41 @@ public partial class MainWindow : Window
     // render
     // -----------------------------------------------------------------------
 
+    /// <summary>
+    /// True once this install has been seen exporting, now or in an earlier session. The
+    /// remembered half is the point: a working setup should not be told it might be broken
+    /// every time the app starts.
+    /// </summary>
+    private bool ExporterProven => _cfg.ExporterProven || (_reader?.HasExported ?? false);
+
+    /// <summary>
+    /// Records what the exporter is doing, and remembers the first time it is seen working.
+    /// The write happens once per install rather than once per run, so the config file is
+    /// not touched on every launch.
+    /// </summary>
+    private void TrackExporterHealth()
+    {
+        if (_reader == null) return;
+
+        DebugLog.Note("exporter", "state", _reader.IsStale
+            ? _reader.HasExported
+                ? "export stopped - menu, loading, paused, or the map ended"
+                : $"nothing exported yet - {(_reader.Status.Length > 0 ? _reader.Status : "waiting")}"
+            : $"exporting - {_reader.Current?.Survivors.Count ?? 0} survivors, seq advancing");
+
+        if (_reader.Diagnostic.Length > 0)
+            DebugLog.Note("diagnostic", "state", _reader.Diagnostic);
+
+        if (!_reader.HasExported || _cfg.ExporterProven) return;
+
+        _cfg.ExporterProven = true;
+        bool saved = _cfg.TrySave(out string error);
+
+        DebugLog.Write("state", saved
+            ? "addon confirmed working - the NO EXPORT help will not be shown again"
+            : $"addon confirmed working, but the config could not be saved: {error}");
+    }
+
     private bool ShouldShow()
     {
         // Live preview is its own reason to draw: the editor holds input focus, so neither
@@ -524,14 +702,19 @@ public partial class MainWindow : Window
 
     private void Render()
     {
+        TrackExporterHealth();
+
         // Fresh exports mean an active round. No/frozen exports mean main menu, lobby,
         // loading, or pause; the transport cannot distinguish those inactive states.
         bool showMenuBadge = _cfg.ShowStatusBadge
                              && _gameForeground && (_reader == null || _reader.IsStale)
                              && !LivePreview;
         MenuBadge.Visibility = showMenuBadge ? Visibility.Visible : Visibility.Collapsed;
+        UpdateNotice(showMenuBadge);
 
-        var state = _reader?.Current;
+        // A stale read is last session's roster, or this session's before the map ended.
+        // Drawing it is worse than drawing nothing: it is wrong, and it looks authoritative.
+        var state = (_reader?.IsStale ?? true) ? null : _reader?.Current;
         var survivors = state?.Survivors ?? new List<Survivor>();
 
         // The exporter's observed roster order is preserved; RosterPolicy decides which of
@@ -541,15 +724,26 @@ public partial class MainWindow : Window
 
         bool hasActiveExtras = !(_reader?.IsStale ?? true) && extras.Count > 0;
 
-        // Nothing being exported is not the same as nobody to show. An empty panel with a
-        // reason on it is recoverable; drawing nothing at all is indistinguishable from the
-        // overlay being broken, which is exactly how it was reported. A healthy export with
-        // an empty roster still draws nothing - that case is by design, from v0.2.0.
-        bool nothingExporting = _reader == null || _reader.IsStale;
-        bool show = ShouldShow()
-                    && (hasActiveExtras || _cfg.AlwaysShow || LivePreview || nothingExporting);
+        // The panel draws a roster or it draws nothing. It used to carry the "no export"
+        // explanation as well, which meant holding Tab at a main menu produced an alarm
+        // about a missing addon on an install where the addon was sitting in addons\ and
+        // working perfectly - the app cannot tell "not installed" from "no map loaded" from
+        // the state file alone. That explanation now lives under the top-right badge, where
+        // it is backed by an actual look at the addons folder. See UpdateNotice.
+        bool show = ShouldShow() && (hasActiveExtras || _cfg.AlwaysShow || LivePreview);
 
         Panel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+
+        // Why the panel is not on screen is the single most asked question about this app,
+        // and the panel cannot answer it while it is the thing not being drawn.
+        DebugLog.Note("panel", "render", show
+            ? "drawing"
+            : !ShouldShow()
+                ? _cfg.AlwaysShow || (_keys?.IsHeld ?? false)
+                    ? "hidden - L4D2 is not the foreground window"
+                    : "hidden - hold key is not down"
+                : "hidden - nothing to draw for the current roster filter");
+
         if (!show) return;
 
         // Live preview redraws on every slider move, and those do not touch the reader.
@@ -576,39 +770,83 @@ public partial class MainWindow : Window
         }
 
         HeaderText.Text = $"{RosterPolicy.Header(mode)}  {cards.Count}";
+        StatusText.Text = usingSampleCards
+            ? "LIVE PREVIEW - SAMPLE ROSTER"
+            : LivePreview ? "LIVE PREVIEW" : "";
+
         Columns.ItemsSource = LayoutColumns(cards);
         FitToSurface();
+    }
 
-        // With survivors on screen the status line stays out of the way and only reports
-        // staleness. With nothing to draw it has to explain why, or the panel is a blank
-        // box with no way to tell a missing addon from a missing game.
-        if (usingSampleCards)
+    /// <summary>
+    /// The line under the status badge. It says only what can be shown from evidence: the
+    /// addons folder for whether the addon is there, and the state file for whether it is
+    /// writing. Nothing exporting on an install with the pack present is not a fault - it is
+    /// a menu or a load - and saying otherwise is what made the old message untrustworthy.
+    /// </summary>
+    private void UpdateNotice(bool badgeShowing)
+    {
+        if (!badgeShowing || _reader == null)
         {
-            StatusText.Text = "LIVE PREVIEW - SAMPLE ROSTER";
+            Notice.Visibility = Visibility.Collapsed;
+            return;
         }
-        else if (LivePreview)
+
+        var addon = AddonProbe.Look(_reader.Path);
+        string title;
+        string body;
+
+        if (_reader.Path == null)
         {
-            StatusText.Text = "LIVE PREVIEW";
+            title = "GAME NOT FOUND";
+            body = "Left 4 Dead 2 was not located. Set statePath in config.json to the "
+                 + "state file under left4dead2\\ems\\overlay_hud\\.";
         }
-        else if (_reader == null)
+        else if (addon.Missing)
         {
-            StatusText.Text = "";
+            title = "ADDON NOT INSTALLED";
+            body = $"No exporter pack in {addon.AddonsPath}, subscribed or dropped in. "
+                 + "Install the addon and restart L4D2.";
         }
-        else if (cards.Count > 0)
+        else if (addon.Duplicated)
         {
-            StatusText.Text = _reader.IsStale ? "STALE" : "";
+            var where = string.Join(" and ", addon.Packs.Select(pack =>
+                pack.FromWorkshop ? $"workshop\\{pack.Name}" : pack.Name));
+
+            title = "MORE THAN ONE COPY";
+            body = $"The exporter is installed twice ({where}). One of them mounts and "
+                 + "which is not predictable. Keep one and restart L4D2.";
+        }
+        else if (addon.Disabled)
+        {
+            title = "ADDON TURNED OFF";
+            body = $"{addon.Packs[0].Name} is installed but switched off in the game's "
+                 + "Add-ons screen, so it never runs. Enable it and restart L4D2.";
+        }
+        else if (!ExporterProven)
+        {
+            // Installed but never seen writing. Stated as waiting rather than as a fault,
+            // because at a main menu that is exactly what it is.
+            var source = addon.Count == 1 && addon.Packs[0].FromWorkshop
+                ? "Subscribed addon found"
+                : "The addon is installed";
+
+            title = "WAITING FOR A ROUND";
+            body = $"{source}. The overlay fills in once a map is running.";
         }
         else
         {
-            // The most common cause by far, and the one the raw status cannot express: the
-            // addon is not loaded, or its VPK was replaced while the game was running.
-            var reason = _reader.IsStale
-                ? "NO EXPORT - IS THE ADDON LOADED? RESTART L4D2 AFTER UPDATING ITS VPK.  "
-                : "";
-            var detail = _reader.Diagnostic.Length > 0 ? $"  ({_reader.Diagnostic})" : "";
-            StatusText.Text = reason
-                + ($"{_reader.Status} [polls {_reader.Polls}]" + detail).ToUpperInvariant();
+            // Proven install, not exporting: menu, lobby, loading, or between maps. The
+            // badge alone says that, and it needs no sentence under it.
+            Notice.Visibility = Visibility.Collapsed;
+            return;
         }
+
+        NoticeTitle.Text = title;
+        NoticeBody.Text = body;
+        Notice.Visibility = Visibility.Visible;
+
+        DebugLog.Note("notice", "state", $"{title} - {body}");
     }
 
     /// <summary>
@@ -725,6 +963,10 @@ public partial class MainWindow : Window
         // First, and unconditionally: a scoreboard key still down after the overlay exits
         // would leave the game stuck showing it.
         _scoreboard.Release();
+
+        var debug = _debug;
+        _debug = null;      // this is shutdown, not the user turning the console off
+        debug?.Close();
 
         _settings?.Close();
         _keys?.Dispose();

@@ -360,6 +360,21 @@
                 </Border>
                 <Border Style="{StaticResource ControlCard}">
                     <StackPanel>
+                        <CheckBox x:Name="DebugCheckBox"
+                                  FontWeight="SemiBold"
+                                  Foreground="#F0F2F5"
+                                  Click="OnDebugChanged">
+                            <TextBlock Text="Debug console"
+                                       Foreground="#F0F2F5"
+                                       FontWeight="SemiBold" />
+                        </CheckBox>
+                        <TextBlock Text="Opens a window showing what the app is reading, whether the addon is exporting, and every problem it hits. Turn it on if something is not appearing; it saves a log you can attach to a report."
+                                   Margin="22,4,0,0" TextWrapping="Wrap"
+                                   Foreground="#AAB2BE" FontSize="11" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ControlCard}">
+                    <StackPanel>
                         <CheckBox x:Name="ExitWhenGameClosesCheckBox"
                                   FontWeight="SemiBold"
                                   Foreground="#F0F2F5"

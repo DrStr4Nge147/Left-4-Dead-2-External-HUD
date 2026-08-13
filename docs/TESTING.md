@@ -1,4 +1,4 @@
-# Testing — exporter v1.0.4 + overlay app v1.0.4
+# Testing — exporter v1.0.5 + overlay app v1.0.5
 
 The exporter is live-tested. This run is about the overlay app: whether it appears over the
 game, follows Tab, and stays out of the way.
@@ -9,7 +9,7 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.0.4.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.0.5.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -19,7 +19,7 @@ game, follows Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.0.4 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 1.0.5 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -117,9 +117,25 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.4` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.5` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
+- **Hold Tab at the main menu, after having played at least one round this session.**
+  Nothing should be drawn — no panel, no message, and above all no cards from the round just
+  finished. Restart the app and hold Tab at the menu again: still nothing, because
+  `exporterProven` in `config.json` is now `true`.
+- **The status corner.** Before the first round of a fresh install, the badge should carry
+  `WAITING FOR A ROUND` beneath it, saying the addon is installed. Confirm it is gone once a
+  round has exported. Then test that it tells the truth about the addon: move the VPK out of
+  `addons\` and restart both — it must say `ADDON NOT INSTALLED`. Put it back, disable the
+  addon in the in-game **Add-ons** screen — `ADDON TURNED OFF`. **Turn it back on without
+  restarting the app**: the line must clear within a few seconds. Subscribe to the Workshop
+  copy while the manual VPK is still in `addons\` — `MORE THAN ONE COPY`. A Workshop-only
+  install must be recognised as installed, despite being stored under a numeric filename.
+- **Tick Debug console** in the editor, or open it from the tray menu. Confirm the top block
+  shows `exporter live` during a round and `export stopped` at the menu, that the state file
+  path is the one the addon is writing, and that alt-tabbing produces focus lines. Close the
+  window and confirm the checkbox and the tray tick both clear.
 - **Hold Tab.** The panel should appear at top left, directly below the scoreboard, within
   a frame or two and vanish on release. The game's own scoreboard will also appear — that
   is expected, since both react to the same key.
@@ -128,6 +144,11 @@ Start a campaign with the soldiers spawning, then:
   the editor opens while that Insert bind does not execute. Release Tab before Insert once
   as well; the app must still suppress the matching Insert release without leaving either
   key stuck.
+- **Alt-tab away and back, several times, and after a map load.** Hold Tab each time. The
+  panel must still appear, and it must draw over the game rather than behind it. This is the
+  v1.0.4 fault: the hold key stopped working mid-session and only restarting the app fixed
+  it. Play a full campaign before calling it confirmed — the hook was lost to a timing
+  overrun, so a handful of clean alt-tabs proves nothing on its own.
 - Change a slider without saving, then press **Tab+Insert** again while the editor is
   active. Confirm the editor closes and reopening it shows the old saved value—the second
   shortcut is equivalent to **Cancel**.
@@ -192,26 +213,32 @@ Start a campaign with the soldiers spawning, then:
 - Whether clicks passed through
 - Anything on the panel that disagreed with the real HUD
 
-## If the panel says NO EXPORT
+## If nothing is exporting
 
 The addon is not writing `ems\overlay_hud\state.json`. Check its timestamp: if it is not
 advancing while a map is loaded, the script is not running. Almost always the VPK was
-swapped while L4D2 was open — close the game, confirm exactly one
-`overlay_hud_export_*.vpk` in `addons\`, start it again, and look for the
-`[OVLHUD] ... loaded` line in `console.log`.
+swapped while L4D2 was open — close the game, confirm exactly one exporter pack is
+installed, start it again, and look for the `[OVLHUD] ... loaded` line in `console.log`.
 
-Turn the top-right badge off with **Show status badge** once the setup is proven; it exists
-to report this same condition.
+The line under the top-right badge names the cause when the cause is on disk — not
+installed, installed twice, or turned off in the Add-ons screen. The **Debug console** has
+the rest: the file being watched, the poll count, and whether `seq` is advancing.
+
+Turn the whole status corner off with **Show status badge** once the setup is proven.
 
 ## If the panel never appears
 
-The status line in the panel says why — but you can only see it if the panel is drawing.
-Set both of these in `overlay-app\dist\config.json` and restart the app:
+Open the **Debug console** from the tray menu. Its top block says whether the hold key is
+being seen, whether L4D2 is in front, whether the exporter is live, and whether the panel is
+drawing — which is the whole chain, in order.
+
+To take the game out of the picture entirely, set both of these in
+`overlay-app\dist\config.json` and restart the app:
 
 ```json
 "alwaysShow": true,
 "ignoreForeground": true
 ```
 
-The panel will then stay on screen on the desktop and report what it is watching and what
-went wrong. Set both back to `false` afterwards.
+The panel then stays on screen on the desktop, with no hold key and no foreground gate
+involved. Set both back to `false` afterwards.

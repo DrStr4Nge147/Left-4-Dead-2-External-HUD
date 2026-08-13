@@ -18,6 +18,7 @@ public partial class SettingsWindow : Window
     private readonly Action _apply;
     private readonly Action<AppConfig, int, bool>? _startLivePreview;
     private readonly Action<bool>? _endLivePreview;
+    private readonly Action<bool>? _toggleDebug;
     private AppConfig _draft;
     private bool _ready;
     private bool _saved;
@@ -26,7 +27,8 @@ public partial class SettingsWindow : Window
 
     public SettingsWindow(AppConfig config, Action apply,
                           Action<AppConfig, int, bool>? startLivePreview = null,
-                          Action<bool>? endLivePreview = null)
+                          Action<bool>? endLivePreview = null,
+                          Action<bool>? toggleDebug = null)
     {
         InitializeComponent();
 
@@ -35,6 +37,7 @@ public partial class SettingsWindow : Window
         _apply = apply;
         _startLivePreview = startLivePreview;
         _endLivePreview = endLivePreview;
+        _toggleDebug = toggleDebug;
 
         Title = AppIdentity.Name;
         Icon = AppIcon.ForWindow();
@@ -123,6 +126,8 @@ public partial class SettingsWindow : Window
         ExitWhenGameClosesCheckBox.IsChecked = _draft.ExitWhenGameCloses;
         AlwaysShowCheckBox.IsChecked = _draft.AlwaysShow;
         ShowStatusBadgeCheckBox.IsChecked = _draft.ShowStatusBadge;
+        DebugCheckBox.IsChecked = _draft.Debug;
+        DebugCheckBox.IsEnabled = _toggleDebug != null;
 
         // The editor reopens on whichever preview was last used. This is safe to persist
         // because live preview only draws while this window is open.
@@ -249,6 +254,38 @@ public partial class SettingsWindow : Window
         // follow it as well as the sliders.
         RefreshPreview();
         SaveStatus.Text = "Unsaved changes";
+    }
+
+    /// <summary>
+    /// The console is a diagnostic, not a layout value: it takes effect the moment it is
+    /// ticked and is remembered straight away, the same as the preview mode. Waiting for
+    /// Save would be wrong for a tool someone reaches for when something is already broken.
+    /// </summary>
+    private void OnDebugChanged(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+
+        bool on = DebugCheckBox.IsChecked == true;
+
+        _draft.Debug = on;
+        if (_live.Debug != on)
+        {
+            _live.Debug = on;
+            _live.TrySave(out _);
+        }
+
+        _toggleDebug?.Invoke(on);
+    }
+
+    /// <summary>Keeps the box honest when the console is closed from its own title bar.</summary>
+    public void SetDebugChecked(bool on)
+    {
+        _draft.Debug = on;
+
+        bool wasReady = _ready;
+        _ready = false;
+        DebugCheckBox.IsChecked = on;
+        _ready = wasReady;
     }
 
     private RosterMode SelectedRosterMode()
@@ -389,6 +426,11 @@ public partial class SettingsWindow : Window
     {
         ReadControls();
 
+        // Written by the overlay while this window was open, and never by this window.
+        // Saving a draft cloned before the first export would put the app back to claiming
+        // the addon might be missing.
+        _draft.ExporterProven |= _live.ExporterProven;
+
         if (!_draft.TrySave(out string error))
         {
             SaveStatus.Text = error;
@@ -403,6 +445,7 @@ public partial class SettingsWindow : Window
         _live.AlwaysShow = _draft.AlwaysShow;
         _live.PreviewMode = _draft.PreviewMode;
         _live.PreviewScoreboard = _draft.PreviewScoreboard;
+        _live.Debug = _draft.Debug;
         _apply();
 
         // The values on screen are now the saved ones, so live preview must not roll the

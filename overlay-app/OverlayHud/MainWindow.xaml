@@ -42,25 +42,59 @@
         </Canvas>
 
         <!-- Always-visible confirmation while L4D2 is focused but no round is actively
-             exporting. Kept separate from the Tab-controlled survivor panel. -->
-        <Border x:Name="MenuBadge"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Padding="10,6"
-                CornerRadius="3"
-                Background="#A005070A"
-                BorderBrush="#40FFFFFF"
-                BorderThickness="1"
-                Visibility="Collapsed">
-            <Border.LayoutTransform>
+             exporting, and directly under it the reason. Kept out of the Tab-controlled
+             survivor panel: that panel is a roster, and it is also the thing that goes
+             missing when something is wrong, which makes it the worst place for the
+             explanation. -->
+        <StackPanel x:Name="StatusStack"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top">
+            <StackPanel.LayoutTransform>
                 <ScaleTransform x:Name="MenuBadgeScale" ScaleX="1" ScaleY="1" />
-            </Border.LayoutTransform>
-            <TextBlock x:Name="MenuBadgeText"
-                       Text="Left 4 Dead 2 Customized Overlay HUD - External"
-                       FontFamily="{StaticResource HudFont}"
-                       FontSize="11"
-                       Foreground="#CCFFFFFF" />
-        </Border>
+            </StackPanel.LayoutTransform>
+
+            <Border x:Name="MenuBadge"
+                    HorizontalAlignment="Right"
+                    Padding="10,6"
+                    CornerRadius="3"
+                    Background="#A005070A"
+                    BorderBrush="#40FFFFFF"
+                    BorderThickness="1"
+                    Visibility="Collapsed">
+                <TextBlock x:Name="MenuBadgeText"
+                           Text="Left 4 Dead 2 Customized Overlay HUD - External"
+                           FontFamily="{StaticResource HudFont}"
+                           FontSize="11"
+                           Foreground="#CCFFFFFF" />
+            </Border>
+
+            <Border x:Name="Notice"
+                    HorizontalAlignment="Right"
+                    Margin="0,4,0,0"
+                    Padding="10,6"
+                    CornerRadius="3"
+                    Background="#A005070A"
+                    BorderBrush="#40FFFFFF"
+                    BorderThickness="1"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="NoticeTitle"
+                               HorizontalAlignment="Right"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="12"
+                               Foreground="#E0A830" />
+                    <TextBlock x:Name="NoticeBody"
+                               Margin="0,3,0,0"
+                               MaxWidth="360"
+                               TextAlignment="Right"
+                               TextWrapping="Wrap"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="11"
+                               LineHeight="16"
+                               Foreground="#CCFFFFFF" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <Border x:Name="Panel"
                 HorizontalAlignment="Center"

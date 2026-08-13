@@ -27,6 +27,13 @@ public sealed class StateReader : IDisposable
     /// <summary>True when the file has not advanced its seq recently: game paused or gone.</summary>
     public bool IsStale { get; private set; } = true;
 
+    /// <summary>
+    /// True once the file has been seen to advance, which is the only proof that an
+    /// exporter is actually running. Reading a file is not proof: `state.json` from the
+    /// previous session is still sitting there at the main menu.
+    /// </summary>
+    public bool HasExported { get; private set; }
+
     /// <summary>Empty when all is well; otherwise describes why nothing is showing.</summary>
     public string Status { get; private set; } = "starting up";
 
@@ -127,12 +134,20 @@ public sealed class StateReader : IDisposable
 
         if (state.Seq != _lastSeq)
         {
+            // The first sighting is not an advance. A leftover file read once at the main
+            // menu would otherwise look freshly written for a whole staleness window, and
+            // the panel would come up on Tab full of last session's survivors.
+            bool firstSighting = _lastSeq < 0;
+
             _lastSeq = state.Seq;
             _lastSeqChangeUtc = DateTime.UtcNow;
+
+            if (!firstSighting) HasExported = true;
         }
 
         Current = state;
-        IsStale = (DateTime.UtcNow - _lastSeqChangeUtc).TotalSeconds > StaleAfterSeconds;
+        IsStale = !HasExported
+                  || (DateTime.UtcNow - _lastSeqChangeUtc).TotalSeconds > StaleAfterSeconds;
         Status = IsStale ? "game paused or not running" : "";
     }
 
