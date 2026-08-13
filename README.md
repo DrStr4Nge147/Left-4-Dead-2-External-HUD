@@ -5,8 +5,9 @@ not just the four the built-in HUD has room for. Built for oversized rosters —
 Soldiers and other mods that spawn more than four survivors.
 
 **Steam Workshop:** [Left 4 Dead 2 Customized Overlay HUD - External](https://steamcommunity.com/sharedfiles/filedetails/?id=3782550188)
-— the exporter addon. The overlay app is not on the Workshop; it is built from this
-repository (`version output/`) and is required for the addon to do anything.
+— the exporter addon. The overlay app is not on the Workshop; get it from this repo's
+[Releases](https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases) page —
+it is required for the addon to do anything.
 
 <table>
   <tr>
