@@ -1,0 +1,90 @@
+[h1]THIS ADDON NEEDS A SEPARATE APPLICATION - IT DOES NOTHING ON ITS OWN[/h1]
+
+[b]Download it here:[/b] [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Left 4 Dead 2 Customized Overlay HUD - External (GitHub releases)[/url]
+
+This addon is the exporter half. It writes live survivor state to a file and draws nothing. The application reads that file and draws the HUD. Subscribe to this, download that, or you will see no difference in game at all.
+
+[h1]WHAT IT IS[/h1]
+
+An external survivor HUD that shows [b]every[/b] survivor in the session, not just the four the built-in HUD has room for. Built for oversized rosters - [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] and anything else that spawns more than four survivors.
+
+Each card shows what the vanilla HUD shows: name, permanent health, temp health from pills or adrenaline, black-and-white state, incapacitated / hanging / dying / dead, and the medkit, pills and throwable being carried.
+
+Hold [b]Tab[/b] to show the panel, release to hide it. No key binds are changed - the application watches the key itself, so your Tab still opens the real scoreboard exactly as before.
+
+[h1]REQUIREMENTS - READ THESE, THEY ARE NOT OPTIONAL[/h1]
+
+[list]
+[*][b]You must host the session.[/b] Single player, or coop where you are the host. VScript runs on the server, so on someone else's server there is no data to export and the HUD stays empty. It does not work as a client joining a dedicated server or someone else's lobby.
+[*][b]L4D2 must run borderless windowed[/b] - launch options [b]-windowed -noborder[/b]. Nothing outside the game can draw over exclusive fullscreen. This is a limit of Windows, not of the addon.
+[*][b]Keep -condebug[/b] in your launch options, so console output lands in console.log and a problem can actually be diagnosed.
+[*]Windows only. The application is a Windows program.
+[/list]
+
+[h1]HOW IT WORKS[/h1]
+
+The overlay never touches the game process. No injection, no memory reading, no DirectX hooking. The addon writes a small file, the application reads it and draws its own window - the same category of program as the Steam or Discord overlay.
+
+The addon writes to:
+
+[code]
+left4dead2\ems\overlay_hud\state.json
+[/code]
+
+[h1]CUSTOMISING THE PANEL[/h1]
+
+Right-click the overlay's notification-area icon and choose [b]Customize UI...[/b], or hold [b]Tab[/b] and press [b]Insert[/b]. Insert on its own still does whatever you have it bound to.
+
+[list]
+[*][b]Live preview.[/b] The editor draws the real panel over the real game with your real roster, updating as you move a slider. Cancel puts everything back; nothing is written until Save & Apply.
+[*][b]Hold the game's scoreboard open[/b] while you lay the panel out, so you can see what it sits next to. The addon runs the command for you - an external application cannot.
+[*][b]Position, scale, opacity, columns[/b], and guide lines for the sidebar edge that the game itself cannot draw.
+[*][b]Show HUD consistently[/b] keeps the panel up during play instead of only while Tab is held. It still hides when L4D2 loses focus.
+[*][b]Exit when L4D2 closes[/b], on by default. Turn it off to keep the overlay in the tray between sessions.
+[/list]
+
+[h1]WHO THE PANEL SHOWS[/h1]
+
+[b]Who to show[/b] picks one of three rosters. The lower two are for Finale Soldiers - without that addon nothing is ever classified as a soldier or a follower, so they would show an empty panel.
+
+[list]
+[*][b]All survivors[/b] - every mortal soldier, follower, and extra survivor past the four L4D2 already draws.
+[*][b]Mortal soldiers + followers[/b] - Finale Soldiers' mortal soldiers and followers only.
+[*][b]Followers only[/b] - only the soldiers currently following a player.
+[/list]
+
+Immortal holdout soldiers are never drawn. Nothing can hurt them, so a health card for one carries no information.
+
+[h1]INSTALLING AND UPDATING[/h1]
+
+[list]
+[*][b]Close L4D2 before the addon updates.[/b] Addon packs are mounted when the game starts. One replaced while the game is running is not reloaded, and the old one stops working - the overlay then reports NO EXPORT at a session that looks perfectly fine.
+[*]Keep the application and the addon on the same version. They are downloaded separately, so it is on you to update both.
+[/list]
+
+[h3]v1.0.4 - the transport moved into its own folder[/h3]
+
+[list]
+[*]The two files the addon writes now live in [b]left4dead2\ems\overlay_hud\[/b] instead of loose at the top of ems\, which is where every other addon keeps its own named folder.
+[*]A current application still reads the old location, so it keeps working with an older addon.
+[*]Once this version has run once, these leftovers at the top of ems\ can be deleted: [b]overlay_hud_state.json[/b], [b]overlay_hud_cmd.txt[/b], [b]overlay_hud_probe.txt[/b].
+[/list]
+
+[h1]IF NOTHING APPEARS[/h1]
+
+[list]
+[*]The panel says why, on the panel itself - hold Tab and read it.
+[*][b]NO EXPORT[/b] means the addon is not writing. Nine times in ten the pack was updated while L4D2 was open: close the game and start it again.
+[*]Nothing at all on screen usually means the game is in exclusive fullscreen. Set [b]-windowed -noborder[/b].
+[*]An empty panel with no message means the roster filter is set to a Finale Soldiers option and there are no soldiers to show.
+[/list]
+
+[h1]COMPATIBILITY[/h1]
+
+Script only. It reads survivor state and writes one file, and changes no gameplay - no entities, no damage, no Director behaviour, no cvars. It does not conflict with HUD replacements, since it draws outside the game entirely.
+
+[h1]SOURCE AND LICENSE[/h1]
+
+Source for both halves: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD]github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD[/url] - GPL-3.0. Fork it, study it, ship your own version under the same license.
+
+The item icons are monochrome masks derived from Left 4 Dead 2's own HUD artwork, which belongs to Valve. They are here so the overlay looks like the game it sits next to; they are not mine to license.
