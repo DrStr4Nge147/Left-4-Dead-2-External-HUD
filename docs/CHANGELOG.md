@@ -2,6 +2,28 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.0.4 - 2026-08-13: the transport gets its own folder
+
+- Both transport files move into `ems\overlay_hud\`: `state.json` and `cmd.txt`. They were
+  loose at the top of `ems\` as `overlay_hud_state.json` and `overlay_hud_cmd.txt`, which is
+  three unexplained files in a folder every other addon keeps one named directory in. The
+  folder carries the name now, so the files no longer repeat it.
+- The app reads the old loose state file when the new one is absent, and then writes its
+  command file under the old name as well. The two halves are downloaded separately, so a
+  current app will meet a v1.0.3 addon; it keeps working instead of reporting `NO EXPORT` at
+  an exporter that is exporting fine one folder up.
+- The app creates `ems\overlay_hud\` if it is not there. It can ask for the scoreboard
+  before any map has loaded, which is before the addon has written anything at all.
+- **Delete the old files by hand** once the new build has written the folder:
+  `overlay_hud_state.json`, `overlay_hud_cmd.txt`, and `overlay_hud_probe.txt` (left by
+  `v0.1.0-probe1`). A stale state file is what the app falls back to, so leaving it there can
+  hide a folder that never got written.
+
+**Verification**: warning-free build; all 20 checks pass, including a new one asserting the
+command file follows a legacy exporter to the old name. The scoreboard check now creates its
+folder from nothing, which is the fresh-install path. Not yet run in game — the folder move
+itself is unconfirmed live, and `docs/TESTING.md` step 6 is where it shows up.
+
 ## Overlay HUD v1.0.3 - 2026-08-13: the addon says it needs the app
 
 - Rewrites the addon's Workshop description to open with the requirement: the separate

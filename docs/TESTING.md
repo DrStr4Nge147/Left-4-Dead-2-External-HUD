@@ -1,4 +1,4 @@
-# Testing — exporter v1.0.3 + overlay app v1.0.3
+# Testing — exporter v1.0.4 + overlay app v1.0.4
 
 The exporter is live-tested. This run is about the overlay app: whether it appears over the
 game, follows Tab, and stays out of the way.
@@ -9,7 +9,7 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.0.3.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.0.4.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -19,9 +19,14 @@ game, follows Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.0.2 loaded`. If that line is absent, the addon is not
-   mounted and nothing below will work.
-7. Start the overlay:
+   `[OVLHUD] Overlay HUD Export 1.0.4 loaded - exporting to ems/overlay_hud/state.json`. If
+   that line is absent, the addon is not mounted and nothing below will work.
+7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
+   the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
+   `overlay_hud_cmd.txt`, and `overlay_hud_probe.txt`. Nothing reads them any more, but a
+   stale `overlay_hud_state.json` is exactly what the app falls back to when the new one is
+   missing, so leaving it there can mask a folder that never got written.
+8. Start the overlay:
 
    ```text
    overlay-app\dist\OverlayHud.exe
@@ -112,7 +117,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.3` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.4` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab.** The panel should appear at top left, directly below the scoreboard, within
@@ -189,7 +194,7 @@ Start a campaign with the soldiers spawning, then:
 
 ## If the panel says NO EXPORT
 
-The addon is not writing `ems\overlay_hud_state.json`. Check its timestamp: if it is not
+The addon is not writing `ems\overlay_hud\state.json`. Check its timestamp: if it is not
 advancing while a map is loaded, the script is not running. Almost always the VPK was
 swapped while L4D2 was open — close the game, confirm exactly one
 `overlay_hud_export_*.vpk` in `addons\`, start it again, and look for the

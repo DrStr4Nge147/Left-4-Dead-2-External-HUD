@@ -1,18 +1,25 @@
-# Transport format — `overlay_hud_state.json`
+# Transport format — `overlay_hud/state.json`
 
 The exporter rewrites this file at 5 Hz while a map is loaded.
 
 ```text
-E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud_state.json
+E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud\state.json
 ```
 
-Write path verified live by `v0.1.0-probe1`.
+The `ems` write path was verified live by `v0.1.0-probe1`. Both files moved into the
+`overlay_hud` subfolder in v1.0.4; `StringToFile` takes a relative subpath and the engine
+creates the folder on first write, the same as `ems/finale_soldier/`.
+
+**Up to v1.0.3 the files sat loose at the top of `ems/`**, as `overlay_hud_state.json` and
+`overlay_hud_cmd.txt`. The app still reads the old state file when the new one is absent, so
+a current app paired with an older addon keeps working; it then writes its command file
+under the old name too, because that is the only name an older addon reads.
 
 ## Shape
 
 ```json
 {
-  "v": "1.0.3",
+  "v": "1.0.4",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -99,14 +106,17 @@ and retry, never as an error.
 **Staleness.** If `seq` has not changed for ~2 seconds, the game is paused, alt-tabbed at a
 menu, or closed. Show a stale/disconnected state rather than frozen numbers.
 
-## Reverse channel — `overlay_hud_cmd.txt`
+## Reverse channel — `overlay_hud/cmd.txt`
 
 Added in v1.0.1. The overlay app writes it, the addon reads it on the same 5 Hz tick that
 writes state out. It lives beside the state file:
 
 ```text
-E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud_cmd.txt
+E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud\cmd.txt
 ```
+
+The app creates the folder if it is not there yet. On a fresh install it can ask for the
+scoreboard before any map has loaded, which is before the addon has written anything.
 
 One line, two fields:
 

@@ -20,15 +20,17 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v1.0.3 — feature complete. Both halves working, not yet run together in-game.**
+**v1.0.4 — feature complete. Both halves working, not yet run together in-game.**
 
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v1.0.3** — exports every survivor plus a `cls` classification field for
+- **Exporter addon v1.0.4** — exports every survivor plus a `cls` classification field for
   Finale Soldiers rosters, and holds the game's scoreboard open on request. Both still need
-  one in-game confirmation.
-- **Left 4 Dead 2 Customized Overlay HUD - External v1.0.3** — includes source-faithful
+  one in-game confirmation. Its two transport files live in `left4dead2\ems\overlay_hud\`;
+  builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
+  delete.
+- **Left 4 Dead 2 Customized Overlay HUD - External v1.0.4** — includes source-faithful
   monochrome item icons, a built-in UI editor with simulated *and* live preview, the
   default Tab+Insert editor shortcut and the three roster filters. The Tab hold, the
   foreground gate and following the game window are written but not yet confirmed in-game.

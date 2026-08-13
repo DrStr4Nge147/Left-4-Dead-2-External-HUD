@@ -1,5 +1,30 @@
 # Dev log
 
+## Overlay HUD v1.0.4 - 2026-08-13: the answer was already in the same ems folder
+
+Whether `StringToFile` accepts a subpath, and whether the engine creates the directory, are
+exactly the kind of questions v0.1.0-probe1 exists to warn about — community lore, no
+observation. Both were already answered on this machine and neither needed a probe build:
+Finale Soldiers calls `StringToFile("finale_soldier/" + map + ".txt", ...)`, and
+`ems/finale_soldier/` is full of files written during play. A VPK addon, a relative subpath,
+a folder nothing else created. That is the whole proof.
+
+Worth recording as a habit rather than a fact: the install already running the mod is a
+primary source, and reading a sibling addon's source beat guessing at the API.
+
+The compatibility case is the part that needed thought. The two halves are separate
+downloads — an addon on the Workshop, an app on GitHub releases — so they are not upgraded
+together, and a path change breaks the pair in one direction. A new app meeting a v1.0.3
+addon would find no `overlay_hud/state.json` and draw `NO EXPORT` over a session that was
+exporting perfectly. So the app falls back to the old loose path, and — this is the half
+that is easy to miss — its command file has to follow, because an old addon reads only
+`overlay_hud_cmd.txt`. Writing the new name beside the old state file would be a hold
+nothing ever picks up, which is a silent no-op, which is the failure mode this project keeps
+finding. The check now asserts both pairings.
+
+The other direction is not defended: an old app with a new addon reads a stale file, and the
+staleness rule already covers it. Only one of the two can be fixed from here.
+
 ## Overlay HUD v1.0.2 - 2026-08-13: three reports, one fact
 
 Reported together: the scoreboard hold did nothing, the top-right badge was on constantly in

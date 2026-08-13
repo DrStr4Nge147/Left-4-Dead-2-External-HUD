@@ -541,7 +541,7 @@ internal static class Program
     {
         var writes = new List<string>();
         var paths = new List<string>();
-        string state = @"C:\Games\Left 4 Dead 2\left4dead2\ems\overlay_hud_state.json";
+        string state = @"C:\Games\Left 4 Dead 2\left4dead2\ems\overlay_hud\state.json";
 
         var hold = new ScoreboardHold(() => state, (path, line) =>
         {
@@ -555,7 +555,19 @@ internal static class Program
         hold.Update(true);
         bool asksForHold = hold.IsHeld && writes.SequenceEqual(new[] { "1 1" });
         bool writesBesideStateFile = paths[0] ==
-            @"C:\Games\Left 4 Dead 2\left4dead2\ems\" + ScoreboardHold.CommandFileName;
+            @"C:\Games\Left 4 Dead 2\left4dead2\ems\overlay_hud\" + ScoreboardHold.CommandFileName;
+
+        // A new app can meet an exporter up to v1.0.3, which writes loose into ems/ and reads
+        // its command file from there. Writing the current name beside that file would be a
+        // hold nothing ever picks up.
+        var legacyPaths = new List<string>();
+        string legacyState = @"C:\Games\Left 4 Dead 2\left4dead2\ems\overlay_hud_state.json";
+        var legacyHold = new ScoreboardHold(() => legacyState, (path, _) => legacyPaths.Add(path));
+        legacyHold.Update(true);
+        bool followsLegacyExporter = legacyPaths.SequenceEqual(new[]
+        {
+            @"C:\Games\Left 4 Dead 2\left4dead2\ems\" + ScoreboardHold.LegacyCommandFileName
+        });
 
         // Every poll while held is the heartbeat: same want, advancing seq. Without it the
         // addon cannot tell a live hold from a process that died holding.
@@ -592,12 +604,14 @@ internal static class Program
         bool honestWhenUnreachable = !unreachable.IsHeld && writes.Count == 4;
 
         bool passed = silentUntilAsked && asksForHold && writesBesideStateFile
+            && followsLegacyExporter
             && heartbeats && releases && releaseIsQuietOnceDone && honestWhenUnreachable
             && notHeldOnFailedWrite && releasesAfterFailedHold;
 
         Console.WriteLine(
             $"silentUntilAsked={silentUntilAsked} asksForHold={asksForHold} " +
-            $"writesBesideStateFile={writesBesideStateFile} heartbeats={heartbeats} " +
+            $"writesBesideStateFile={writesBesideStateFile} " +
+            $"followsLegacyExporter={followsLegacyExporter} heartbeats={heartbeats} " +
             $"releases={releases} releaseIsQuietOnceDone={releaseIsQuietOnceDone} " +
             $"honestWhenUnreachable={honestWhenUnreachable} " +
             $"notHeldOnFailedWrite={notHeldOnFailedWrite} " +
@@ -638,7 +652,11 @@ internal static class Program
         string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                                                 "OverlayHudCheck", "ems");
         System.IO.Directory.CreateDirectory(scratch);
-        config.StatePath = System.IO.Path.Combine(scratch, "overlay_hud_state.json");
+
+        // The addon's own folder is deliberately NOT created here: on a fresh install the
+        // app asks for the scoreboard before a map has ever been loaded, and the hold has to
+        // make the folder itself rather than fail on it.
+        config.StatePath = System.IO.Path.Combine(scratch, "overlay_hud", "state.json");
 
         Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
 
@@ -663,7 +681,8 @@ internal static class Program
         // because the real scoreboard is what will be on screen.
         var scoreboard = (System.Windows.Shapes.Rectangle)GetField(window, "GuideScoreboard", flags);
         var holdState = (ScoreboardHold)GetField(window, "_scoreboard", flags);
-        string commandFile = System.IO.Path.Combine(scratch, ScoreboardHold.CommandFileName);
+        string commandFile = System.IO.Path.Combine(scratch, "overlay_hud",
+                                                    ScoreboardHold.CommandFileName);
 
         bool asksAddonForScoreboard = holdState.IsHeld
             && System.IO.File.Exists(commandFile)
@@ -672,7 +691,7 @@ internal static class Program
 
         // Undeliverable ask - no addon folder to write into. The block is the fallback, and
         // the hold must not claim to be held.
-        config.StatePath = @"X:\OverlayHudCheckNoSuchFolder\ems\overlay_hud_state.json";
+        config.StatePath = @"X:\OverlayHudCheckNoSuchFolder\ems\overlay_hud\state.json";
         window.UpdateLivePreview(draft, 6, true);
         Invoke(window, "Render", flags);
         bool marksRegionWhenUndeliverable = !holdState.IsHeld
@@ -680,7 +699,7 @@ internal static class Program
             && Math.Abs(scoreboard.Height - 1080 * 0.45) < 0.5
             && Math.Abs(scoreboard.Width - 1920 * LayoutPolicy.SidebarWidthFraction) < 0.5;
 
-        config.StatePath = System.IO.Path.Combine(scratch, "overlay_hud_state.json");
+        config.StatePath = System.IO.Path.Combine(scratch, "overlay_hud", "state.json");
         window.UpdateLivePreview(draft, 6, false);
         bool scoreboardOptional = scoreboard.Visibility != Visibility.Visible
             && System.IO.File.ReadAllText(commandFile).StartsWith("0 ", StringComparison.Ordinal);

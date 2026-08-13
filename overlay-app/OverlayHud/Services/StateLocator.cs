@@ -5,18 +5,29 @@ using Microsoft.Win32;
 namespace OverlayHud.Services;
 
 /// <summary>
-/// Finds left4dead2/ems/overlay_hud_state.json without the user having to type a path.
+/// Finds left4dead2/ems/overlay_hud/state.json without the user having to type a path.
 /// The file itself may not exist yet - what is located is the game install.
 /// </summary>
 public static class StateLocator
 {
-    private const string RelativeState = @"left4dead2\ems\overlay_hud_state.json";
+    private const string RelativeState = @"left4dead2\ems\overlay_hud\state.json";
     private const string GameMarker    = @"left4dead2\gameinfo.txt";
+
+    /// <summary>
+    /// Where exporters up to v1.0.3 wrote, loose at the top of ems/. Still read, because
+    /// the two halves are downloaded separately and a new app can meet an old addon; an
+    /// app that only knew the new path would report "exporter not writing" at someone
+    /// whose exporter is writing perfectly well, one folder up.
+    /// </summary>
+    private const string LegacyState = @"left4dead2\ems\overlay_hud_state.json";
 
     /// <summary>
     /// An install that already has a state file wins over one that merely exists. A
     /// machine can carry more than one L4D2 install (a stub on C:, the real one on
     /// another drive) and picking the first one found lands on the wrong install.
+    ///
+    /// Within one install the current path wins over the legacy one, so an upgrade is not
+    /// pinned to a stale file the old exporter left behind and no longer updates.
     /// </summary>
     public static string? Locate()
     {
@@ -31,6 +42,10 @@ public static class StateLocator
             var state = Path.Combine(game, RelativeState);
 
             if (File.Exists(state)) return state;
+
+            var legacy = Path.Combine(game, LegacyState);
+
+            if (File.Exists(legacy)) return legacy;
 
             firstInstall ??= state;
         }

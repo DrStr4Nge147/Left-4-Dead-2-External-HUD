@@ -18,7 +18,26 @@ namespace OverlayHud.Services;
 /// </summary>
 public sealed class ScoreboardHold
 {
-    public const string CommandFileName = "overlay_hud_cmd.txt";
+    public const string CommandFileName = "cmd.txt";
+
+    /// <summary>
+    /// What exporters up to v1.0.3 read, beside their loose state file at the top of ems/.
+    /// </summary>
+    public const string LegacyCommandFileName = "overlay_hud_cmd.txt";
+
+    /// <summary>Legacy state file name, the one signal that an old exporter is in use.</summary>
+    private const string LegacyStateFileName = "overlay_hud_state.json";
+
+    /// <summary>
+    /// The command file has to land where the exporter that is actually running reads it.
+    /// The state file it just wrote says which one that is: an old exporter writes loose
+    /// into ems/, and reads its command file from there too.
+    /// </summary>
+    public static string CommandNameFor(string statePath) =>
+        string.Equals(Path.GetFileName(statePath), LegacyStateFileName,
+                      StringComparison.OrdinalIgnoreCase)
+            ? LegacyCommandFileName
+            : CommandFileName;
 
     private readonly Func<string?> _statePath;
     private readonly Action<string, string>? _write;
@@ -71,7 +90,9 @@ public sealed class ScoreboardHold
 
         string? folder = Path.GetDirectoryName(state);
 
-        return string.IsNullOrEmpty(folder) ? null : Path.Combine(folder, CommandFileName);
+        return string.IsNullOrEmpty(folder)
+            ? null
+            : Path.Combine(folder, CommandNameFor(state));
     }
 
     private bool TryWrite(string path, string want)
@@ -85,6 +106,12 @@ public sealed class ScoreboardHold
                 _write(path, line);
                 return true;
             }
+
+            // ems/overlay_hud/ is created by whichever side writes first, and before a map
+            // has ever loaded that is this one. Without it the first hold of a fresh install
+            // fails on a missing directory and reports itself, correctly, as not held.
+            string? folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
 
             File.WriteAllText(path, line);
             return true;

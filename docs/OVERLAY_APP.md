@@ -101,7 +101,7 @@ Sits next to the exe. Edit and restart the app.
 
 | Key | Default | Notes |
 |---|---|---|
-| `statePath` | `""` | Empty = find the L4D2 install automatically. An install that already has a state file is preferred over one that merely exists |
+| `statePath` | `""` | Empty = find `left4dead2\ems\overlay_hud\state.json` automatically, falling back to the pre-v1.0.4 loose `ems\overlay_hud_state.json`. An install that already has a state file is preferred over one that merely exists |
 | `gameProcess` | `left4dead2` | Process name to treat as the game |
 | `holdKey` | `9` | Virtual-key code. 9 = Tab. 160 = left shift, 164 = left alt |
 | `editorKey` | `45` | Key used with `holdKey` to open the editor. 45 = Insert; `0` disables the shortcut |

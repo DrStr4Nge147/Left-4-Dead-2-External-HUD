@@ -4,16 +4,21 @@
 // application reads. Read-only with respect to the game: it reads state and writes one
 // file. No gameplay is touched.
 //
-// Output: left4dead2/ems/overlay_hud_state.json   (verified write path, v0.1.0-probe1)
+// Output: left4dead2/ems/overlay_hud/state.json   (ems write path verified by v0.1.0-probe1)
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.0.3"
-::OvlHud.OUT_FILE  <- "overlay_hud_state.json"
+::OvlHud.VERSION   <- "1.0.4"
+
+// Both files live in an ems subfolder rather than loose at the top of ems/, which is what
+// every other addon on a busy install does. StringToFile takes a relative subpath and the
+// engine creates the folder on the first write - the same mechanism Finale Soldiers uses
+// for ems/finale_soldier/. The folder carries the name, so the files do not repeat it.
+::OvlHud.OUT_FILE  <- "overlay_hud/state.json"
 
 // Reverse channel. The overlay app writes "<want> <seq>" here; this script reads it on the
 // same tick that writes state out. See docs/STATE_FORMAT.md.
-::OvlHud.CMD_FILE  <- "overlay_hud_cmd.txt"
+::OvlHud.CMD_FILE  <- "overlay_hud/cmd.txt"
 
 // Seconds without a new command seq before a held scoreboard is released on its own. The
 // app rewrites the file about four times a second while it holds, so anything past this
