@@ -10,8 +10,8 @@ repository (`version output/`) and is required for the addon to do anything.
 
 <table>
   <tr>
-    <td><img src="workshop%20assets/OVerlayHUD.jpg" width="260" alt="The overlay panel over a full roster"></td>
-    <td><img src="workshop%20assets/OverlayHUD%202.jpg" width="260" alt="The overlay panel with health and item cards"></td>
+    <td><img src="workshop%20assets/OverlayHUD%202.jpg" width="260" alt="The overlay panel over a full roster"></td>
+    <td><img src="workshop%20assets/OVerlayHUD.jpg" width="260" alt="The overlay panel with health and item cards"></td>
     <td><img src="workshop%20assets/OVerlayHUD%20editor.png" width="260" alt="The built-in UI editor"></td>
   </tr>
   <tr>
