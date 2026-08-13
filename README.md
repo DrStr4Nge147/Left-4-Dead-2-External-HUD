@@ -8,11 +8,18 @@ Soldiers and other mods that spawn more than four survivors.
 — the exporter addon. The overlay app is not on the Workshop; it is built from this
 repository (`version output/`) and is required for the addon to do anything.
 
-![The overlay panel over a full roster](workshop%20assets/OVerlayHUD.jpg)
-
-![The overlay panel with health and item cards](workshop%20assets/OverlayHUD%202.jpg)
-
-![The built-in UI editor](workshop%20assets/OVerlayHUD%20editor.png)
+<table>
+  <tr>
+    <td><img src="workshop%20assets/OVerlayHUD.jpg" width="260" alt="The overlay panel over a full roster"></td>
+    <td><img src="workshop%20assets/OverlayHUD%202.jpg" width="260" alt="The overlay panel with health and item cards"></td>
+    <td><img src="workshop%20assets/OVerlayHUD%20editor.png" width="260" alt="The built-in UI editor"></td>
+  </tr>
+  <tr>
+    <td align="center">The panel over a full roster</td>
+    <td align="center">Health and item cards</td>
+    <td align="center">The built-in UI editor</td>
+  </tr>
+</table>
 
 Two pieces:
 
