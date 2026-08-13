@@ -4,6 +4,16 @@ An external survivor HUD for Left 4 Dead 2 that shows **every** survivor in the 
 not just the four the built-in HUD has room for. Built for oversized rosters — Finale
 Soldiers and other mods that spawn more than four survivors.
 
+**Steam Workshop:** [Left 4 Dead 2 Customized Overlay HUD - External](https://steamcommunity.com/sharedfiles/filedetails/?id=3782550188)
+— the exporter addon. The overlay app is not on the Workshop; it is built from this
+repository (`version output/`) and is required for the addon to do anything.
+
+![The overlay panel over a full roster](workshop%20assets/OVerlayHUD.jpg)
+
+![The overlay panel with health and item cards](workshop%20assets/OverlayHUD%202.jpg)
+
+![The built-in UI editor](workshop%20assets/OVerlayHUD%20editor.png)
+
 Two pieces:
 
 | Piece | What it is | Where |
