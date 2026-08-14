@@ -1,4 +1,4 @@
-# Testing — exporter v1.0.5 + overlay app v1.0.5
+# Testing — exporter v1.0.8 + overlay app v1.0.8
 
 The exporter is live-tested. This run is about the overlay app: whether it appears over the
 game, follows Tab, and stays out of the way.
@@ -9,7 +9,7 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.0.5.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.0.8.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -19,7 +19,7 @@ game, follows Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.0.5 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 1.0.8 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -117,7 +117,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.5` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.8` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**
@@ -180,6 +180,16 @@ Start a campaign with the soldiers spawning, then:
   dodge the bot-catchup teleport). It must **stay** on the panel, not flicker off and back.
 - Get incapped, get revived, go black-and-white, let a soldier die, pop pills. Check each
   reads correctly on the panel.
+- With an addon that restores extra survivor bots, let the whole team go down and wait for
+  the same-map round restart. Confirm `console.log` prints
+  `[OVLHUD] re-arming exporter (scriptedmode, first export in 1s)` or the same line for
+  `director`, then confirm the `state.json` timestamp resumes advancing and the extra cards
+  return within a second or two. This is the regression case for v1.0.8: through v1.0.7 the
+  exporter stopped writing at the wipe and the panel consequently showed zero while the
+  restored bots were already standing in the room.
+  - Chapter progression is a separate path and was never affected - it goes through
+    `mapspawn_addon.nut`, which a restart does not re-run. Worth walking one map end to end
+    anyway, since the same re-entry files now fire on that path too.
 - Alt-tab out. The panel must disappear entirely, and Tab on the desktop must do nothing.
 - Alt-tab back and hold Tab again.
 - With **Exit when L4D2 closes** checked, close L4D2 and confirm the overlay tray icon exits

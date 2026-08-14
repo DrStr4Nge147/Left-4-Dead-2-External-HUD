@@ -1230,7 +1230,7 @@ internal static class Program
         var file = System.IO.Path.Combine(folder, "state.json");
 
         string Snapshot(long seq) =>
-            $"{{\"v\":\"1.0.5\",\"seq\":{seq},\"time\":1,\"count\":2,\"survivors\":[" +
+            $"{{\"v\":\"1.0.8\",\"seq\":{seq},\"time\":1,\"count\":2,\"survivors\":[" +
             // Soldiers, so the vanilla-four skip does not decide the count for us.
             "{\"uid\":1,\"name\":\"Leftover A\",\"cls\":\"soldier\",\"hp\":100,\"maxhp\":100}," +
             "{\"uid\":2,\"name\":\"Leftover B\",\"cls\":\"soldier\",\"hp\":80,\"maxhp\":100}]}";

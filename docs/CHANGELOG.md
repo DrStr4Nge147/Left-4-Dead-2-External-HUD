@@ -2,6 +2,35 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.0.8 - 2026-08-14: the HUD survives a same-map round restart
+
+A full-team wipe restarts the map in place, and extra survivors restored by another addon -
+Finale Soldiers' followers, Spawn L4D1/L4D2 Survivors' bots - came back into a panel that
+read zero. The exporter's export loop is an `EntFire` chain living on the map's worldspawn,
+and a restart tears that down without re-running `mapspawn_addon.nut`, so nothing wrote the
+state file again for the rest of the session. The app was reading a frozen file and doing
+the right thing with it.
+
+- The exporter now ships `scriptedmode_addon.nut` and `director_base_addon.nut` alongside
+  `mapspawn_addon.nut`. Both re-run on a same-map restart and re-arm the export loop; the
+  existing generation guard means the doubled call costs nothing.
+- Re-arming after a restart waits 1 second before the first export, not the 5 seconds a
+  cold chapter load needs, so the panel comes back about as fast as the survivors do.
+- An empty roster is never written during the first 4 seconds after a boot. A tick that
+  lands mid-respawn holds the panel blank rather than publishing a confident zero, which is
+  the failure this release exists to remove. Past that window a zero is written, because by
+  then it is true.
+- Chapter progression was never affected and is unchanged.
+- Advances the exporter addon and desktop overlay together to v1.0.8. The app's behavior is
+  unchanged - its `EXTRA SURVIVORS 0` was the correct reading of a stale file throughout.
+
+Supersedes the unreleased v1.0.6 and v1.0.7 builds, which tried to recover through a
+`round_start_post_nav` listener. That callback is never delivered to this addon, from any
+entry point tried; see the dev log.
+
+**Verification**: live-tested - the panel repopulates after a full-team wipe restart with
+restored followers. The shortened delay is source inspection only.
+
 ## Overlay HUD v1.0.5 - 2026-08-13: the hold key stops dying mid-session
 
 Reported as the overlay showing at first and then never again after an alt-tab, with a

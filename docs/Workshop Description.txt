@@ -63,28 +63,11 @@ Immortal holdout soldiers are never drawn, in any of the three.
 [h1]INSTALLING AND UPDATING[/h1]
 
 [list]
-[*][b]Close L4D2 before the addon updates.[/b] Addon packs are mounted when the game starts. One replaced while the game is running is not reloaded, and the old one stops working - the overlay then shows nothing in a session that looks perfectly fine.
-[*]Keep the application and the addon on the same version. They are downloaded separately, so it is on you to update both.
+[*][b]Close L4D2 before the addon updates.[/b] Packs are mounted at game start; one replaced while the game is running is not reloaded, and the old one keeps running until you restart.
+[*]Keep the application and the addon on the same version - they are downloaded separately, so updating is on you.
 [/list]
 
-[h3]v1.0.5 - the overlay stops going missing after an alt-tab[/h3]
-
-[list]
-[*]Fixes the overlay showing at first and then not responding to Tab at all until the application was restarted. Windows was quietly removing its keyboard hook; the application now notices and puts it back.
-[*]The overlay puts itself back on top of the game when you alt-tab in.
-[*]Holding Tab at the main menu no longer shows the last session's survivors, or a warning about the addon on an install where the addon is working. The panel only draws a roster it is being sent right now.
-[*]When something really is wrong, the application says so under its top-right badge, and it checks: whether an exporter pack is installed at all, whether two are fighting, and whether it has been turned off in the Add-ons screen. Workshop subscriptions are recognised as well as manually installed VPKs.
-[*]New debug console in the application, from its settings or its tray icon: it says whether the addon is exporting, what it is reading, and what went wrong, and saves a log you can attach to a report.
-[*]Addon side is unchanged - it only advances to keep both halves on the same version.
-[/list]
-
-[h3]v1.0.4 - the transport moved into its own folder[/h3]
-
-[list]
-[*]The two files the addon writes now live in [b]left4dead2\ems\overlay_hud\[/b] instead of loose at the top of ems\, which is where every other addon keeps its own named folder.
-[*]A current application still reads the old location, so it keeps working with an older addon.
-[*]Once this version has run once, these leftovers at the top of ems\ can be deleted: [b]overlay_hud_state.json[/b], [b]overlay_hud_cmd.txt[/b], [b]overlay_hud_probe.txt[/b].
-[/list]
+[b]Current: v1.0.8[/b] - includes the v1.0.5 input/status fixes and keeps the HUD alive through a same-map round restart. When a full-team wipe restarts the map and another addon puts your extra survivors back, they are written to the HUD again within about a second instead of leaving a false empty roster behind. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
 
 [h1]IF NOTHING APPEARS[/h1]
 

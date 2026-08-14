@@ -1,6 +1,8 @@
 # Transport format — `overlay_hud/state.json`
 
-The exporter rewrites this file at 5 Hz while a map is loaded.
+The exporter rewrites this file at 5 Hz while a round is running. It re-arms itself from
+`round_start_post_nav`, including same-map restarts, so a round wipe cannot leave the
+transport frozen while restored survivor bots are already present.
 
 ```text
 E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud\state.json
@@ -19,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "1.0.5",
+  "v": "1.0.8",
   "seq": 412,
   "time": 183.40,
   "count": 8,

@@ -1,5 +1,131 @@
 # Dev log
 
+## 2026-08-14 - v1.0.7-exp3, shipped as v1.0.8: the restart delay was a cold-load wait in the wrong place
+
+Promoted to v1.0.8 after the author confirmed the restart recovery live. The three exp
+builds were deleted on promotion; v1.0.6 and v1.0.7 never shipped either, and the changelog
+folds all five into the one release. The trail below is why the shipped fix looks nothing
+like the first two attempts.
+
+
+exp2 confirmed live: the panel repopulates after a wipe restart. The author's follow-up was
+the delay, and it was not deliberate - `BOOT_WAIT` is 5 seconds because a chapter load has
+no settled roster at t=0, and the re-arm path inherited it without anyone deciding it
+should.
+
+Rather than trade the wait against a mid-respawn misread, the two concerns are now
+separate. `REARM_WAIT` (1s) covers a restart into a live VM, `BOOT_WAIT` (5s) still covers a
+cold load, and the case the long wait was really guarding - exporting an empty roster while
+survivors are still being put back - is handled directly: within `SETTLE` (4s) of any boot,
+a zero-survivor result is not written at all. The app holds its stale frame, blank, which is
+the honest state; publishing `count: 0` there would reproduce the original false zero from
+the opposite direction.
+
+`coldLoad` is what tells the two apart, and it is cleared on the first export rather than at
+boot: the second and third entry points of a normal chapter load run before anything has
+been exported, so they correctly keep the long wait.
+
+**Verification**: source inspection. Not live-tested.
+
+## 2026-08-14 - v1.0.7-exp2: stop waiting for an event that is never delivered
+
+exp1's theory was that the mapspawn phase was the wrong place to register from. It was
+wrong. exp1 registered from both phases, the log shows both lines -
+`listener registered (mapspawn)` at 415167 and `(director)` at 415223 - and on the restart
+that followed, `[CF AutoSpawn][DEBUG] round_start_post_nav fired` appears at 430640 while
+`[OVLHUD] re-arming` still appears nowhere. Two builds, two registration sites, zero
+callbacks. Why the delivery does not reach this addon is unresolved and is now moot: the
+event route is abandoned rather than debugged further.
+
+The author also narrowed the report usefully: chapter progression carries the HUD fine,
+and the failure is only the same-map restart. That fits exactly - `mapspawn_addon.nut` runs
+on a chapter load and not on a restart.
+
+What actually works on this install was sitting in the same log the whole time.
+`[ADS] thinker re-armed after a round restart` is aim-all-guns recovering from the same
+restarts, and it uses no game event at all: it ships `scriptedmode_addon.nut` and
+`director_base_addon.nut`, both of which DO re-run on a restart, and re-does its bootstrap
+idempotently from each. Its re-arm branch also proves the script VM survives that restart -
+the addon's own booted flag is still set - so what the restart destroys is the map's
+entities, which is precisely what kills an `EntFire`-on-worldspawn chain.
+
+So the exporter now does the same: two re-entry files, each calling `Rearm` -> `Boot`,
+with the existing generation guard making a double call free. The `events` table and
+`RegisterRoundEvents` are deleted; a dead mechanism sitting next to a live one is how the
+next person loses a day.
+
+Both re-entry files aim their fallback include at `getroottable()` explicitly. They execute
+in the map-script and DirectorScript scopes, not the root table, and `::OvlHud` has to be
+in the root for the scheduled `RunScriptCode` ticks to resolve it.
+
+**Verification**: source inspection and the console-log capture above. Not live-tested.
+Packed as `overlay_hud_export_v1.0.7-exp2.vpk`.
+
+## 2026-08-14 - v1.0.7-exp1: the listener was registered into the wrong phase
+
+v1.0.7 shipped the right mechanism and registered it in a place where it does nothing. The
+author reported the same false zero roster with 1.0.7 loaded, and added that it reproduces
+with any addon that adds extra survivors - Spawn L4D1/L4D2 Survivors included - which rules
+out Finale Soldiers' carryover restore as the cause and puts the fault squarely in the
+exporter.
+
+`console.log` settles it. With 1.0.7 loaded the addon prints its own
+`round_start_post_nav listener registered` on every map load. On the same-map restart that
+follows, `[CF AutoSpawn][DEBUG] round_start_post_nav fired` and the other addons' round
+handlers all appear - and `[OVLHUD] round_start_post_nav: re-arming exporter` appears
+nowhere in 238,000 lines. The event fired. The callback was not delivered. The frozen
+`state.json` (`seq` 101, `time` 26.83) is that dead export chain, and the app's
+`EXTRA SURVIVORS 0` is `MainWindow` line 717 refusing to draw a stale file - the app was
+right at every step.
+
+The difference between the addons whose handlers fire and this one is the entry point.
+Finale Soldiers registers from `director_base_addon.nut`, which the console log shows
+loading after `scriptedmode_addon.nut` and `ScriptMode_Init`. This addon registered from
+`mapspawn_addon.nut`, which loads before both. A registration made in the mapspawn phase is
+not present in the table the dispatcher reads once scripted mode has initialised. The exact
+engine-side reason is unverified - `scriptedmode.nuc` is compiled bytecode in `pak01_dir`
+and was not decompiled - but the behavioural difference is reproduced in the capture and it
+is enough to place the registration correctly.
+
+Fix: keep the mapspawn registration and add an additive `director_base_addon.nut` that
+registers again. Two live callbacks would call `Boot()` twice in one frame and the second
+generation bump retires the first chain, so the duplicate is free; having none is not.
+
+**Verification**: source inspection and the console-log capture above. Not live-tested.
+Packed as `overlay_hud_export_v1.0.7-exp1.vpk`; `addonversion` deliberately stays at 1.0.7.
+
+## 2026-08-14 - re-arm the exporter after a same-map round restart
+
+The supplied captures narrowed this to the HUD transport, not the survivor-spawn addon.
+The state file's last write was 09:50:52, exactly when the team wipe restarted the round;
+the `EXTRA SURVIVORS 0` capture was 09:51:00. The overlay was therefore doing the safe
+thing with a stale file, but the VScript export chain had never been restarted for the
+new round. `mapspawn_addon.nut` is not guaranteed to execute again when the Director
+restarts the same map.
+
+The exporter now registers `round_start_post_nav` through the additive event callback
+collector. That event is observed on both a fresh map and a same-map restart, after the
+real survivor entities have settled. It calls the existing generation-safe `Boot()`;
+the old `EntFire` chain is superseded and one new chain begins after the normal five-
+second roster-settle delay. No survivor addon or Finale Soldiers code is changed.
+
+**Verification**: source inspection and app build/layout checks; live confirmation still
+needs the supplied reproduction with the new v1.0.7 exporter loaded from a fresh L4D2
+launch.
+
+## 2026-08-14 - version alignment for the restart follower fix
+
+The follower-count failure belongs to Finale Soldiers' carryover restore, where a
+replacement soldier could keep following through native survivor behavior without
+having its `cf_soldier_following` scope marker rebuilt. The exporter is intentionally
+read-only and already classified that state correctly, so no HUD workaround was added.
+The exporter and desktop app advance together to v1.0.6 so users do not pair the fixed
+Finale Soldiers build with an older overlay package by version accident.
+
+**Verification**: source and VPK structure checks pass; the overlay app build and layout
+checks pass. Not yet live-tested - the combined run must confirm the state file emits
+`cls: "follower"` after a restart and the overlay draws the restored cards.
+
 ## Overlay HUD v1.0.5 - 2026-08-13: a hook can be gone without anything saying so
 
 The report was "it showed, I alt-tabbed, it never came back, restarting the app fixed it".

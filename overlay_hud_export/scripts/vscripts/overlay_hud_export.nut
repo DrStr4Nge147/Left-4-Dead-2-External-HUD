@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.0.5"
+::OvlHud.VERSION   <- "1.0.8"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -32,6 +32,26 @@
 
 // Seconds after chapter load before the first export. The roster is not settled at t=0.
 ::OvlHud.BOOT_WAIT <- 5.0
+
+// The same wait after a same-map round restart, where the map is already loaded and the
+// survivors are put back in a fraction of the time a cold load takes. Five seconds there
+// is five seconds of blank panel for no gain - the settle guard below covers what the long
+// wait was actually protecting against.
+::OvlHud.REARM_WAIT <- 1.0
+
+// Seconds after any boot during which an EMPTY roster is not written out. An export that
+// honestly reports zero survivors mid-respawn is indistinguishable, in the app, from the
+// stale-file false zero this whole restart path exists to fix - and a blank panel for one
+// more tick is better than a confident wrong one. After this window a zero is written,
+// because by then it is real.
+::OvlHud.SETTLE    <- 4.0
+
+// Time() the current generation booted at, for the settle guard.
+::OvlHud.bootTime  <- 0.0
+
+// True until the first export of this script load. Distinguishes a cold chapter load, which
+// gets BOOT_WAIT, from a round-restart re-entry into a live VM, which gets REARM_WAIT.
+::OvlHud.coldLoad  <- true
 
 ::OvlHud.DEBUG     <- false
 
@@ -445,6 +465,15 @@
 		count++
 	}
 
+	// Still inside the settle window with nobody found: the survivors are mid-respawn, not
+	// absent. Write nothing and let the app hold on the previous frame, which it already
+	// treats as stale, rather than publishing an authoritative empty roster.
+	if (count == 0 && (Time() - this.bootTime) < this.SETTLE) { return }
+
+	// First real export of this script load - anything from here on is a re-entry into a
+	// live VM, which is a round restart and gets the short wait.
+	this.coldLoad = false
+
 	this.seq++
 
 	local json = "{"
@@ -498,13 +527,45 @@
 	}
 }
 
+// Called by the two re-entry points, scriptedmode_addon.nut and director_base_addon.nut,
+// on a map load AND on a same-map round restart.
+//
+// A restart tears down the map's entities without re-running mapspawn_addon.nut, so the
+// EntFire chain - which lives on the old round's worldspawn - dies there and the exporter
+// goes silent while the restored survivor bots are already standing in the new round. That
+// is the false zero roster: the app is reading a file nothing writes any more.
+//
+// This does NOT go through round_start_post_nav. v1.0.7 and v1.0.7-exp1 both tried that -
+// registering from mapspawn, then from mapspawn AND the director phase - and the callback
+// was never delivered in either build, while other addons' handlers for that same event
+// fired on the same restart, in the same log. [OBSERVED - console.log 2026-08-14]
+//
+// Re-entry is the mechanism the aim-all-guns addon uses on this install and it is seen
+// working on every restart in that capture. Boot() is what makes it safe to call blind:
+// the generation bump retires whatever chain came before, so a restart that runs both
+// re-entry points, or a map load that runs all three entry points, still ends with exactly
+// one live chain.
+//
+// A re-entry that has already exported this script load is a restart, and waits REARM_WAIT
+// rather than the cold-load BOOT_WAIT - the map is already up and the survivors are back in
+// a fraction of the time. The other two re-entries of a normal chapter load land while
+// coldLoad is still true and keep the long wait.
+::OvlHud.Rearm <- function (entry)
+{
+	local wait = this.coldLoad ? this.BOOT_WAIT : this.REARM_WAIT
+
+	this.Log("re-arming exporter (" + entry + ", first export in " + wait + "s)")
+	this.Boot(wait)
+}
+
 // ---------------------------------------------------------------------------
 // load
 // ---------------------------------------------------------------------------
 
-::OvlHud.Boot <- function ()
+::OvlHud.Boot <- function (wait = null)
 {
 	this.gen++
+	this.bootTime = Time()
 
 	try
 	{
@@ -528,7 +589,7 @@
 	this.cmdSeq  = -1
 	this.cmdSeen = 0.0
 
-	this.Schedule(this.BOOT_WAIT)
+	this.Schedule((wait == null) ? this.BOOT_WAIT : wait)
 }
 
 ::OvlHud.Log("Overlay HUD Export " + ::OvlHud.VERSION + " loaded - exporting to ems/" + ::OvlHud.OUT_FILE)
