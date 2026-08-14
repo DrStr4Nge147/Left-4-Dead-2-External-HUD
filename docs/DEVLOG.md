@@ -1,5 +1,31 @@
 # Dev log
 
+## 2026-08-14 - v1.0.8: the temp-health bar was the wrong colour by construction
+
+The buffer segment was a fixed pale blue at 55% opacity over a dark bar. Against green,
+amber or red it landed somewhere near grey, which is what the author reported after
+comparing it side by side with the vanilla HUD: in game the buffer is the bar's own colour,
+scratched over, not a colour of its own.
+
+Two things had to change together. `TempBrush` is now derived from the health colour rather
+than being a constant, and the XAML `Opacity="0.55"` came off the rectangle - with alpha
+baked into the brush, leaving the opacity there knocked it back a second time and put the
+grey straight back.
+
+The texture is a tiled `DrawingBrush`: the colour at 74% brightness, with three uneven
+slanted streaks at 40% over it. Uneven on purpose - evenly spaced stripes read as a
+progress bar or a loading indicator, which is the one thing a health bar must not look
+like. Brushes are frozen and cached per colour, because cards are rebuilt on every poll and
+five new tiled brushes a second is work the render thread does not need.
+
+This also settles the black-and-white case the author raised: nothing special is needed for
+it. The buffer follows the bar, and the bar is already grey on the last strike, so a
+black-and-white survivor who drinks pills gets a grey buffer for the right reason.
+
+Checked by rendering all seven bar states offscreen through the shipping `SurvivorCard`
+code with the same two-rectangle layering the card template uses, rather than by eye in a
+live session.
+
 ## 2026-08-14 - v1.0.7-exp3, shipped as v1.0.8: the restart delay was a cold-load wait in the wrong place
 
 Promoted to v1.0.8 after the author confirmed the restart recovery live. The three exp

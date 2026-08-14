@@ -66,11 +66,14 @@
 
                 <Grid Grid.Column="1" Width="190" Height="16" VerticalAlignment="Center">
                     <Border Background="#66000000" CornerRadius="2" />
+                    <!-- Temp health. Drawn full width and then covered by the permanent bar,
+                         so what shows is the buffer past current health. The brush carries
+                         its own alpha - no Opacity here, or it is knocked back twice and
+                         goes grey against the dark bar again. -->
                     <Rectangle HorizontalAlignment="Left"
                                Width="{Binding TotalWidth}"
                                Fill="{Binding TempBrush}"
-                               RadiusX="2" RadiusY="2"
-                               Opacity="0.55" />
+                               RadiusX="2" RadiusY="2" />
                     <Rectangle HorizontalAlignment="Left"
                                Width="{Binding PermanentWidth}"
                                Fill="{Binding HealthBrush}"

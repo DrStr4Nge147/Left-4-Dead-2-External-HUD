@@ -1,4 +1,5 @@
 using System.IO;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using OverlayHud.Model;
@@ -20,6 +21,11 @@ public sealed class SurvivorCard
     public double TotalWidth { get; init; }
 
     public Brush HealthBrush { get; init; } = Brushes.LimeGreen;
+
+    /// <summary>
+    /// The temp-health segment: the game's scratched-up overlay in the health bar's own
+    /// colour, not a colour of its own. See <see cref="Grunge"/>.
+    /// </summary>
     public Brush TempBrush { get; init; } = Brushes.White;
 
     public string StateText { get; init; } = "";
@@ -38,12 +44,11 @@ public sealed class SurvivorCard
     /// <summary>L4D2 HUD slot order: throwable, kit/ammo pack, pills/adrenaline.</summary>
     public IReadOnlyList<ItemChip> ItemSlots => new[] { Throwable, Kit, Pill };
 
-    private static readonly Brush Green   = Frozen(0x4C, 0xC0, 0x4C);
-    private static readonly Brush Amber   = Frozen(0xE0, 0xA8, 0x30);
-    private static readonly Brush Red     = Frozen(0xC8, 0x3C, 0x3C);
-    private static readonly Brush Bone    = Frozen(0xD8, 0xD8, 0xD0);
-    private static readonly Brush Grey    = Frozen(0x6A, 0x6A, 0x6A);
-    private static readonly Brush TempFill = Frozen(0xBF, 0xE4, 0xFF);
+    private static readonly SolidColorBrush Green = Frozen(0x4C, 0xC0, 0x4C);
+    private static readonly SolidColorBrush Amber = Frozen(0xE0, 0xA8, 0x30);
+    private static readonly SolidColorBrush Red   = Frozen(0xC8, 0x3C, 0x3C);
+    private static readonly SolidColorBrush Bone  = Frozen(0xD8, 0xD8, 0xD0);
+    private static readonly SolidColorBrush Grey  = Frozen(0x6A, 0x6A, 0x6A);
 
     public static SurvivorCard From(Survivor s, bool markFollower = false)
     {
@@ -59,7 +64,11 @@ public sealed class SurvivorCard
         bool dead  = s.State == "dead";
         bool down  = s.State is "incap" or "ledge" or "dying";
 
-        Brush fill =
+        // Black and white keeps its own grey rather than a health colour: the bar is saying
+        // "one more hit", not "this much health left", and the game separates the two the
+        // same way. The temp overlay below follows whichever of these wins, so a survivor on
+        // his last strike who drinks pills gets a grey overlay, not a green one.
+        SolidColorBrush fill =
             dead                 ? Grey   :
             down                 ? Red    :
             s.BlackAndWhite      ? Bone   :
@@ -88,7 +97,7 @@ public sealed class SurvivorCard
             PermanentWidth = dead ? 0 : BarWidth * hp / max,
             TotalWidth     = dead ? 0 : BarWidth * total / max,
             HealthBrush    = fill,
-            TempBrush      = TempFill,
+            TempBrush      = Grunge(fill),
             StateText      = stateText,
             StateBrush     = stateBrush,
             IsFollower     = markFollower,
@@ -105,6 +114,80 @@ public sealed class SurvivorCard
         brush.Freeze();
         return brush;
     }
+
+    /// <summary>
+    /// One grunge brush per health colour, built once and reused. Cards are rebuilt on every
+    /// poll, and a fresh tiled DrawingBrush five times a second is not something to hand the
+    /// render thread.
+    /// </summary>
+    private static readonly Dictionary<Color, Brush> GrungeCache = new();
+
+    /// <summary>
+    /// The temp-health overlay: the bar's own colour, knocked back and scratched through, the
+    /// way the game draws the buffer portion. It is deliberately not a colour of its own - a
+    /// fixed tint here read as plain grey next to the coloured bar, which is what this
+    /// replaces, and it hid the fact that a black-and-white survivor's buffer should be grey
+    /// because his BAR is grey, not because buffers are grey.
+    ///
+    /// Drawn under the permanent bar, so only the part past current health is ever visible.
+    /// </summary>
+    private static Brush Grunge(SolidColorBrush source)
+    {
+        Color colour = source.Color;
+
+        lock (GrungeCache)
+        {
+            if (GrungeCache.TryGetValue(colour, out var cached)) return cached;
+
+            // Dimmed base, so the buffer segment reads as the same colour continuing rather
+            // than as more full health.
+            var group = new DrawingGroup();
+            group.Children.Add(new GeometryDrawing(
+                new SolidColorBrush(Shade(colour, 0.74, 0xE6)),
+                null,
+                new RectangleGeometry(new Rect(0, 0, 12, 16))));
+
+            // The scratches. Slanted, uneven, and darker than the base - regular stripes look
+            // like a progress bar, which is the one thing this must not look like.
+            var scratch = new SolidColorBrush(Shade(colour, 0.40, 0xC0));
+            scratch.Freeze();
+
+            foreach (var (x, width) in new[] { (1.0, 1.6), (5.0, 0.9), (7.5, 2.1) })
+            {
+                var streak = new PathGeometry();
+                var figure = new PathFigure { StartPoint = new Point(x, 16), IsClosed = true };
+                figure.Segments.Add(new LineSegment(new Point(x + 3, 0), true));
+                figure.Segments.Add(new LineSegment(new Point(x + 3 + width, 0), true));
+                figure.Segments.Add(new LineSegment(new Point(x + width, 16), true));
+                streak.Figures.Add(figure);
+
+                group.Children.Add(new GeometryDrawing(scratch, null, streak));
+            }
+
+            // Both boxes are given in absolute units and match the drawing, so one tile is
+            // one 12x16 device-independent block however wide the bar ends up.
+            var brush = new DrawingBrush(group)
+            {
+                TileMode = TileMode.Tile,
+                Viewbox = new Rect(0, 0, 12, 16),
+                ViewboxUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(0, 0, 12, 16),
+                ViewportUnits = BrushMappingMode.Absolute,
+                Stretch = Stretch.Fill
+            };
+            brush.Freeze();
+
+            GrungeCache[colour] = brush;
+            return brush;
+        }
+    }
+
+    /// <summary>The same colour at a fraction of its brightness, with an explicit alpha.</summary>
+    private static Color Shade(Color colour, double factor, byte alpha) => Color.FromArgb(
+        alpha,
+        (byte)(colour.R * factor),
+        (byte)(colour.G * factor),
+        (byte)(colour.B * factor));
 
     public sealed class ItemChip
     {

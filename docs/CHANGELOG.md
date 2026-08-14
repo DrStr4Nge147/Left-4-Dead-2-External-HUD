@@ -21,15 +21,26 @@ the right thing with it.
   the failure this release exists to remove. Past that window a zero is written, because by
   then it is true.
 - Chapter progression was never affected and is unchanged.
-- Advances the exporter addon and desktop overlay together to v1.0.8. The app's behavior is
-  unchanged - its `EXTRA SURVIVORS 0` was the correct reading of a stale file throughout.
+- Advances the exporter addon and desktop overlay together to v1.0.8. The app's restart
+  behavior is unchanged - its `EXTRA SURVIVORS 0` was the correct reading of a stale file
+  throughout.
+
+The overlay's health bars also read like the game's now:
+
+- Temp health from pills or adrenaline draws as a scratched overlay in the bar's **own**
+  colour, the way the vanilla HUD draws the buffer, instead of the fixed pale tint that
+  came out looking grey next to every bar colour.
+- A black-and-white survivor keeps a grey bar, and his buffer is grey with it - grey
+  because the bar is grey on the last strike, not because buffers are grey.
 
 Supersedes the unreleased v1.0.6 and v1.0.7 builds, which tried to recover through a
 `round_start_post_nav` listener. That callback is never delivered to this addon, from any
 entry point tried; see the dev log.
 
 **Verification**: live-tested - the panel repopulates after a full-team wipe restart with
-restored followers. The shortened delay is source inspection only.
+restored followers. The shortened delay is source inspection only. The bars were checked by
+rendering every health state offscreen through the shipping card code; app build and layout
+checks pass.
 
 ## Overlay HUD v1.0.5 - 2026-08-13: the hold key stops dying mid-session
 
