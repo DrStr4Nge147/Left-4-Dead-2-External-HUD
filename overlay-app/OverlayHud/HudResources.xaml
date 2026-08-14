@@ -4,6 +4,14 @@
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
+    <!-- The black-and-white outline, pulsing. Deliberately ONE shared brush animated once at
+         startup (see MainWindow.StartBlackAndWhitePulse) rather than a per-card storyboard:
+         the card list is rebuilt on every poll, so an animation owned by a card would be
+         thrown away and restarted five times a second and never visibly move. Sharing it
+         also keeps every black-and-white card pulsing in step, which reads as one alarm
+         instead of several. -->
+    <SolidColorBrush x:Key="BwPulseBrush" Color="#FF6060" />
+
     <!-- One carried item. An empty slot draws as a dim outline. -->
     <DataTemplate x:Key="ChipTemplate">
         <Border Width="30" Height="22" Margin="2,0,0,0"
@@ -29,9 +37,20 @@
                 Padding="8,5"
                 CornerRadius="3"
                 Background="#B4101216"
-                BorderBrush="#33FFFFFF"
-                BorderThickness="1"
                 Opacity="{Binding CardOpacity}">
+            <!-- BorderBrush lives in the style, not on the element: a local value here would
+                 win over the trigger and the pulse would never show. -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="#33FFFFFF" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBlackAndWhite}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource BwPulseBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="150" />

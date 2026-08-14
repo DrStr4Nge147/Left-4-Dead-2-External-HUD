@@ -22,9 +22,22 @@ This also settles the black-and-white case the author raised: nothing special is
 it. The buffer follows the bar, and the bar is already grey on the last strike, so a
 black-and-white survivor who drinks pills gets a grey buffer for the right reason.
 
-Checked by rendering all seven bar states offscreen through the shipping `SurvivorCard`
-code with the same two-rectangle layering the card template uses, rather than by eye in a
-live session.
+Checked by rendering every bar state offscreen through the shipping `SurvivorCard` code with
+the same two-rectangle layering the card template uses, rather than by eye in a live
+session.
+
+A side-by-side screenshot then settled the downed state too: the game's own panels draw
+incap health as a hatched red bar, and the overlay was drawing a flat block. Down now takes
+the same grunge brush for the whole bar, not only for the buffer past current health.
+
+The black-and-white pulse is the one piece here that is not a colour choice. The card list
+is rebuilt on every poll - `Columns.ItemsSource` is assigned a new list - so a storyboard
+declared in the card template is thrown away and restarted roughly five times a second, and
+never travels far enough from its start value to be seen moving. The animation therefore
+runs once, at startup, on a single shared `SolidColorBrush` resource, and the template's
+`DataTrigger` only swaps `BorderBrush` to it. That also puts every marked card on one clock,
+which reads as a single alarm rather than several unrelated flashes. `BorderBrush` had to
+move from a local attribute into the style for the trigger to win at all.
 
 ## 2026-08-14 - v1.0.7-exp3, shipped as v1.0.8: the restart delay was a cold-load wait in the wrong place
 

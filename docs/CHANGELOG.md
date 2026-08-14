@@ -32,6 +32,11 @@ The overlay's health bars also read like the game's now:
   came out looking grey next to every bar colour.
 - A black-and-white survivor keeps a grey bar, and his buffer is grey with it - grey
   because the bar is grey on the last strike, not because buffers are grey.
+- A downed survivor's bar is scratched across its whole length rather than a flat block,
+  which is how the game draws incap health in its own panels.
+- A black-and-white survivor's card outline pulses red. It is the one state worth catching
+  without reading the panel, and the pulse is shared, so several cards alarm in step
+  instead of each on its own beat.
 
 Supersedes the unreleased v1.0.6 and v1.0.7 builds, which tried to recover through a
 `round_start_post_nav` listener. That callback is never delivered to this addon, from any

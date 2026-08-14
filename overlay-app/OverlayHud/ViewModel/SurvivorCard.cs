@@ -35,6 +35,13 @@ public sealed class SurvivorCard
     /// <summary>Marks a Finale Soldiers follower. Only set when the roster is mixed.</summary>
     public bool IsFollower { get; init; }
 
+    /// <summary>
+    /// On the last strike and still up. Drives the card's pulsing outline - the one state
+    /// worth catching out of the corner of an eye, because the next hit is the last one.
+    /// A downed survivor does not get it: the card already says DOWN in red.
+    /// </summary>
+    public bool IsBlackAndWhite { get; init; }
+
     public double CardOpacity { get; init; } = 1.0;
 
     public ItemChip Kit { get; init; } = ItemChip.Empty;
@@ -96,11 +103,16 @@ public sealed class SurvivorCard
             HealthText     = healthText,
             PermanentWidth = dead ? 0 : BarWidth * hp / max,
             TotalWidth     = dead ? 0 : BarWidth * total / max,
-            HealthBrush    = fill,
+            // Down draws the whole bar scratched, not flat: incap health in the game's own
+            // panels is a hatched red bar, and a solid block was the obvious difference when
+            // the two were put side by side. Everyone else keeps a solid bar with the
+            // scratched overlay only on the buffer past current health.
+            HealthBrush    = down ? Grunge(fill) : fill,
             TempBrush      = Grunge(fill),
             StateText      = stateText,
             StateBrush     = stateBrush,
             IsFollower     = markFollower,
+            IsBlackAndWhite = s.BlackAndWhite && !dead && !down,
             CardOpacity    = dead ? 0.45 : 1.0,
             Kit            = ItemChip.For(s.Kit),
             Pill           = ItemChip.For(s.Pill),

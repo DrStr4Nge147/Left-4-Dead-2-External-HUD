@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using OverlayHud.Interop;
 using OverlayHud.Model;
@@ -58,9 +60,40 @@ public partial class MainWindow : Window
         MenuBadgeText.Text = $"{AppIdentity.Name} v{DisplayVersion()}";
 
         ApplyLayout();
+        StartBlackAndWhitePulse();
 
         Loaded += OnLoaded;
         Closed += OnClosed;
+    }
+
+    /// <summary>
+    /// Runs the shared black-and-white outline colour for the life of the app.
+    ///
+    /// It has to be started here, on the resource, rather than from a storyboard inside the
+    /// card template: cards are rebuilt from scratch on every poll, so a per-card animation
+    /// is discarded and restarted about five times a second and never gets far enough from
+    /// its start value to be seen. One brush, one clock, every marked card in step.
+    ///
+    /// The animation is on a shared resource, so it is deliberately never stopped.
+    /// </summary>
+    private void StartBlackAndWhitePulse()
+    {
+        if (Application.Current?.Resources["BwPulseBrush"] is not SolidColorBrush brush) return;
+        if (brush.IsFrozen) return;
+
+        var pulse = new ColorAnimation
+        {
+            From = Color.FromRgb(0xFF, 0x60, 0x60),
+            To = Color.FromRgb(0x5A, 0x18, 0x18),
+            Duration = TimeSpan.FromSeconds(0.55),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            // Linear reads as a strobe; easing makes it breathe, which is easier to have on
+            // screen for a whole round.
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+
+        brush.BeginAnimation(SolidColorBrush.ColorProperty, pulse);
     }
 
     // -----------------------------------------------------------------------
