@@ -14,11 +14,13 @@ it is required for the addon to do anything.
     <td><img src="workshop%20assets/OverlayHUD%202.jpg" width="260" alt="The overlay panel over a full roster"></td>
     <td><img src="workshop%20assets/OVerlayHUD.jpg" width="260" alt="The overlay panel with health and item cards"></td>
     <td><img src="workshop%20assets/OVerlayHUD%20editor.png" width="260" alt="The built-in UI editor"></td>
+    <td><img src="workshop%20assets/Overlay%20HUD%20Live.jpg" width="260" alt="The panel in-game alongside the stock HUD"></td>
   </tr>
   <tr>
     <td align="center">The panel over a full roster</td>
     <td align="center">Health and item cards</td>
     <td align="center">The built-in UI editor</td>
+    <td align="center">In-game beside the stock HUD</td>
   </tr>
 </table>
 
