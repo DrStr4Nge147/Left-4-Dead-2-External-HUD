@@ -13,3 +13,6 @@ console.log
 overlay-app/**/bin/
 overlay-app/**/obj/
 overlay-app/dist/
+
+# Keep the editable workshop source local; publish the exported preview image only.
+workshop assets/Overlay HUD Consistent HUD Basic.psd
