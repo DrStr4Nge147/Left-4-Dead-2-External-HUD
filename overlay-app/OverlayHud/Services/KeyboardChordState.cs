@@ -3,7 +3,8 @@ namespace OverlayHud.Services;
 internal readonly record struct KeyboardChordDecision(
     bool Consume,
     bool TriggerShortcut,
-    bool? HeldChanged);
+    bool? HeldChanged,
+    bool TriggerToggle);
 
 /// <summary>
 /// Pure state machine behind the low-level hook. Keeping this separate makes the exact
@@ -14,11 +15,14 @@ internal sealed class KeyboardChordState
     private readonly int _holdKey;
     private readonly int _shortcutKey;
     private bool _consumeShortcutUntilUp;
+    private int _toggleKey;
+    private bool _consumeToggleUntilUp;
 
-    public KeyboardChordState(int holdKey, int shortcutKey)
+    public KeyboardChordState(int holdKey, int shortcutKey, int toggleKey = 0)
     {
         _holdKey = holdKey;
         _shortcutKey = shortcutKey;
+        _toggleKey = toggleKey == holdKey || toggleKey == shortcutKey ? 0 : toggleKey;
     }
 
     public bool IsHeld { get; private set; }
@@ -36,8 +40,14 @@ internal sealed class KeyboardChordState
         return held;
     }
 
+    public void SetToggleKey(int toggleKey)
+    {
+        _toggleKey = toggleKey == _holdKey || toggleKey == _shortcutKey ? 0 : toggleKey;
+        _consumeToggleUntilUp = false;
+    }
+
     public KeyboardChordDecision Process(int vkCode, bool isDown, bool isUp,
-                                          bool shortcutEnabled)
+                                          bool shortcutEnabled, bool toggleEnabled = false)
     {
         if (vkCode == _holdKey)
         {
@@ -46,7 +56,24 @@ internal sealed class KeyboardChordState
             IsHeld = held;
 
             // The scoreboard key is observed only. L4D2 must still receive it.
-            return new KeyboardChordDecision(false, false, changed);
+            return new KeyboardChordDecision(false, false, changed, false);
+        }
+
+        if (_toggleKey != 0 && vkCode == _toggleKey)
+        {
+            if (_consumeToggleUntilUp)
+            {
+                if (isUp) _consumeToggleUntilUp = false;
+                return new KeyboardChordDecision(true, false, null, false);
+            }
+
+            if (isDown && toggleEnabled)
+            {
+                _consumeToggleUntilUp = true;
+                return new KeyboardChordDecision(true, false, null, true);
+            }
+
+            return new KeyboardChordDecision(false, false, null, false);
         }
 
         if (_shortcutKey == 0 || _shortcutKey == _holdKey || vkCode != _shortcutKey)
@@ -57,15 +84,15 @@ internal sealed class KeyboardChordState
         if (_consumeShortcutUntilUp)
         {
             if (isUp) _consumeShortcutUntilUp = false;
-            return new KeyboardChordDecision(true, false, null);
+            return new KeyboardChordDecision(true, false, null, false);
         }
 
         if (isDown && IsHeld && shortcutEnabled)
         {
             _consumeShortcutUntilUp = true;
-            return new KeyboardChordDecision(true, true, null);
+            return new KeyboardChordDecision(true, true, null, false);
         }
 
-        return default;
+        return new KeyboardChordDecision(false, false, null, false);
     }
 }

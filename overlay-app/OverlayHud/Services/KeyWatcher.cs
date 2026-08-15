@@ -20,6 +20,7 @@ public sealed class KeyWatcher : IDisposable
     private readonly KeyboardChordState _state;
     private readonly HookWatchdog _watchdog = new();
     private readonly Func<bool> _shortcutEnabled;
+    private readonly Func<bool> _toggleEnabled;
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
     private readonly int _holdKey;
 
@@ -31,19 +32,24 @@ public sealed class KeyWatcher : IDisposable
 
     public event Action<bool>? HeldChanged;
     public event Action? ShortcutPressed;
+    public event Action? TogglePressed;
 
     public bool IsHeld => _state.IsHeld;
 
     /// <summary>Times the hook has been reinstalled after Windows removed it.</summary>
     public int Recoveries { get; private set; }
 
-    public KeyWatcher(int holdKey, int shortcutKey, Func<bool> shortcutEnabled)
+    public KeyWatcher(int holdKey, int shortcutKey, Func<bool> shortcutEnabled,
+                      int toggleKey = 0, Func<bool>? toggleEnabled = null)
     {
         _holdKey = holdKey;
-        _state = new KeyboardChordState(holdKey, shortcutKey);
+        _state = new KeyboardChordState(holdKey, shortcutKey, toggleKey);
         _shortcutEnabled = shortcutEnabled;
+        _toggleEnabled = toggleEnabled ?? shortcutEnabled;
         _proc = HookProc;
     }
+
+    public void SetToggleKey(int toggleKey) => _state.SetToggleKey(toggleKey);
 
     public void Start()
     {
@@ -120,10 +126,14 @@ public sealed class KeyWatcher : IDisposable
             if (isDown || isUp)
             {
                 bool enabled;
+                bool toggleEnabled;
                 try { enabled = _shortcutEnabled(); }
                 catch { enabled = false; }
+                try { toggleEnabled = _toggleEnabled(); }
+                catch { toggleEnabled = false; }
 
-                var decision = _state.Process((int)data.vkCode, isDown, isUp, enabled);
+                var decision = _state.Process((int)data.vkCode, isDown, isUp,
+                                               enabled, toggleEnabled);
 
                 // Consume has to be decided here, but the subscribers must not be: a render
                 // pass on this thread is charged against the hook timeout, and blowing that
@@ -133,6 +143,9 @@ public sealed class KeyWatcher : IDisposable
 
                 if (decision.TriggerShortcut)
                     _dispatcher.BeginInvoke(() => ShortcutPressed?.Invoke());
+
+                if (decision.TriggerToggle)
+                    _dispatcher.BeginInvoke(() => TogglePressed?.Invoke());
 
                 if (decision.Consume) return (IntPtr)1;
             }

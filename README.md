@@ -31,6 +31,19 @@ Two pieces:
 | **Exporter addon** | VScript addon that reads live survivor state and writes it out on a timer | `overlay_hud_export/` |
 | **Overlay app** | Transparent always-on-top Windows app that reads that state and draws the HUD | `overlay-app/` |
 
+## App downloads
+
+Choose one app file from the release page:
+
+- **Standalone** — the larger self-contained build. It includes the required .NET components,
+  so no separate runtime installation is needed.
+- **Compact** — the smaller framework-dependent build. Install the **.NET 9 Desktop Runtime
+  for Windows x64** before launching it: [download it from Microsoft](https://dotnet.microsoft.com/download/dotnet/9.0).
+  Choose **Desktop Runtime**, not only the base .NET Runtime or ASP.NET Core Runtime.
+
+The Compact build will not start until the Desktop Runtime is installed. Both app variants still
+require the matching Workshop exporter addon.
+
 Hold **Tab** to show the panel, release to hide it — handled by the overlay app, so no
 key binds are changed. Hold **Tab** and press **Insert** to open the UI editor without
 also firing an in-game Insert bind; Insert by itself continues to work normally.
@@ -40,29 +53,45 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v1.1.0 — the app can now show every mortal survivor, including the original four, while
-keeping the previous extra-only roster as a separate choice. Both halves also compare their
-versions and report a mismatch without blocking the HUD. Not yet live-tested. v1.0.8's
+**v1.2.0 — the scoreboard panel now has its own editor tab, while a separate Consistent HUD
+tab provides three named templates: Bottom - Horizontal Grid, Lower Left Vertical Grid, and
+Lower Right Vertical Grid. The horizontal grid lays out four cards across and up to three rows,
+adding columns for larger rosters; with Separate You enabled, the shared bottom roster starts at
+three columns so the independent You card can use the fourth area. The HUD design dropdown adds
+Basic and Minimalist cards; Minimalist puts the name and icon-only items before the health value
+above a five-segment compressed health strip, keeps grunge on temporary health, and truncates long
+names without hiding items. The Consistent HUD can hide health numbers or use a complete
+black-and-white theme. A vertical-position slider moves the HUD upward from the
+bottom edge, while horizontal and vertical spacing sliders can pull cards together or overlap
+them. A configurable hotkey toggles it during play. Both halves also compare
+their versions and report a mismatch without blocking the HUD. **Separate You** splits the
+bottom horizontal layout as roster-left/You-right and mirrors the lower-right vertical layout
+as roster-right/You-left, while leaving roster spacing unchanged. Live-tested and confirmed
+working in L4D2 on 2026-08-15, including the health-number option, black-and-white theme, and
+five-segment Minimalist layout. v1.0.8's
 exporter restart recovery is confirmed in-game: a full-team wipe that restarts the map no
 longer leaves the panel showing an empty roster.**
 
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v1.1.0** — exports every survivor plus a `cls` classification field for
-  Finale Soldiers rosters, and holds the game's scoreboard open on request. Both still need
-  one in-game confirmation. Its two transport files live in `left4dead2\ems\overlay_hud\`;
+- **Exporter addon v1.2.0** — exports every survivor plus `cls` classification and a `local`
+  marker for the listen-server host, and holds the game's scoreboard open on request. The
+  v1.2.0 app/VPK pair has been live-tested in L4D2. Its two transport files live in
+  `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v1.1.0** — includes source-faithful
-  monochrome item icons, a built-in UI editor with simulated *and* live preview, the
-  default Tab+Insert editor shortcut and the four roster filters. The Tab hold, the
-  foreground gate and following the game window are written but not yet confirmed in-game.
+- **Left 4 Dead 2 Customized Overlay HUD - External v1.2.0** — includes source-faithful
+  monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
+  preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
+  and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
+  The Consistent HUD templates and new presentation options are confirmed in-game with the
+  v1.2.0 app/VPK pair.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-1.1.x marks feature completeness, not a completed test pass — `docs/TESTING.md` is the
-run to make. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+1.2.x is now live-tested for the current v1.2.0 release; `docs/TESTING.md` remains the
+regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over
@@ -75,8 +104,11 @@ work in the editor — an external app cannot do that, but the addon is already 
 game. The sidebar edge and vertical start are marked with guide lines the game cannot draw
 at all.
 
-**Show HUD consistently** displays the HUD persistently during play instead of only while
-the hold key is down. It still hides when L4D2 loses focus.
+**Scoreboard** keeps the Tab-held panel beside the vanilla scoreboard. **Consistent HUD**
+keeps a survivor HUD visible during play instead of only while the hold key is down. Choose the
+bottom-centered horizontal grid or either lower-corner vertical grid in the Consistent HUD tab,
+then adjust its vertical position without changing the scoreboard. It still hides when L4D2
+loses focus.
 
 ## Who the panel shows
 

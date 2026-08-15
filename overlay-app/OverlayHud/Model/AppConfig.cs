@@ -18,8 +18,14 @@ public sealed class AppConfig
     /// <summary>Virtual-key code used with holdKey to open the editor. 0x2D = Insert; 0 disables.</summary>
     [JsonPropertyName("editorKey")] public int EditorKey { get; set; } = 0x2D;
 
-    /// <summary>Show the panel permanently, ignoring the hold key. Useful for layout work.</summary>
+    /// <summary>
+    /// Start the consistent HUD enabled, ignoring the scoreboard hold key. The configured
+    /// consistentKey toggles this value while the game is in the foreground.
+    /// </summary>
     [JsonPropertyName("alwaysShow")] public bool AlwaysShow { get; set; }
+
+    /// <summary>Virtual-key code that toggles the consistent HUD. 0x76 = F7; 0 disables.</summary>
+    [JsonPropertyName("consistentKey")] public int ConsistentKey { get; set; } = 0x76;
 
     /// <summary>Draw even when L4D2 is not the foreground window. Debug aid.</summary>
     [JsonPropertyName("ignoreForeground")] public bool IgnoreForeground { get; set; }
@@ -45,6 +51,41 @@ public sealed class AppConfig
 
     /// <summary>Overall UI scale, on top of autoScale.</summary>
     [JsonPropertyName("scale")] public double Scale { get; set; } = 1.0;
+
+    /// <summary>Scale used by the consistent HUD, independently of the scoreboard panel.</summary>
+    [JsonPropertyName("consistentScale")] public double ConsistentScale { get; set; } = 0.85;
+
+    /// <summary>Opacity used by the consistent HUD, independently of the scoreboard panel.</summary>
+    [JsonPropertyName("consistentOpacity")] public double ConsistentOpacity { get; set; } = 0.88;
+
+    /// <summary>Card design used only by the consistent HUD: "basic" or "minimalist".</summary>
+    [JsonPropertyName("consistentDesign")] public string ConsistentDesign { get; set; } = "basic";
+
+    /// <summary>Whether the consistent HUD prints numeric health values.</summary>
+    [JsonPropertyName("consistentShowHealthNumbers")]
+    public bool ConsistentShowHealthNumbers { get; set; } = true;
+
+    /// <summary>Render the consistent HUD using grayscale colors instead of health-state colors.</summary>
+    [JsonPropertyName("consistentMonochrome")]
+    public bool ConsistentMonochrome { get; set; }
+
+    /// <summary>
+    /// Fraction of the game window kept below the consistent HUD. Zero touches the bottom
+    /// edge; higher values move the HUD upward. This is independent of the scoreboard offset.
+    /// </summary>
+    [JsonPropertyName("consistentVerticalOffset")] public double ConsistentVerticalOffset { get; set; } = 0.035;
+
+    /// <summary>Extra horizontal gap between consistent-HUD cards, in layout pixels.</summary>
+    [JsonPropertyName("consistentHorizontalSpacing")] public double ConsistentHorizontalSpacing { get; set; }
+
+    /// <summary>Extra vertical gap between consistent-HUD cards, in layout pixels.</summary>
+    [JsonPropertyName("consistentVerticalSpacing")] public double ConsistentVerticalSpacing { get; set; }
+
+    /// <summary>
+    /// Moves the local listen-server host's card out of the shared consistent-HUD roster
+    /// and places it at the lower-right edge. The scoreboard view never uses this option.
+    /// </summary>
+    [JsonPropertyName("consistentSeparateYou")] public bool ConsistentSeparateYou { get; set; }
 
     /// <summary>Smallest fraction of the resolution-scaled size used by overflow fitting.</summary>
     [JsonPropertyName("minScale")] public double MinScale { get; set; } = 0.35;
@@ -88,6 +129,13 @@ public sealed class AppConfig
 
     /// <summary>Blocks out the vanilla scoreboard region in both previews.</summary>
     [JsonPropertyName("previewScoreboard")] public bool PreviewScoreboard { get; set; } = true;
+
+    /// <summary>
+    /// Placement template for the persistent HUD: "vanilla-bottom-center",
+    /// legacy "vanilla-vertical", or "lower-right-vertical". Retired "bottom-right" and
+    /// "top-vertical" values migrate to "vanilla-bottom-center".
+    /// </summary>
+    [JsonPropertyName("consistentTemplate")] public string ConsistentTemplate { get; set; } = "vanilla-bottom-center";
 
     /// <summary>Cards per column before wrapping. 0 = work it out from the space available.</summary>
     [JsonPropertyName("cardsPerColumn")] public int CardsPerColumn { get; set; }
@@ -144,10 +192,20 @@ public sealed class AppConfig
         AutoScale = source.AutoScale;
         BaselineHeight = source.BaselineHeight;
         Scale = source.Scale;
+        ConsistentScale = source.ConsistentScale;
+        ConsistentOpacity = source.ConsistentOpacity;
+        ConsistentDesign = source.ConsistentDesign;
+        ConsistentShowHealthNumbers = source.ConsistentShowHealthNumbers;
+        ConsistentMonochrome = source.ConsistentMonochrome;
+        ConsistentVerticalOffset = source.ConsistentVerticalOffset;
+        ConsistentHorizontalSpacing = source.ConsistentHorizontalSpacing;
+        ConsistentVerticalSpacing = source.ConsistentVerticalSpacing;
+        ConsistentSeparateYou = source.ConsistentSeparateYou;
         MinScale = source.MinScale;
         BottomReserve = source.BottomReserve;
         Opacity = source.Opacity;
         RosterFilter = source.RosterFilter;
+        ConsistentTemplate = source.ConsistentTemplate;
         ShowStatusBadge = source.ShowStatusBadge;
         CardsPerColumn = source.CardsPerColumn;
         MaxColumns = source.MaxColumns;

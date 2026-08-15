@@ -17,13 +17,30 @@ internal static class LayoutMeasurement
 
         // ItemsSource can change from one column to two immediately before this call.
         // WPF otherwise reuses the still-valid DesiredSize from the old item layout.
-        InvalidateMeasureTree(content);
-        content.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var infinite = new Size(double.PositiveInfinity, double.PositiveInfinity);
+        Size measured = new();
+        for (int pass = 0; pass < 6; pass++)
+        {
+            // An ItemsControl can create its item containers during a measure pass. Repeat
+            // until the desired size settles so a newly-created card cannot grow into the
+            // sibling You panel after the fit pass has already accepted the roster.
+            InvalidateMeasureTree(content);
+            content.Measure(infinite);
+            Size current = content.DesiredSize;
+            if (pass > 0 && Math.Abs(current.Width - measured.Width) < 0.1
+                          && Math.Abs(current.Height - measured.Height) < 0.1)
+            {
+                measured = current;
+                break;
+            }
+
+            measured = current;
+        }
 
         return new Size(
-            content.DesiredSize.Width + panel.Padding.Left + panel.Padding.Right
+            measured.Width + panel.Padding.Left + panel.Padding.Right
                                       + panel.BorderThickness.Left + panel.BorderThickness.Right,
-            content.DesiredSize.Height + panel.Padding.Top + panel.Padding.Bottom
+            measured.Height + panel.Padding.Top + panel.Padding.Bottom
                                        + panel.BorderThickness.Top + panel.BorderThickness.Bottom);
     }
 

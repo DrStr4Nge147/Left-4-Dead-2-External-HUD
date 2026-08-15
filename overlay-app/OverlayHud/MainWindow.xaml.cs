@@ -31,14 +31,17 @@ public partial class MainWindow : Window
     private volatile bool _settingsActive;
     private bool _dirty = true;
     private int _lastCardCount = -1;
+    private bool _separatedYouVisible;
 
     // Live preview. The baseline is what the running overlay looked like before the editor
     // started pushing draft values at it, so Cancel can put it back without a save.
     private AppConfig? _livePreviewBaseline;
     private int _livePreviewSampleCount;
     private bool _livePreviewScoreboard;
+    private bool _livePreviewConsistent;
     private readonly ScoreboardHold _scoreboard;
     private bool LivePreview => _livePreviewBaseline != null;
+    private bool ConsistentMode => _livePreviewConsistent || (!LivePreview && _cfg.AlwaysShow);
 
     // Layout is derived from the game window, so it has to survive a resolution change at
     // runtime rather than being computed once at startup.
@@ -55,7 +58,8 @@ public partial class MainWindow : Window
         _scoreboard = new ScoreboardHold(() => _reader?.Path
             ?? (string.IsNullOrWhiteSpace(_cfg.StatePath) ? StateLocator.Locate() : _cfg.StatePath));
 
-        Panel.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
+        Panel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+        ConsistentYouPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
         StatusStack.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
         Title = AppIdentity.Name;
         MenuBadgeText.Text = $"{AppIdentity.Name} v{DisplayVersion()}";
@@ -125,11 +129,14 @@ public partial class MainWindow : Window
 
         _keys = new KeyWatcher(_cfg.HoldKey, _cfg.EditorKey,
                                () => _gameForeground || _settingsActive
-                                                     || _cfg.IgnoreForeground);
+                                                     || _cfg.IgnoreForeground,
+                               _cfg.ConsistentKey,
+                               () => _gameForeground || _cfg.IgnoreForeground);
         // Both events are already marshalled onto this thread by the watcher, which keeps
         // the hook callback itself short enough to survive LowLevelHooksTimeout.
         _keys.HeldChanged += _ => Render();
         _keys.ShortcutPressed += ToggleSettings;
+        _keys.TogglePressed += ToggleConsistentHud;
         _keys.Start();
 
         // Normal priority for the same reason as the state poll - see StateReader.
@@ -250,6 +257,30 @@ public partial class MainWindow : Window
         OpenSettings();
     }
 
+    /// <summary>
+    /// The persistent HUD hotkey changes the same preference exposed by the editor. Saving it
+    /// means the user's choice survives a restart, while the next render changes immediately.
+    /// The hook gate only enables this while the game is in front, so a key pressed in the
+    /// editor cannot accidentally switch the live HUD behind it.
+    /// </summary>
+    private void ToggleConsistentHud()
+    {
+        _cfg.AlwaysShow = !_cfg.AlwaysShow;
+        _cfg.TrySave(out string error);
+
+        DebugLog.Write("input", _cfg.AlwaysShow
+            ? "consistent HUD enabled by hotkey"
+            : "consistent HUD disabled by hotkey");
+        if (error.Length > 0) DebugLog.Write("config", error);
+
+        _settings?.SetConsistentHudChecked(_cfg.AlwaysShow);
+        _fitScale = 1.0;
+        _lastCardCount = -1;
+        ApplyLayout();
+        _dirty = true;
+        Render();
+    }
+
     public void ShowSettings() => OpenSettings();
 
     /// <summary>
@@ -336,12 +367,14 @@ public partial class MainWindow : Window
     /// at its real geometry. Nothing is written to disk: the first call snapshots the live
     /// configuration so <see cref="EndLivePreview"/> can restore it.
     /// </summary>
-    public void UpdateLivePreview(AppConfig draft, int sampleCount, bool showScoreboard = false)
+    public void UpdateLivePreview(AppConfig draft, int sampleCount, bool showScoreboard = false,
+                                  bool consistentHud = false)
     {
         _livePreviewBaseline ??= _cfg.Clone();
         _livePreviewSampleCount = Math.Max(0, sampleCount);
 
         _livePreviewScoreboard = showScoreboard;
+        _livePreviewConsistent = consistentHud;
 
         _cfg.CopyUiFrom(draft);
 
@@ -362,6 +395,7 @@ public partial class MainWindow : Window
 
         _livePreviewBaseline = null;
         _livePreviewScoreboard = false;
+        _livePreviewConsistent = false;
         _scoreboard.Release();
 
         if (!keepDraftValues) _cfg.CopyUiFrom(baseline);
@@ -379,7 +413,9 @@ public partial class MainWindow : Window
 
     private void ApplyUiConfig()
     {
-        Panel.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
+        _keys?.SetToggleKey(_cfg.ConsistentKey);
+        Panel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+        ConsistentYouPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
         StatusStack.Opacity = Math.Clamp(_cfg.Opacity, 0.1, 1.0);
 
         _fitScale = 1.0;
@@ -558,6 +594,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void ApplyLayout()
     {
+        ApplyPanelMode();
+
         double baseScale = BaseScale;
         double minFit = Math.Clamp(_cfg.MinScale, 0.1, 1.0);
         double maxFit = Math.Max(minFit, LayoutPolicy.MaxFitScale);
@@ -565,6 +603,7 @@ public partial class MainWindow : Window
 
         PanelScale.ScaleX = PanelScale.ScaleY = scale;
         MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = baseScale;
+        ConsistentYouPanelScale.ScaleX = ConsistentYouPanelScale.ScaleY = scale;
 
         // The badge and its notice have their own fixed corner: roster anchor settings must
         // not move them.
@@ -572,6 +611,7 @@ public partial class MainWindow : Window
                                            _surfaceWidth * 0.02, 0);
 
         ApplyAnchor();
+        ApplyYouLayout();
         UpdateGuides();
     }
 
@@ -583,6 +623,24 @@ public partial class MainWindow : Window
     {
         Guides.Visibility = LivePreview ? Visibility.Visible : Visibility.Collapsed;
         if (!LivePreview) return;
+
+        if (_livePreviewConsistent)
+        {
+            GuideScoreboard.Visibility = Visibility.Collapsed;
+            GuideScoreboardLabel.Visibility = Visibility.Collapsed;
+            GuideReserve.Visibility = Visibility.Collapsed;
+            GuideSidebar.Visibility = Visibility.Collapsed;
+            GuideTop.Visibility = Visibility.Collapsed;
+            GuideSidebarLabel.Visibility = Visibility.Collapsed;
+            GuideTopLabel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        GuideReserve.Visibility = Visibility.Visible;
+        GuideSidebar.Visibility = Visibility.Visible;
+        GuideTop.Visibility = Visibility.Visible;
+        GuideSidebarLabel.Visibility = Visibility.Visible;
+        GuideTopLabel.Visibility = Visibility.Visible;
 
         double sidebarEdge = _surfaceWidth * LayoutPolicy.SidebarWidthFraction;
         double top = Math.Max(0, VerticalOffset());
@@ -623,7 +681,7 @@ public partial class MainWindow : Window
         get
         {
             double baseline = _cfg.BaselineHeight > 0 ? _cfg.BaselineHeight : 1080;
-            double user = Math.Clamp(_cfg.Scale,
+            double user = Math.Clamp(ConsistentMode ? _cfg.ConsistentScale : _cfg.Scale,
                                      LayoutPolicy.MinUserScale,
                                      LayoutPolicy.MaxUserScale);
             double auto = _cfg.AutoScale ? _surfaceHeight / baseline : 1.0;
@@ -636,9 +694,43 @@ public partial class MainWindow : Window
 
     private double EffectiveScale => PanelScale.ScaleX <= 0 ? 1.0 : PanelScale.ScaleX;
 
+    private double ActivePanelOpacity() => ConsistentMode ? _cfg.ConsistentOpacity : _cfg.Opacity;
+
+    private void ApplyPanelMode()
+    {
+        bool consistent = ConsistentMode;
+        ConsistentHudDesign.SetDesign(Root, _cfg.ConsistentDesign);
+        Panel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+        ScoreboardContent.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
+        ConsistentContent.Visibility = consistent ? Visibility.Visible : Visibility.Collapsed;
+        ConsistentYouPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+
+        if (!consistent)
+        {
+            _separatedYouVisible = false;
+            ConsistentYouPanel.Visibility = Visibility.Collapsed;
+            ConsistentYouCards.ItemsSource = null;
+        }
+
+        if (consistent)
+        {
+            Panel.Padding = new Thickness(0);
+            Panel.Background = Brushes.Transparent;
+            Panel.BorderBrush = Brushes.Transparent;
+            Panel.BorderThickness = new Thickness(0);
+        }
+        else
+        {
+            Panel.Padding = new Thickness(10, 8, 10, 8);
+            Panel.Background = new SolidColorBrush(Color.FromArgb(0x8C, 0x05, 0x07, 0x0A));
+            Panel.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+            Panel.BorderThickness = new Thickness(1);
+        }
+    }
+
     private void ApplyAnchor()
     {
-        var anchor = _cfg.Anchor ?? "TopLeft";
+        var anchor = ConsistentMode ? ConsistentRosterAnchor() : (_cfg.Anchor ?? "TopLeft");
 
         // Fully qualified: Window exposes HorizontalAlignment/VerticalAlignment as
         // properties, so the bare names resolve to those instead of the enum types.
@@ -672,13 +764,63 @@ public partial class MainWindow : Window
             vertical == System.Windows.VerticalAlignment.Top ? 0 : y);
     }
 
+    /// <summary>
+    /// With Separate You enabled, the bottom horizontal roster occupies the lower-left
+    /// side so the independent local-player card has the lower-right side to itself.
+    /// The other templates keep their named roster anchor.
+    /// </summary>
+    private string ConsistentRosterAnchor()
+    {
+        var template = ConsistentHudPolicy.Parse(_cfg.ConsistentTemplate);
+        if (_separatedYouVisible && template == ConsistentHudPolicy.VanillaBottomCenter)
+            return "BottomLeft";
+
+        return ConsistentHudPolicy.For(template).Anchor;
+    }
+
+    /// <summary>
+    /// The optional local-player card has its own root-level anchor so the selected roster
+    /// template and its spacing cannot move it. Lower-right vertical mirrors it to the
+    /// lower-left because the roster already owns the lower-right side.
+    /// </summary>
+    private void ApplyYouLayout()
+    {
+        if (!ConsistentMode)
+        {
+            ConsistentYouPanelScale.ScaleX = ConsistentYouPanelScale.ScaleY = 1.0;
+            return;
+        }
+
+        var placement = ConsistentHudPolicy.For(_cfg.ConsistentTemplate);
+        bool youOnLeft = _separatedYouVisible
+            && ConsistentHudPolicy.Parse(_cfg.ConsistentTemplate)
+                == ConsistentHudPolicy.LowerRightVertical;
+        ConsistentYouPanel.HorizontalAlignment = youOnLeft
+            ? System.Windows.HorizontalAlignment.Left
+            : System.Windows.HorizontalAlignment.Right;
+        ConsistentYouPanel.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+        ConsistentYouPanel.Margin = new Thickness(
+            youOnLeft ? placement.HorizontalInset * _surfaceWidth : 0,
+            0,
+            youOnLeft ? 0 : placement.HorizontalInset * _surfaceWidth,
+            Math.Clamp(_cfg.ConsistentVerticalOffset, 0.0, 0.90) * _surfaceHeight);
+    }
+
     private double HorizontalOffset() => _cfg.OffsetsArePercent
-        ? _cfg.OffsetX * _surfaceWidth
-        : _cfg.OffsetX;
+        ? (ConsistentMode
+            ? ConsistentHudPolicy.For(_cfg.ConsistentTemplate).HorizontalInset * _surfaceWidth
+            : _cfg.OffsetX * _surfaceWidth)
+        : (ConsistentMode
+            ? ConsistentHudPolicy.For(_cfg.ConsistentTemplate).HorizontalInset * _surfaceWidth
+            : _cfg.OffsetX);
 
     private double VerticalOffset() => _cfg.OffsetsArePercent
-        ? _cfg.OffsetY * _surfaceHeight
-        : _cfg.OffsetY;
+        ? (ConsistentMode
+            ? Math.Clamp(_cfg.ConsistentVerticalOffset, 0.0, 0.90) * _surfaceHeight
+            : _cfg.OffsetY * _surfaceHeight)
+        : (ConsistentMode
+            ? Math.Clamp(_cfg.ConsistentVerticalOffset, 0.0, 0.90) * _surfaceHeight
+            : _cfg.OffsetY);
 
     // -----------------------------------------------------------------------
     // render
@@ -765,6 +907,13 @@ public partial class MainWindow : Window
         // it belongs on the panel for the configured filter.
         var mode = RosterPolicy.Parse(_cfg.RosterFilter);
         var selectedRoster = RosterPolicy.Apply(survivors, mode);
+        bool separateYouRequested = ConsistentMode && _cfg.ConsistentSeparateYou;
+        Survivor? localSurvivor = separateYouRequested
+            ? selectedRoster.FirstOrDefault(survivor => survivor.IsLocal)
+            : null;
+        var rosterSurvivors = localSurvivor == null
+            ? selectedRoster
+            : selectedRoster.Where(survivor => !ReferenceEquals(survivor, localSurvivor)).ToList();
 
         bool hasActiveRoster = !(_reader?.IsStale ?? true) && selectedRoster.Count > 0;
 
@@ -777,6 +926,13 @@ public partial class MainWindow : Window
         bool show = ShouldShow() && (hasActiveRoster || _cfg.AlwaysShow || LivePreview);
 
         Panel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (!show)
+        {
+            _separatedYouVisible = false;
+            ConsistentYouPanel.Visibility = Visibility.Collapsed;
+            ConsistentYouCards.ItemsSource = null;
+            _dirty = true;
+        }
 
         // Why the panel is not on screen is the single most asked question about this app,
         // and the panel cannot answer it while it is the thing not being drawn.
@@ -794,31 +950,108 @@ public partial class MainWindow : Window
         if (!_dirty && !LivePreview) return;
         _dirty = false;
 
-        var cards = selectedRoster
-            .Select(s => SurvivorCard.From(s, RosterPolicy.MarksFollower(s, mode)))
+        var cards = rosterSurvivors
+            .Select(s => SurvivorCard.From(
+                s,
+                RosterPolicy.MarksFollower(s, mode),
+                monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
+                showHealthNumbers: !ConsistentMode || _cfg.ConsistentShowHealthNumbers))
             .ToList();
+        var youCards = new List<SurvivorCard>();
+
+        if (localSurvivor != null)
+        {
+            youCards.Add(SurvivorCard.From(localSurvivor,
+                                           RosterPolicy.MarksFollower(localSurvivor, mode),
+                                           monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
+                                           showHealthNumbers: !ConsistentMode
+                                               || _cfg.ConsistentShowHealthNumbers));
+        }
 
         // Nothing exporting - menu, lobby, or L4D2 not running at all. Stand-in cards keep
         // the panel measurable so layout can still be tuned.
         bool usingSampleCards = LivePreview && !hasActiveRoster;
         if (usingSampleCards)
-            cards = SampleRoster.Cards(_livePreviewSampleCount, mode != RosterMode.Followers);
+        {
+            var samples = SampleRoster.Cards(
+                _livePreviewSampleCount,
+                mode != RosterMode.Followers,
+                monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
+                showHealthNumbers: !ConsistentMode || _cfg.ConsistentShowHealthNumbers);
+            if (separateYouRequested && samples.Count > 0)
+            {
+                youCards = new List<SurvivorCard> { samples[0] };
+                samples.RemoveAt(0);
+            }
+
+            cards = samples;
+        }
+
+        bool separatedYouVisible = ConsistentMode && youCards.Count > 0;
+        bool separationChanged = separatedYouVisible != _separatedYouVisible;
+        _separatedYouVisible = separatedYouVisible;
 
         // A wider roster may force the panel smaller. Re-earn that shrink when the number
         // of cards changes, without re-laying out at full scale on every 100 ms poll.
-        if (cards.Count != _lastCardCount)
+        if (cards.Count != _lastCardCount || separationChanged)
         {
             _lastCardCount = cards.Count;
             _fitScale = 1.0;
             ApplyLayout();
         }
 
-        HeaderText.Text = $"{RosterPolicy.Header(mode)}  {cards.Count}";
-        StatusText.Text = usingSampleCards
-            ? "LIVE PREVIEW - SAMPLE ROSTER"
-            : LivePreview ? "LIVE PREVIEW" : "";
+        if (ConsistentMode)
+        {
+            HeaderText.Text = "";
+            StatusText.Text = "";
+            Columns.ItemsSource = null;
+            var cardMargin = ConsistentHudSpacing.CardMargin(_cfg.ConsistentHorizontalSpacing,
+                                                             _cfg.ConsistentVerticalSpacing);
+            ConsistentRows.Tag = cardMargin;
+            ConsistentVerticalCards.Tag = cardMargin;
+            if (youCards.Count > 0)
+            {
+                ConsistentYouCards.ItemsSource = youCards;
+                ConsistentYouPanel.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ConsistentYouCards.ItemsSource = null;
+                ConsistentYouPanel.Visibility = Visibility.Collapsed;
+            }
+            bool vertical = ConsistentHudPolicy.IsVertical(_cfg.ConsistentTemplate);
+            ConsistentRows.Visibility = vertical ? Visibility.Collapsed : Visibility.Visible;
+            ConsistentVerticalCards.Visibility = vertical ? Visibility.Visible : Visibility.Collapsed;
+            if (vertical)
+            {
+                ConsistentRows.ItemsSource = null;
+                ConsistentVerticalCards.ItemsSource = cards;
+            }
+            else
+            {
+                ConsistentVerticalCards.ItemsSource = null;
+                int minimumColumns = _separatedYouVisible
+                    ? ConsistentHudPolicy.SeparateRosterColumns
+                    : ConsistentHudPolicy.MinimumColumns;
+                ConsistentRows.ItemsSource = ConsistentHudPolicy.SplitRows(cards,
+                                                                           minimumColumns);
+            }
+        }
+        else
+        {
+            HeaderText.Text = $"{RosterPolicy.Header(mode)}  {cards.Count}";
+            StatusText.Text = usingSampleCards
+                ? "LIVE PREVIEW - SAMPLE ROSTER"
+                : LivePreview ? "LIVE PREVIEW" : "";
 
-        Columns.ItemsSource = LayoutColumns(cards);
+            ConsistentRows.ItemsSource = null;
+            ConsistentVerticalCards.ItemsSource = null;
+            ConsistentYouCards.ItemsSource = null;
+            ConsistentYouPanel.Visibility = Visibility.Collapsed;
+            ConsistentRows.Visibility = Visibility.Visible;
+            ConsistentVerticalCards.Visibility = Visibility.Collapsed;
+            Columns.ItemsSource = LayoutColumns(cards);
+        }
         FitToSurface();
     }
 
@@ -956,6 +1189,9 @@ public partial class MainWindow : Window
     {
         double offset = VerticalOffset();
 
+        if (ConsistentMode)
+            return Math.Max(1, _surfaceHeight - Math.Max(0, offset));
+
         double reserve = Math.Clamp(_cfg.BottomReserve, 0.0, 0.9) * _surfaceHeight;
 
         // An optional exclusion zone is defined for the scoreboard sidebar's Top*
@@ -972,7 +1208,29 @@ public partial class MainWindow : Window
     private double AvailableWidth()
     {
         double offset = Math.Max(0, HorizontalOffset());
-        var anchor = _cfg.Anchor ?? "TopLeft";
+        var anchor = ConsistentMode
+            ? ConsistentRosterAnchor()
+            : (_cfg.Anchor ?? "TopLeft");
+
+        if (ConsistentMode)
+        {
+            bool edge = anchor.Contains("Left", StringComparison.OrdinalIgnoreCase)
+                        || anchor.Contains("Right", StringComparison.OrdinalIgnoreCase);
+            double hudInsetCount = edge ? 1 : 2;
+            double room = _surfaceWidth - offset * hudInsetCount;
+
+            // Separate You is a sibling root element, so the roster's natural width can
+            // otherwise run underneath it. Reserve both the rendered You card and a
+            // deliberate inter-group gap before FitToSurface chooses the roster scale.
+            if (_separatedYouVisible)
+            {
+                double youWidth = SeparateYouRenderedWidth();
+                double gap = _surfaceWidth * ConsistentHudPolicy.SeparateYouGapFraction;
+                room -= youWidth + gap + offset;
+            }
+
+            return Math.Max(1, room);
+        }
 
         bool edgeAnchored = anchor.Contains("Left", StringComparison.OrdinalIgnoreCase)
             || anchor.Contains("Right", StringComparison.OrdinalIgnoreCase);
@@ -988,31 +1246,47 @@ public partial class MainWindow : Window
         return Math.Min(surfaceRoom, sidebarRoom);
     }
 
+    private double SeparateYouRenderedWidth()
+    {
+        if (!ConsistentMode || !_separatedYouVisible
+            || ConsistentYouCards.ItemsSource == null)
+            return 0;
+
+        Size natural = LayoutMeasurement.NaturalSize(ConsistentYouPanel);
+        return Math.Max(0, natural.Width * EffectiveScale);
+    }
+
     /// <summary>
     /// Measures what was actually laid out and scales it to use the available sidebar.
     /// Spare width can enlarge a short roster; overflow shrinks large two-column rosters.
     /// </summary>
     private void FitToSurface()
     {
-        Size natural = LayoutMeasurement.NaturalSize(Panel);
-        double w = natural.Width * EffectiveScale;
-        double h = natural.Height * EffectiveScale;
-        if (w <= 0 || h <= 0) return;
+        // A separated You card changes the usable width after every scale adjustment, so
+        // settle the fit in one render instead of leaving the sibling overlap to future
+        // state ticks. The cap prevents a pathological layout from spinning forever.
+        for (int pass = 0; pass < 4; pass++)
+        {
+            Size natural = LayoutMeasurement.NaturalSize(Panel);
+            double w = natural.Width * EffectiveScale;
+            double h = natural.Height * EffectiveScale;
+            if (w <= 0 || h <= 0) return;
 
-        double roomW = AvailableWidth();
-        double roomH = AvailableHeight();
+            double roomW = AvailableWidth();
+            double roomH = AvailableHeight();
 
-        double adjustment = Math.Min(roomW / w, roomH / h);
-        double maxFit = Math.Max(Math.Clamp(_cfg.MinScale, 0.1, 1.0),
-                                 LayoutPolicy.MaxFitScale);
-        double nextFit = Math.Min(maxFit, _fitScale * adjustment);
+            double adjustment = Math.Min(roomW / w, roomH / h);
+            double maxFit = Math.Max(Math.Clamp(_cfg.MinScale, 0.1, 1.0),
+                                     LayoutPolicy.MaxFitScale);
+            double nextFit = Math.Min(maxFit, _fitScale * adjustment);
 
-        if (Math.Abs(nextFit - _fitScale) < 0.005) return;
+            if (Math.Abs(nextFit - _fitScale) < 0.001) return;
 
-        // ApplyLayout enforces the readability floor; this upper bound prevents a tiny
-        // roster from becoming comically large merely because the sidebar is empty.
-        _fitScale = nextFit;
-        ApplyLayout();
+            // ApplyLayout enforces the readability floor; this upper bound prevents a tiny
+            // roster from becoming comically large merely because the sidebar is empty.
+            _fitScale = nextFit;
+            ApplyLayout();
+        }
     }
 
     // -----------------------------------------------------------------------

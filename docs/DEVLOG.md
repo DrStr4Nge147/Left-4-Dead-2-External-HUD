@@ -1,5 +1,91 @@
 # Dev log
 
+## 2026-08-15 - v1.2.0: the scoreboard and persistent HUD are different jobs
+
+Replaced the old `alwaysShow` behavior, which kept the scoreboard-shaped panel persistent.
+That was useful for layout work, but it made the persistent view look like a scoreboard left
+open. Split the editor into two explicit modes: **Scoreboard** keeps the Tab-held
+vanilla-sidebar geometry, while **Consistent HUD** uses a borderless row-major grid renderer.
+
+Used named templates for the persistent view instead of exposing another set of raw
+coordinates. The default bottom-centered horizontal grid, preserved lower-left vertical grid,
+and lower-right vertical grid cover the intended HUD roles while keeping the panel inside the
+screen at every resolution. Set four cards per horizontal row, with no more than three rows;
+larger rosters add columns. Gave the persistent HUD separate scale and opacity values so
+changing the scoreboard does not unexpectedly change the always-visible HUD.
+
+Added a third, single-key path to the global input state machine alongside the pass-through
+scoreboard key and the consumed Tab+Insert editor chord. Repeats and the matching release are
+consumed after one toggle, and the toggle is gated to the game foreground. Save the choice to
+`config.json` so the editor setting and hotkey cannot drift apart.
+
+Kept the existing complete-roster transport for both presentations. Extended it for the
+Separate You feature with one optional local-player marker. Packed the release VPK as
+format v1 because the target L4D2 build rejects VPK v2.
+
+Changed the first consistent-HUD layout from four vertical stacks to the vanilla-like reading
+order: rows fill left-to-right, with four cards across and up to three rows, followed by
+additional columns for larger rosters. The editor preview and live overlay both use that same
+row-major split.
+
+Retained **Lower Left Vertical Grid** as a separate renderer. Its legacy `vanilla-vertical`
+config value still maps to the one-card-per-row layout, while the new lower-right vertical option
+uses `lower-right-vertical`. Kept `bottom-right` as a migration alias for
+`vanilla-bottom-center`, so the main default remains useful for older configs. The retired
+`top-vertical` value follows the same migration path. Added `consistentVerticalOffset` for the
+bottom inset, so the persistent HUD can move upward without changing the scoreboard's `offsetY`.
+Passed horizontal and vertical spacing through the shared card template's
+ItemsControl margin, allowing the simulated preview and live overlay to use overlap-friendly
+spacing without changing the scoreboard template.
+
+Added a design selector separate from placement. **Basic** keeps the existing card template.
+**Minimalist** uses a compact 260-pixel segmented health strip with the name and item icons
+before the health value above it; temporary health keeps the existing grunge brush, and the
+icons have no slot boxes, only a black outline. The items use an Auto-width column, so a long
+name is ellipsized instead of pushing the items out of view. Applied the selected design to the
+live roster, vertical roster, separate You card, and simulated preview, while the Scoreboard tab
+keeps its own template.
+
+Kept the follow-up presentation controls scoped to the Consistent HUD. The saved
+`consistentShowHealthNumbers` flag hides the numeric health value in both Basic and Minimalist
+cards without changing the scoreboard. The saved `consistentMonochrome` flag routes health bars,
+state text, and follower markers through grayscale brushes. The item artwork was already
+monochrome, and the pulsing warning edge uses a white brush in this mode. Reduced Minimalist's
+strip to five segments and compressed it vertically so the compact design uses less screen
+height.
+
+For the final v1.2.0 addition, separated the current survivor without changing the default.
+Updated the exporter to compare each survivor's player ID with the verified L4D2
+`GetListenServerHost()` handle and write an optional `local` boolean. The app removes that
+marked card only when **Separate You** is enabled in the Consistent HUD tab. Rendered it in its
+own root-level element and left the selected roster's spacing margin on the remaining cards.
+The bottom horizontal template places the roster left and the player card right; the lower-right
+vertical template mirrors the player card to the left so the two elements do not occupy the same
+corner. The simulated preview uses its first sample card as the stand-in for the host. Older
+exporters omit the field, so the option has a safe no-marker fallback: no card is moved.
+
+First live report exposed two implementation faults before release: the render path cleared
+the independent card before a no-op geometry render returned, and a transient null/failed host
+probe could remove the `local` marker for one export tick. Fixed the renderer to preserve the
+card through no-op renders and mark a hidden state dirty for the next show. Made the addon cache
+the last valid host userid for the current script generation. These fixes keep layout
+selection and state detection from making the player card blink.
+
+Follow-up in-game screenshot found a second, independent geometry fault: making the two
+elements root-level siblings did not reserve the player card's width, so a four-card roster row
+could grow underneath it. Subtracted the rendered player-card width and a fixed inter-group gap
+from the roster's usable width. The measurement helper also
+settles newly generated WPF item containers before fitting, and the fit pass converges in one
+render instead of waiting for later state ticks. The horizontal Separate You layout now starts
+the shared roster at three columns, reserving the fourth area for the independent player card;
+the ordinary four-column split remains unchanged when the option is off.
+
+Live-tested the current app and format-v1 VPK in L4D2, including the Consistent HUD health-number
+switch, black-and-white theme, and five-segment Minimalist layout.
+
+**Live-tested and confirmed working** 2026-08-15: Confirmed the v1.2.0 Consistent HUD
+presentation and its new options in-game.
+
 ## 2026-08-15 - v1.0.10: which half is stale, and how it can know
 
 The addon half updates itself. Someone subscribes on the Workshop and Steam keeps it
@@ -466,7 +552,7 @@ The guide lines stay for the boundaries the game cannot draw at all - sidebar ed
 start, bottom clearance - now measured against real pixels rather than simulated ones.
 
 The simulated preview stays as the other mode rather than being deleted. It is the only
-thing that works with no game to draw over, and per the user's correction the two are a
+thing that works with no game to draw over, and per the player's correction the two are a
 choice rather than a replacement. The consequence is the preview-parity risk the v0.3.x
 entries are about, which is why both modes still build their cards from one
 `SampleRoster` and one card template.
@@ -711,7 +797,7 @@ preview templates bind that sequence, and an automated check locks the vanilla o
 
 The v0.4.0 implementation interpreted the screenshots and hand-authored new vector paths.
 Although the item identities were correct and the style was monochrome, the shapes were
-approximations. That violated the user's requirement that the icons look exactly like the
+approximations. That violated the player's requirement that the icons look exactly like the
 screenshots.
 
 The supplied files are now the authoritative sources. Semantic copies live under
@@ -730,7 +816,7 @@ were recreated as native WPF geometry instead of copying the small reference ras
 
 Vector geometry stays crisp through the overlay's automatic enlargement and shrink pass
 and is shared automatically between live cards and the customization preview. Per the
-user's correction, reference-image gradients and slight color casts are deliberately not
+player's correction, reference-image gradients and slight color casts are deliberately not
 preserved: every occupied slot is exactly white on black. Slot dimensions remain unchanged
 so the icon feature cannot reintroduce the recently fixed sidebar overflow.
 
@@ -780,7 +866,7 @@ fit 16 cards into two columns at 1280x720.
 ## Overlay HUD v0.3.1 - 2026-08-12: the reserved band is absent during Tab
 
 The 12% bottom reserve was based on the normal in-game survivor HUD, but this overlay is
-only shown while Tab is held. In the user's HUD setup, that vanilla lower HUD disappears
+only shown while Tab is held. In the player's HUD setup, that vanilla lower HUD disappears
 with the scoreboard and returns after Tab is released. Reserving its former area therefore
 forced an early second column to avoid content that was not present at the same time.
 
@@ -1067,7 +1153,7 @@ reads a file and draws a window.
 
 Tab detection lives in the **app**, not the addon. Two reasons: no round-trip latency on
 show/hide, and VScript cannot read a player's existing key binds, so a "rebind Tab,
-restore later" design can only guess defaults and would permanently corrupt the user's
+restore later" design can only guess defaults and would permanently corrupt the player's
 config. The app hooks the keyboard for itself and gates rendering on L4D2 being the
 foreground window.
 

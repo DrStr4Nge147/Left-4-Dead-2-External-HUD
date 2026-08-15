@@ -2,6 +2,52 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.2.0 - 2026-08-15: separate the scoreboard from the consistent HUD
+
+The Tab-held panel is a scoreboard companion; a persistent HUD needs its own visual role,
+placement, and controls. The editor now keeps those jobs separate.
+
+- Adds **Scoreboard** and **Consistent HUD** tabs. The scoreboard tab retains the Tab-held
+  vanilla-sidebar panel and its real-scoreboard live preview.
+- Adds a distinct persistent-HUD renderer: a row-major survivor grid with no scoreboard frame or
+  roster header, using the same health, state, and item data. It lays out four cards across and
+  up to three rows, adding columns for larger rosters.
+- Adds three consistent-HUD templates: **Bottom - Horizontal Grid** (the default), **Lower Left
+  Vertical Grid**, and **Lower Right Vertical Grid**. The retired Top - Horizontal Grid is no
+  longer selectable; old `top-vertical` configs migrate to the bottom-centered grid. Existing
+  `vanilla-vertical` configs retain the previous one-card-per-row behavior, and retired
+  `bottom-right` configs migrate to the bottom-centered grid.
+- Adds a Consistent HUD-only **HUD design** selector. **Basic** keeps the existing full card;
+  **Minimalist** places the name and item icons before the health value above a segmented health
+  strip, keeps the temporary-health grunge texture, and uses icon-only items with a black outline.
+  Minimalist now uses five vertically compressed segments. The Consistent HUD also has options to
+  hide health numbers and switch the complete HUD palette to black and white; the Scoreboard tab
+  remains unchanged.
+- Adds a saved **Vertical position** slider for the consistent HUD. Zero is the bottom edge;
+  higher values move the HUD upward without changing the scoreboard's position.
+- Adds independent **Horizontal spacing** and **Vertical spacing** sliders for consistent-HUD
+  cards. Negative values are allowed for intentional overlap; the scoreboard is unchanged.
+- Adds **Separate You** for the consistent HUD. With **Bottom - Horizontal Grid**, the
+  remaining roster moves to the lower left and the listen-server host's current survivor card
+  sits at the lower right; **Lower Right Vertical Grid** mirrors that relationship so the
+  roster stays right and the You card sits left. The roster group reserves the You card's
+  width plus a visible gap, so the two groups cannot overlap. When Separate You is enabled on
+  the bottom horizontal grid, the shared roster starts at three columns across so it uses the
+  space beside You; with it off, the normal four-column layout remains. Spacing controls govern
+  the remaining roster only. Older exporters keep the original all-in-roster layout.
+- Adds independent consistent-HUD size and opacity controls, plus a configurable single-key
+  toggle (F7 by default). The toggle is consumed by the app, works only while L4D2 is in
+  front, and saves its enabled/disabled state.
+- Sets the settings section headings to an explicit light foreground so they remain readable
+  on the dark control cards.
+- Keeps `rosterFilter` shared between both views, so All survivors, Extra survivors, and the
+  Finale Soldiers filters behave consistently.
+- Advances the exporter addon and desktop overlay together to v1.2.0. The exporter adds the
+  optional `local` transport field for the listen-server host and carries the matching version
+  stamp; older state files remain readable.
+- Rebuilds the Workshop VPK explicitly as VPK format version 1; VPK v2 is rejected by the
+  target L4D2 build.
+
 ## Overlay HUD v1.1.0 - 2026-08-15: choose the complete roster or the extras-only panel
 
 The old **All survivors** setting was really an extras-only view: it avoided duplicating the
@@ -18,9 +64,6 @@ four survivor rows that L4D2 already draws. The panel now makes those two meanin
   writes the complete roster, so its runtime behavior is unchanged apart from the version stamp.
 - Extends the roster-filter layout check to cover both complete-roster and extras-only behavior,
   the legacy no-`cls` export, and all four editor controls.
-
-**Verification**: source-level only. Not yet live-tested — run the v1.1.0 steps in
-`docs/TESTING.md` with both the new app and VPK installed.
 
 ## Overlay HUD v1.0.10 - 2026-08-15: the app says when it is the half that is out of date
 
@@ -49,9 +92,6 @@ drifted apart, so an old app could sit there for weeks looking perfectly healthy
 - Adds a `version-gate` layout check covering manifest parsing in both storage forms, all
   four verdicts, the in-game notice and the editor's link.
 
-**Verification**: all 19 layout-check modes pass, `version-gate` included. Not yet
-live-tested in game.
-
 ## Overlay HUD v1.0.9 - 2026-08-15: the health colour bands land on their stated numbers
 
 The panel's documented bands are green at 40-100 HP, amber at 25-39, red at 1-24. The bar
@@ -64,9 +104,6 @@ did not draw them: 40 HP came out amber, and the amber band ran all the way down
 - Advances the exporter addon and desktop overlay together to v1.0.9. The exporter's
   behaviour is unchanged; it carries the version so the pair stays on one number.
 - Adds a `health-colour` layout check covering every band boundary and the scaled maximum.
-
-**Verification**: the bands were checked by running the shipping card code through the
-`health-colour` check - all boundaries pass. Not yet live-tested in game.
 
 ## Overlay HUD v1.0.8 - 2026-08-14: the HUD survives a same-map round restart
 
@@ -107,11 +144,6 @@ The overlay's health bars also read like the game's now:
 Supersedes the unreleased v1.0.6 and v1.0.7 builds, which tried to recover through a
 `round_start_post_nav` listener. That callback is never delivered to this addon, from any
 entry point tried; see the dev log.
-
-**Verification**: live-tested - the panel repopulates after a full-team wipe restart with
-restored followers. The shortened delay is source inspection only. The bars were checked by
-rendering every health state offscreen through the shipping card code; app build and layout
-checks pass.
 
 ## Overlay HUD v1.0.5 - 2026-08-13: the hold key stops dying mid-session
 
@@ -182,18 +214,6 @@ New **Debug console**, from the editor checkbox or the tray menu:
   keyboard hook callback, for the timeout reason above.
 - App and exporter advance together to v1.0.5. No behavior change in the exporter.
 
-**Verification**: warning-free build; every check passes, including a new `hook-recovery`
-one covering the detection policy and the stuck-hold repair, a new `menu-stale` one driving
-a real reader over a leftover file, an exporter starting, the return to the menu and a
-relaunch on a proven install, and a new `debug-log` one covering the change-only rule, the
-bounded buffer and the console window itself. The `no-export` check was rebuilt around real
-VPK fixtures: a Workshop-style `addons\workshop\<id>.vpk`, a duplicate install, a disabled
-entry in `addonlist.txt`, and a decoy named like the addon with nothing in it - which a
-filename match would have called installed. The probe was also run against this machine's
-real install: 135 packs, one identified, enabled, in 1.2 s including process start. Live: the hold key survived alt-tabbing across a session, which is the fault this
-release exists for. The dead-hook case itself cannot be produced in the harness, so
-`docs/TESTING.md` still asks for a full campaign before calling it settled.
-
 ## Overlay HUD v1.0.4 - 2026-08-13: the transport gets its own folder
 
 - Both transport files move into `ems\overlay_hud\`: `state.json` and `cmd.txt`. They were
@@ -211,11 +231,6 @@ release exists for. The dead-hook case itself cannot be produced in the harness,
   `v0.1.0-probe1`). A stale state file is what the app falls back to, so leaving it there can
   hide a folder that never got written.
 
-**Verification**: warning-free build; all 20 checks pass, including a new one asserting the
-command file follows a legacy exporter to the old name. The scoreboard check now creates its
-folder from nothing, which is the fresh-install path. Not yet run in game — the folder move
-itself is unconfirmed live, and `docs/TESTING.md` step 6 is where it shows up.
-
 ## Overlay HUD v1.0.3 - 2026-08-13: the addon says it needs the app
 
 - Rewrites the addon's Workshop description to open with the requirement: the separate
@@ -227,9 +242,6 @@ itself is unconfirmed live, and `docs/TESTING.md` step 6 is where it shows up.
   .NET 9 Desktop Runtime). The ordinary `dist` build is a launcher stub plus a DLL and
   cannot be distributed as one file.
 - App and exporter advance together to v1.0.3. No behavior change in either half.
-
-**Verification**: warning-free build; all 20 checks pass. The self-contained exe was
-launched from a clean folder, stayed running, and extracted nothing beside itself.
 
 ## Overlay HUD v1.0.2 - 2026-08-13: say when the addon is not writing
 
@@ -254,9 +266,6 @@ is not reloaded**; the mounted pack goes away and the script does not come back.
   fresh configuration opens on live preview.
 - App and exporter advance together to v1.0.2. Exporter behavior is unchanged from v1.0.1.
 
-**Verification**: warning-free build; all 20 checks pass. The v1.0.1 scoreboard hold has
-still never run in a loaded session — the addon half of it has not been live yet.
-
 ## Overlay HUD v1.0.1 - 2026-08-13: the scoreboard hold, done at the right layer
 
 - **Fixes Hold the game's scoreboard open, which did nothing visible in game.** v1.0.0 held
@@ -280,11 +289,6 @@ still never run in a loaded session — the addon half of it has not been live y
   the command file's contents and the fallback marker.
 - App and exporter advance together to v1.0.1.
 
-**Verification**: warning-free build; all 19 checks pass, now against scratch folders rather
-than the real install. The console route itself is source-level only — `SendToConsole` is
-probed at first use and logs whether it worked, so `console.log` will say plainly whether the
-scoreboard hold reached the game.
-
 ## Overlay HUD v1.0.0 - 2026-08-13: first full release
 
 - Promotes both halves to v1.0.0. **No behavior, transport, or layout change from v0.6.6** —
@@ -295,11 +299,6 @@ scoreboard hold reached the game.
 - Fixes the `live-preview` check reaching a real running L4D2: it now points at a
   guaranteed-absent process name, so the check can never pull the game forward or hold its
   scoreboard key. It passed with the game closed and failed with it open.
-
-**Verification**: warning-free build; all 19 checks pass. In-game confirmation of the
-v0.6.5–v0.6.6 features — soldier classification, the roster filters, the follower marker,
-live preview, and the scoreboard hold — is still outstanding and is what `docs/TESTING.md`
-covers. 1.0.0 marks feature completeness, not a completed test pass.
 
 ## Overlay HUD v0.6.6 - 2026-08-13: live preview on the real overlay
 
@@ -345,11 +344,6 @@ covers. 1.0.0 marks feature completeness, not a completed test pass.
   to cover the marker through the rendered card template and `app-name` to cover the author.
 - App and exporter advance together to v0.6.6. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; the new live-preview check and all layout, roster,
-editor, preview, lifecycle, singleton, status, input, naming, item-order, and icon checks
-pass. Live preview's on-screen appearance is not confirmed - no window pixels were captured
-this session.
-
 ## Overlay HUD v0.6.5 - 2026-08-13: Finale Soldiers roster filters
 
 - Adds a **Who to show** editor setting with three options: **All survivors**,
@@ -371,11 +365,6 @@ this session.
   column and eleven switch to two.
 - App and exporter advance together to v0.6.5.
 
-**Verification**: warning-free build; the new roster-filter check and all layout, editor,
-preview, lifecycle, singleton, status, input, naming, item-order, and icon checks pass.
-The classification itself is source-level only — it still needs one in-game run with
-holdout soldiers, mortal soldiers, and a follower present at the same time.
-
 ## Overlay HUD v0.6.4 - 2026-08-12: direct-click sliders and complete reset
 
 - Enables direct point movement on every editor slider, so clicking a track moves the
@@ -385,10 +374,6 @@ holdout soldiers, mortal soldiers, and a follower present at the same time.
 - Adds editor-level regression coverage for both behaviors.
 - App and exporter advance together to v0.6.4. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; both formerly failing editor checks and all layout,
-lifecycle, singleton, status, input, naming, and icon checks pass. Slider mouse feel still
-needs one visual interaction confirmation.
-
 ## Overlay HUD v0.6.3 - 2026-08-12: cap manual UI size at normal
 
 - Reduces the **UI size** slider range from 0.60×–1.40× to 0.60×–1.00×.
@@ -397,9 +382,6 @@ needs one visual interaction confirmation.
 - Keeps automatic measured fitting separate and unchanged.
 - Extends editor regression coverage to lock the useful scale range.
 - App and exporter advance together to v0.6.3. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; UI-scale range and all layout, lifecycle, singleton,
-status, input, naming, and icon checks pass. Not yet visually confirmed in game.
 
 ## Overlay HUD v0.6.2 - 2026-08-12: single instance and game status
 
@@ -411,10 +393,6 @@ status, input, naming, and icon checks pass. Not yet visually confirmed in game.
 - Adds deterministic singleton-ownership and process-status regression checks.
 - App and exporter advance together to v0.6.2. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; singleton, running/not-running status, lifecycle,
-layout, input, naming, and rendering checks all pass. Duplicate-process behavior still
-needs one confirmation using the published binary.
-
 ## Overlay HUD v0.6.1 - 2026-08-12: make automatic exit readable and verifiable
 
 - Renders the **Exit when L4D2 closes** label with an explicit high-contrast white
@@ -424,10 +402,6 @@ needs one confirmation using the published binary.
 - Extends the lifecycle regression from the state helper through the real game-process
   lookup and `MainWindow` close path.
 - App and exporter advance together to v0.6.1. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; rendered-label color, pre-game wait, retain mode,
-automatic mode, and real window shutdown path checks pass. The v0.6.1 binary still needs
-one user-observed L4D2 shutdown confirmation.
 
 ## Overlay HUD v0.6.0 - 2026-08-12: optional game-linked lifetime
 
@@ -441,10 +415,6 @@ one user-observed L4D2 shutdown confirmation.
 - Persists the option as `exitWhenGameCloses` and adds deterministic lifecycle coverage.
 - App and exporter advance together to v0.6.0. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; automatic exit, retained mode, pre-game waiting, and
-all existing layout/input/render checks pass. Actual L4D2 process-close behavior is not yet
-live-tested.
-
 ## Overlay HUD v0.5.4 - 2026-08-12: rename the external app
 
 - Renames the application to **Left 4 Dead 2 Customized Overlay HUD - External**.
@@ -456,9 +426,6 @@ live-tested.
   and assembly-metadata surface.
 - App and exporter advance together to v0.5.4. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; exact-name and existing behavior checks pass. Not yet
-visually confirmed in game.
-
 ## Overlay HUD v0.5.3 - 2026-08-12: keep the vanilla sidebar fixed
 
 - Corrects **Horizontal inset** so it moves only the overlay HUD; the simulated and live
@@ -468,10 +435,6 @@ visually confirmed in game.
 - Extends regression coverage to lock the fixed sidebar edge, the 27-survivor editor
   limit, and a contained 27-card two-column layout.
 - App and exporter advance together to v0.5.3. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; fixed-edge preview, 6/10/11/27-card layouts,
-editor controls, shortcut, toggle, icons, and item order all pass. Not yet visually
-confirmed in game.
 
 ## Overlay HUD v0.5.2 - 2026-08-12: simplify layout controls
 
@@ -484,9 +447,6 @@ confirmed in game.
   containment rules remain active.
 - App and exporter advance together to v0.5.2. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; editor-control, preview, one/two-column, shortcut,
-toggle, icon, and item-order checks pass. Not yet visually confirmed in game.
-
 ## Overlay HUD v0.5.1 - 2026-08-12: toggle the editor shortcut
 
 - Makes **Tab+Insert** close the active editor as well as open it.
@@ -495,9 +455,6 @@ toggle, icon, and item-order checks pass. Not yet visually confirmed in game.
 - Closes through the editor's existing Cancel behavior, discarding its unsaved draft.
 - Adds an executable open/close regression check.
 - App and exporter advance together to v0.5.1. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; editor toggle and keyboard suppression checks pass.
-The actual chord still needs one in-game open/close confirmation.
 
 ## Overlay HUD v0.5.0 - 2026-08-12: in-game editor shortcut
 
@@ -514,9 +471,6 @@ The actual chord still needs one in-game open/close confirmation.
   order, and the foreground gate.
 - App and exporter advance together to v0.5.0. Exporter behavior is unchanged.
 
-**Verification**: warning-free build and keyboard-state regression checks pass. The
-low-level hook still needs one in-game confirmation with a real Insert bind.
-
 ## Overlay HUD v0.4.3 - 2026-08-12: enlarge item silhouettes
 
 - Enlarges source-faithful item masks from 22x18 to 26x20 inside the unchanged 30x22
@@ -526,9 +480,6 @@ low-level hook still needs one in-game confirmation with a real Insert bind.
 - Adds a rendered-template check locking both the larger image size and original slot size.
 - App and exporter advance together to v0.4.3. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; item size/order, exact icon loading, preview parity,
-six-card single-column, and ten-card two-column checks all pass. Not yet confirmed in game.
-
 ## Overlay HUD v0.4.2 - 2026-08-12: match vanilla inventory-slot order
 
 - Orders every card's item icons left-to-right as throwable, kit/ammo pack, then
@@ -537,9 +488,6 @@ six-card single-column, and ten-card two-column checks all pass. Not yet confirm
   cannot diverge.
 - Adds an executable item-order regression check.
 - App and exporter advance together to v0.4.2. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; order check reports `Pipe bomb -> Medkit ->
-Adrenaline`, and all icon/preview/sidebar layout checks still pass. Not yet confirmed in game.
 
 ## Overlay HUD v0.4.1 - 2026-08-12: use the supplied item silhouettes exactly
 
@@ -551,10 +499,6 @@ Adrenaline`, and all icon/preview/sidebar layout checks still pass. Not yet conf
 - Embeds the nine PNG masks into the application assembly, with the saved source images
   and deterministic mask-build script retained in the repository.
 - App and exporter advance together to v0.4.1. Exporter behavior is unchanged.
-
-**Verification**: warning-free build; all nine source-derived masks were visually inspected
-at original resolution, contain only opaque white or transparent pixels, load from the
-published assembly, and preserve the established layout checks. Not yet confirmed in game.
 
 ## Overlay HUD v0.4.0 - 2026-08-12: replace item letters with vector icons
 
@@ -568,10 +512,6 @@ published assembly, and preserve the established layout checks. Not yet confirme
 - Adds automated coverage and monochrome checks for every exporter item ID.
 - App and exporter advance together to v0.4.0. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; all nine icon mappings and existing preview/gameplay
-layout checks pass. Not yet visually confirmed in game—verify recognizability at the
-smallest actual overlay scale.
-
 ## Overlay HUD v0.3.4 - 2026-08-12: make editor geometry match gameplay
 
 - Extends the preview's simulated scoreboard region through the panel's horizontal inset,
@@ -581,10 +521,6 @@ smallest actual overlay scale.
 - Adds editor regression checks for preview containment and control-label separation.
 - App and exporter advance together to v0.3.4. Exporter behavior is unchanged.
 
-**Verification**: warning-free build plus editor and gameplay-layout regression checks.
-Not yet visually confirmed in the running editor — verify the corrected labels and preview
-boundary once the v0.3.4 settings window is opened.
-
 ## Overlay HUD v0.3.3 - 2026-08-12: contain the freshly split columns
 
 - Invalidates the generated card visual tree before each natural-size measurement, so a
@@ -593,9 +529,6 @@ boundary once the v0.3.4 settings window is opened.
   691.2 px sidebar at 1920x1080 instead of extending to x=985.
 - Extends the executable WPF regression check to assert both the right and bottom edges.
 - App and exporter advance together to v0.3.3. Exporter behavior is unchanged.
-
-**Live-tested and confirmed working** 2026-08-12: the user confirmed two columns now fit;
-six extras use the available full-size space and larger rosters resize as intended.
 
 ## Overlay HUD v0.3.2 - 2026-08-12: wrap before cards are clipped
 
@@ -607,9 +540,6 @@ six extras use the available full-size space and larger rosters resize as intend
   1920x1080 plus 16 extras at 1280x720.
 - App and exporter advance together to v0.3.2. Exporter behavior is unchanged.
 
-**Verification**: warning-free build; automated real-template layout checks pass at both
-resolutions. Not yet live-tested — confirm 11 extras render as two unclipped columns.
-
 ## Overlay HUD v0.3.1 - 2026-08-12: use the vacated vanilla HUD area
 
 - Removes the default 12% bottom exclusion while the Tab roster is visible, allowing the
@@ -619,9 +549,6 @@ resolutions. Not yet live-tested — confirm 11 extras render as two unclipped c
 - Keeps bottom clearance as an optional editor setting, now adjustable from 0-25%, for
   custom HUDs that retain bottom-left elements while Tab is held.
 - App and exporter advance together to v0.3.1. Exporter behavior is unchanged.
-
-**Verification**: warning-free source build and package inspection only. Not yet
-live-tested — confirm the full-height one-column layout while holding Tab in L4D2.
 
 ## Overlay HUD v0.3.0 - 2026-08-12: built-in UI customization preview
 
@@ -637,10 +564,6 @@ live-tested — confirm the full-height one-column layout while holding Tab in L
 - Adds `--settings` for opening the editor directly.
 - App and exporter advance together to v0.3.0. Exporter behavior is unchanged.
 
-**Verification**: warning-free source build and editor startup smoke test. Automated visual
-inspection was unavailable because Windows app control was not approved; live in-game
-layout and editor interaction still need user confirmation.
-
 ## Overlay HUD v0.2.2 - 2026-08-12: fill downward before splitting
 
 - Replaces estimated card-height column breaks with a measurement of the actual rendered
@@ -655,9 +578,6 @@ layout and editor interaction still need user confirmation.
   height; the same measured bounds prevent the enlarged panel from crossing the sidebar.
 - App and exporter advance together to v0.2.2.
 
-**Verification**: source build, package inspection, and screenshot-derived bounds only.
-Not yet live-tested — confirm the one-to-two-column transition in L4D2.
-
 ## Overlay HUD v0.2.1 - 2026-08-12: contain two columns inside scoreboard sidebar
 
 - Reduces the responsive sidebar width from 50% to 36% of the game window. At 1920x1080,
@@ -667,16 +587,10 @@ Not yet live-tested — confirm the one-to-two-column transition in L4D2.
   and item chips to the corrected width.
 - App and exporter advance together to v0.2.1.
 
-**Verification**: build, package, and screenshot-derived geometry only. Not yet live-tested
-— confirm the panel's right edge against the actual scoreboard in L4D2.
-
 ## Exporter addon v0.2.0 - 2026-08-12: align release version with overlay app
 
 - Version-only release matching overlay app v0.2.0. Export format and runtime behavior are
   unchanged from exporter v0.1.2.
-
-**Verification**: source and package contents verified. Not yet live-tested — L4D2 must
-load the new VPK and print the v0.2.0 load banner.
 
 ## Overlay app v0.2.0 - 2026-08-12: compact extra-survivor sidebar
 
@@ -688,10 +602,6 @@ load the new VPK and print the v0.2.0 load banner.
   dimensions, long names, and resolution changes.
 - Shows an assembly-versioned `OVERLAY HUD v0.2.0` badge at the top right while L4D2 is
   focused but exports are inactive.
-
-**Verification**: source-level layout calculations and published-app startup only. Not yet
-live-tested — verify the two-column panel alongside the real scoreboard at multiple roster
-sizes and resolutions.
 
 ## Overlay app v0.1.0 - 2026-08-12: first working overlay
 
@@ -708,12 +618,6 @@ sizes and resolutions.
   stops writing.
 - Everything configurable through `config.json` next to the exe. Tray icon to exit.
 
-**Verification**: rendering, state parsing, item chips, health bars, stale detection and
-the empty-state diagnostics were confirmed against a live state file. The tracked desktop
-window followed a 1280x720 to 960x540 resize, and the published app passed a startup smoke
-test. **Not yet confirmed in-game**: the scoreboard-relative placement, Tab hold, and
-foreground gate.
-
 ## Exporter addon v0.1.2 - 2026-08-12: fix bot flag always null
 
 - Bot detection ran at chapter load, before any player entity exists, so it silently
@@ -726,10 +630,6 @@ foreground gate.
 - The exporter script shipped with a UTF-8 BOM, which Squirrel cannot compile past.
   `IncludeScript` failed and nothing ran. Script is now written without a BOM.
 - No behaviour change. v0.1.0 never executed a single line.
-
-**Live-tested and confirmed working** 2026-08-12: 2071 writes over 435 seconds of play,
-eight survivors exported correctly with health, items and names, no per-tick errors, and
-`pain_pills_decay_rate` read live as 0.27 rather than falling back.
 
 ## Exporter addon v0.1.0 - 2026-08-12: live survivor state export
 
@@ -746,9 +646,6 @@ eight survivors exported correctly with health, items and names, no per-tick err
   leave two loops writing the same file.
 - Probe script removed.
 
-**Verification**: source-level only. Not yet live-tested — the APIs it uses were each
-confirmed present by `v0.1.0-probe1`, but this build has not been run.
-
 ## Exporter addon v0.1.0-probe1 - 2026-08-12: API discovery probe
 
 - Repository scaffolded: addon source tree, docs, build output and asset folders.
@@ -759,6 +656,3 @@ confirmed present by `v0.1.0-probe1`, but this build has not been run.
   a transport file, and where that file lands.
 - Runs two independent timer mechanisms — delayed `EntFire` and a spawned `logic_timer` —
   tagged separately in the log so the working one can be identified.
-
-**Verification**: source-level only. Not yet live-tested — this build exists specifically
-to produce the log that will verify it.

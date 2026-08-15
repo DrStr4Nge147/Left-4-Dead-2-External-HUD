@@ -19,7 +19,7 @@
     <Copyright>DrStr4nge</Copyright>
     <Description>External customized survivor HUD for Left 4 Dead 2</Description>
     <!-- Read at runtime for the menu/lobby badge. Keep this as the app version source. -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Regenerate with tools/Build-AppIcon.ps1; the file is committed. -->
     <ApplicationIcon>Assets\OverlayHud.ico</ApplicationIcon>

@@ -25,6 +25,8 @@ internal static class Program
         return RunSettingsToggleCheck();
     if (args.Length > 0 && string.Equals(args[0], "editor-controls", StringComparison.OrdinalIgnoreCase))
         return RunEditorControlsCheck();
+    if (args.Length > 0 && string.Equals(args[0], "consistent-hud", StringComparison.OrdinalIgnoreCase))
+        return RunConsistentHudCheck();
     if (args.Length > 0 && string.Equals(args[0], "no-export", StringComparison.OrdinalIgnoreCase))
         return RunNoExportCheck();
     if (args.Length > 0 && string.Equals(args[0], "scoreboard-hold", StringComparison.OrdinalIgnoreCase))
@@ -406,6 +408,87 @@ internal static class Program
             } }
             && settings.FindName("ShowScoreboardCheckBox") is CheckBox { IsChecked: true };
 
+        bool separateConsistentTab =
+            settings.FindName("SettingsTabs") is TabControl { Items.Count: 2 }
+            && settings.FindName("ConsistentTemplateCombo") is ComboBox template
+            && template.Items.Count == 3
+            && settings.FindName("ConsistentDesignCombo") is ComboBox design
+            && design.Items.Count == 2
+            && settings.FindName("ConsistentHotkeyBox") is TextBox
+            && settings.FindName("ConsistentScaleSlider") is Slider { IsMoveToPointEnabled: true }
+            && settings.FindName("ConsistentOpacitySlider") is Slider { IsMoveToPointEnabled: true }
+            && settings.FindName("ConsistentVerticalSlider") is Slider { IsMoveToPointEnabled: true }
+            && settings.FindName("ConsistentHorizontalSpacingSlider") is Slider
+            {
+                Minimum: -100, Maximum: 100, IsMoveToPointEnabled: true
+            }
+            && settings.FindName("ConsistentVerticalSpacingSlider") is Slider
+            {
+                Minimum: -20, Maximum: 40, IsMoveToPointEnabled: true
+            }
+            && settings.FindName("ConsistentSeparateYouCheckBox") is CheckBox
+            {
+                Content: TextBlock { Text: "Separate You" }
+            }
+            && settings.FindName("ConsistentShowHealthNumbersCheckBox") is CheckBox
+            {
+                Content: TextBlock { Text: "Show health numbers" }
+            }
+            && settings.FindName("ConsistentMonochromeCheckBox") is CheckBox
+            {
+                Content: TextBlock { Text: "Black & white theme" }
+            }
+            && new AppConfig().ConsistentKey == 0x76
+            && new AppConfig().ConsistentDesign == ConsistentHudPolicy.BasicDesign
+            && Math.Abs(new AppConfig().ConsistentVerticalOffset - 0.035) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentHorizontalSpacing) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentVerticalSpacing) < 0.0001
+            && !new AppConfig().ConsistentSeparateYou
+            && new AppConfig().ConsistentShowHealthNumbers
+            && !new AppConfig().ConsistentMonochrome
+            && new AppConfig().ConsistentTemplate == ConsistentHudPolicy.VanillaBottomCenter;
+
+        bool templateNames = settings.FindName("ConsistentTemplateCombo") is ComboBox namedTemplate
+            && namedTemplate.Items.OfType<ComboBoxItem>()
+                .Select(item => item.Content?.ToString() ?? string.Empty)
+                .SequenceEqual(new[]
+                {
+                    "Bottom - Horizontal Grid",
+                    "Lower Left Vertical Grid",
+                    "Lower Right Vertical Grid"
+                })
+            && namedTemplate.Items.OfType<ComboBoxItem>()
+                .Select(item => item.Tag as string)
+                .SequenceEqual(new[]
+                {
+                    ConsistentHudPolicy.VanillaBottomCenter,
+                    ConsistentHudPolicy.VanillaVertical,
+                    ConsistentHudPolicy.LowerRightVertical
+                });
+
+        bool designNames = settings.FindName("ConsistentDesignCombo") is ComboBox namedDesign
+            && namedDesign.Items.OfType<ComboBoxItem>()
+                .Select(item => item.Content?.ToString() ?? string.Empty)
+                .SequenceEqual(new[] { "Basic", "Minimalist" })
+            && namedDesign.Items.OfType<ComboBoxItem>()
+                .Select(item => item.Tag as string)
+                .SequenceEqual(new[]
+                {
+                    ConsistentHudPolicy.BasicDesign,
+                    ConsistentHudPolicy.MinimalistDesign
+                });
+
+        bool sectionHeadingsReadable =
+            settings.FindName("PreviewSectionHeading") is TextBlock previewHeading
+            && previewHeading.Foreground is SolidColorBrush previewBrush
+            && previewBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5)
+            && settings.FindName("WhoToShowSectionHeading") is TextBlock whoHeading
+            && whoHeading.Foreground is SolidColorBrush whoBrush
+            && whoBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5)
+            && settings.FindName("UiSizeSectionHeading") is TextBlock uiSizeHeading
+            && uiSizeHeading.Foreground is SolidColorBrush uiSizeBrush
+            && uiSizeBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5);
+
         // First run opens on the live preview: the real panel over the real game is what
         // the editor is for, and the simulated canvas is the fallback for a closed game.
         var freshInstall = new SettingsWindow(new AppConfig(), () => { });
@@ -443,10 +526,50 @@ internal static class Program
 
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         Invoke(settings, "LoadControls", flags);
+        var separateYouCheckBox = (CheckBox)GetField(settings, "ConsistentSeparateYouCheckBox", flags);
+        var showHealthNumbersCheckBox =
+            (CheckBox)GetField(settings, "ConsistentShowHealthNumbersCheckBox", flags);
+        var monochromeCheckBox =
+            (CheckBox)GetField(settings, "ConsistentMonochromeCheckBox", flags);
+        var editorDraft = (AppConfig)GetField(settings, "_draft", flags);
+        var designCombo = (ComboBox)GetField(settings, "ConsistentDesignCombo", flags);
+        bool separateYouLoadsOff = separateYouCheckBox.IsChecked == false;
+        bool themeOptionsLoadDefaults = showHealthNumbersCheckBox.IsChecked == true
+            && monochromeCheckBox.IsChecked == false;
+        separateYouCheckBox.IsChecked = true;
+        showHealthNumbersCheckBox.IsChecked = false;
+        monochromeCheckBox.IsChecked = true;
+        Invoke(settings, "ReadControls", flags);
+        bool separateYouWrites = editorDraft.ConsistentSeparateYou;
+        bool themeOptionsWrite = !editorDraft.ConsistentShowHealthNumbers
+            && editorDraft.ConsistentMonochrome;
+        bool designLoadsBasic = designCombo.SelectedItem is ComboBoxItem
+        {
+            Tag: ConsistentHudPolicy.BasicDesign
+        };
+        designCombo.SelectedIndex = 1;
+        Invoke(settings, "ReadControls", flags);
+        bool designWritesMinimalist = editorDraft.ConsistentDesign
+            == ConsistentHudPolicy.MinimalistDesign;
+        var designAppliedConfig = new AppConfig();
+        designAppliedConfig.CopyUiFrom(editorDraft);
+        bool designCopiesToLive = designAppliedConfig.ConsistentDesign
+            == ConsistentHudPolicy.MinimalistDesign;
+        bool themeOptionsCopyToLive = !designAppliedConfig.ConsistentShowHealthNumbers
+            && designAppliedConfig.ConsistentMonochrome;
+        designCombo.SelectedIndex = 0;
+        Invoke(settings, "ReadControls", flags);
+        separateYouCheckBox.IsChecked = false;
+        showHealthNumbersCheckBox.IsChecked = true;
+        monochromeCheckBox.IsChecked = false;
+        Invoke(settings, "ReadControls", flags);
         var previewSlider = (Slider)GetField(settings, "PreviewCountSlider", flags);
         previewSlider.Value = 27;
         Invoke(settings, "OnResetClick", flags, settings, new RoutedEventArgs());
         bool resetRestoresSix = previewSlider.Value == 6;
+        bool resetRestoresThemeDefaults =
+            ((AppConfig)GetField(settings, "_draft", flags)).ConsistentShowHealthNumbers
+            && !((AppConfig)GetField(settings, "_draft", flags)).ConsistentMonochrome;
 
         // Reset UI is a layout reset: it must not silently turn off the panel-without-Tab
         // or game-lifetime preferences.
@@ -459,7 +582,13 @@ internal static class Program
         bool passed = enlargementRemoved && sidebarRemoved && policyRetained
             && previewLimitIs27 && userScaleRangeIsUseful && slidersJumpToClick
             && resetRestoresSix && obviousScrollBar && tabAndScoreboardOptions
-            && resetKeepsBehaviorOptions && previewChoiceRemembered && livePreviewIsDefault
+            && separateConsistentTab && templateNames && sectionHeadingsReadable
+            && separateYouLoadsOff && separateYouWrites && themeOptionsLoadDefaults
+            && themeOptionsWrite && themeOptionsCopyToLive
+            && designNames && designLoadsBasic && designWritesMinimalist && designCopiesToLive
+            && resetRestoresThemeDefaults
+            && resetKeepsBehaviorOptions
+            && previewChoiceRemembered && livePreviewIsDefault
             && rosterSectionIsCosmetic;
 
         Console.WriteLine(
@@ -473,6 +602,15 @@ internal static class Program
             $"alwaysVisibleScrollBar={barAlwaysVisible} barWidth={barWidth} " +
             $"scrollHint={hintExists} darkerWellWithFade={wellIsDarker} " +
             $"tabAndScoreboardOptions={tabAndScoreboardOptions} " +
+            $"separateConsistentTab={separateConsistentTab} " +
+            $"separateYouLoadsOff={separateYouLoadsOff} separateYouWrites={separateYouWrites} " +
+            $"themeOptionsLoadDefaults={themeOptionsLoadDefaults} " +
+            $"themeOptionsWrite={themeOptionsWrite} themeOptionsCopyToLive={themeOptionsCopyToLive} " +
+            $"templateNames={templateNames} " +
+            $"designNames={designNames} designLoadsBasic={designLoadsBasic} " +
+            $"designWritesMinimalist={designWritesMinimalist} designCopiesToLive={designCopiesToLive} " +
+            $"resetRestoresThemeDefaults={resetRestoresThemeDefaults} " +
+            $"sectionHeadingsReadable={sectionHeadingsReadable} " +
             $"resetKeepsBehaviorOptions={resetKeepsBehaviorOptions} " +
             $"previewChoiceRemembered={previewChoiceRemembered} " +
             $"livePreviewIsDefault={livePreviewIsDefault} " +
@@ -482,6 +620,371 @@ internal static class Program
             : "FAIL: fixed layout policy must not be exposed as editor settings");
 
         settings.Close();
+        app.Shutdown();
+        return passed ? 0 : 1;
+    }
+
+    private static int RunConsistentHudCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.GameProcess = "OverlayHudConsistentCheckNoSuchGame";
+        config.IgnoreForeground = true;
+        config.AlwaysShow = false;
+        config.ConsistentSeparateYou = false;
+        config.ConsistentDesign = ConsistentHudPolicy.BasicDesign;
+        config.ConsistentShowHealthNumbers = true;
+        config.ConsistentMonochrome = false;
+        config.ConsistentTemplate = ConsistentHudPolicy.VanillaBottomCenter;
+        config.ConsistentVerticalOffset = 0.035;
+        config.ConsistentHorizontalSpacing = 24;
+        config.ConsistentVerticalSpacing = -8;
+
+        var minimalistTempCard = SurvivorCard.From(new Survivor
+        {
+            Name = "Temporary health",
+            Hp = 60,
+            Temp = 20,
+            MaxHp = 100
+        });
+        bool minimalistTempHealth = minimalistTempCard.TempBrush is DrawingBrush
+            && minimalistTempCard.MinimalistSegments.Count == SurvivorCard.MinimalistSegmentCount
+            && minimalistTempCard.MinimalistSegments.All(segment =>
+                ReferenceEquals(segment.TotalFill, minimalistTempCard.TempBrush)
+                && ReferenceEquals(segment.PermanentFill, minimalistTempCard.HealthBrush)
+                && segment.TotalFillWidth >= segment.PermanentFillWidth)
+            && minimalistTempCard.MinimalistSegments.Any(segment =>
+                segment.TotalFillWidth > segment.PermanentFillWidth);
+        bool minimalistFiveBars = SurvivorCard.MinimalistSegmentCount == 5
+            && Math.Abs(SurvivorCard.MinimalistSegmentHeight - 4) < 0.001
+            && Math.Abs(SurvivorCard.MinimalistRowHeight - 6) < 0.001
+            && minimalistTempCard.MinimalistSegments.Count == 5;
+
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+
+        var panel = (Border)GetField(window, "Panel", flags);
+        var scoreboard = (StackPanel)GetField(window, "ScoreboardContent", flags);
+        var consistent = (StackPanel)GetField(window, "ConsistentContent", flags);
+        var rows = (ItemsControl)GetField(window, "ConsistentRows", flags);
+        var verticalCards = (ItemsControl)GetField(window, "ConsistentVerticalCards", flags);
+        var youPanel = (Border)GetField(window, "ConsistentYouPanel", flags);
+        var youCards = (ItemsControl)GetField(window, "ConsistentYouCards", flags);
+        var panelScale = (ScaleTransform)GetField(window, "PanelScale", flags);
+        var youPanelScale = (ScaleTransform)GetField(window, "ConsistentYouPanelScale", flags);
+        var guideScoreboard = (System.Windows.Shapes.Rectangle)GetField(window, "GuideScoreboard", flags);
+
+        double defaultBottomMargin = panel.Margin.Bottom;
+        bool spacingApplied = rows.Tag is Thickness cardMargin
+            && Math.Abs(cardMargin.Left - 12) < 0.001
+            && Math.Abs(cardMargin.Right - 12) < 0.001
+            && Math.Abs(cardMargin.Top + 3) < 0.001
+            && Math.Abs(cardMargin.Bottom + 3) < 0.001;
+        bool bottomCenterTemplate = panel.HorizontalAlignment == HorizontalAlignment.Center
+            && panel.VerticalAlignment == VerticalAlignment.Bottom
+            && panel.Margin.Bottom > 0;
+        bool usesHudRenderer = panel.Visibility == Visibility.Visible
+            && scoreboard.Visibility != Visibility.Visible
+            && consistent.Visibility == Visibility.Visible
+            && rows.ItemsSource is IEnumerable rowSource
+            && rowSource.Cast<IEnumerable>()
+                .Select(row => row.Cast<object>().Count())
+                .SequenceEqual(new[] { 4, 2 })
+            && panel.Background == Brushes.Transparent
+            && guideScoreboard.Visibility != Visibility.Visible;
+        Size basicNaturalSize = LayoutMeasurement.NaturalSize(panel);
+        double basicNaturalWidth = basicNaturalSize.Width;
+
+        config.ConsistentShowHealthNumbers = false;
+        config.ConsistentMonochrome = true;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool themeRenderer = rows.ItemsSource is IEnumerable themedRowSource
+            && themedRowSource.Cast<IEnumerable>()
+                .SelectMany(row => row.Cast<object>())
+                .OfType<SurvivorCard>()
+                .FirstOrDefault() is { ShowHealthNumbers: false, IsMonochrome: true } themedCard
+            && ((SolidColorBrush)themedCard.HealthBrush).Color
+                == Color.FromRgb(0xF2, 0xF2, 0xF2)
+            && ((SolidColorBrush)themedCard.FollowerBrush).Color
+                == Color.FromRgb(0xF2, 0xF2, 0xF2);
+
+        config.ConsistentDesign = ConsistentHudPolicy.MinimalistDesign;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        Size minimalistNaturalSize = LayoutMeasurement.NaturalSize(panel);
+        double minimalistNaturalWidth = minimalistNaturalSize.Width;
+        bool minimalistRenderer = minimalistNaturalWidth < basicNaturalWidth
+            && minimalistNaturalSize.Height < basicNaturalSize.Height
+            && rows.ItemsSource is IEnumerable minimalistRowSource
+            && minimalistRowSource.Cast<IEnumerable>()
+                .Select(row => row.Cast<object>().Count())
+                .SequenceEqual(new[] { 4, 2 });
+
+        config.ConsistentDesign = ConsistentHudPolicy.BasicDesign;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+
+        config.ConsistentSeparateYou = true;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool separateYouRenderer = youPanel.Visibility == Visibility.Visible
+            && youCards.ItemsSource is IEnumerable youSource
+            && youSource.Cast<object>().Count() == 1
+            && youCards.Tag == null
+            && rows.ItemsSource is IEnumerable separatedRowSource
+                && separatedRowSource.Cast<IEnumerable>()
+                .Select(row => row.Cast<object>().Count())
+                .SequenceEqual(new[] { 3, 2 })
+            && panel.HorizontalAlignment == HorizontalAlignment.Left
+            && youPanel.HorizontalAlignment == HorizontalAlignment.Right
+            && youPanel.Margin.Right > 0
+            && youPanel.Margin.Bottom > 0;
+        double rosterRenderedWidth = LayoutMeasurement.NaturalSize(panel).Width * panelScale.ScaleX;
+        double youRenderedWidth = LayoutMeasurement.NaturalSize(youPanel).Width * youPanelScale.ScaleX;
+        double youLeft = 1920 - youPanel.Margin.Right - youRenderedWidth;
+        double separateGapPixels = youLeft - (panel.Margin.Left + rosterRenderedWidth);
+        bool separateGroupGap = separateGapPixels
+            >= 1920 * ConsistentHudPolicy.SeparateYouGapFraction - 1.5;
+
+        config.ConsistentSeparateYou = false;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+
+        config.ConsistentTemplate = ConsistentHudPolicy.VanillaVertical;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool vanillaVerticalTemplate = panel.HorizontalAlignment == HorizontalAlignment.Left
+            && panel.VerticalAlignment == VerticalAlignment.Bottom;
+        bool verticalRenderer = rows.Visibility == Visibility.Collapsed
+            && verticalCards.Visibility == Visibility.Visible
+            && verticalCards.ItemsSource is IEnumerable verticalSource
+            && verticalSource.Cast<object>().Count() == 6;
+
+        config.ConsistentTemplate = ConsistentHudPolicy.LowerRightVertical;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool lowerRightVerticalTemplate = panel.HorizontalAlignment == HorizontalAlignment.Right
+            && panel.VerticalAlignment == VerticalAlignment.Bottom
+            && rows.Visibility == Visibility.Collapsed
+            && verticalCards.Visibility == Visibility.Visible
+            && verticalCards.ItemsSource is IEnumerable lowerRightSource
+            && lowerRightSource.Cast<object>().Count() == 6;
+
+        config.ConsistentSeparateYou = true;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool lowerRightSeparatesToLeft = panel.HorizontalAlignment == HorizontalAlignment.Right
+            && youPanel.HorizontalAlignment == HorizontalAlignment.Left
+            && youPanel.Margin.Left > 0
+            && Math.Abs(youPanel.Margin.Right) < 0.001;
+        double lowerRightRosterWidth = LayoutMeasurement.NaturalSize(panel).Width
+            * panelScale.ScaleX;
+        double lowerRightYouWidth = LayoutMeasurement.NaturalSize(youPanel).Width
+            * youPanelScale.ScaleX;
+        double lowerRightRosterLeft = 1920 - panel.Margin.Right - lowerRightRosterWidth;
+        double lowerRightYouRight = youPanel.Margin.Left + lowerRightYouWidth;
+        bool lowerRightGroupGap = lowerRightRosterLeft - lowerRightYouRight
+            >= 1920 * ConsistentHudPolicy.SeparateYouGapFraction - 1.0;
+
+        config.ConsistentSeparateYou = false;
+
+        config.ConsistentTemplate = ConsistentHudPolicy.VanillaBottomCenter;
+        config.ConsistentVerticalOffset = 0.35;
+        window.UpdateLivePreview(config.Clone(), 6, false, true);
+        Invoke(window, "Render", flags);
+        bool verticalPositionMoved = panel.HorizontalAlignment == HorizontalAlignment.Center
+            && panel.VerticalAlignment == VerticalAlignment.Bottom
+            && panel.Margin.Bottom > defaultBottomMargin + 100;
+
+        var settings = new SettingsWindow(config.Clone(), () => { });
+        Invoke(settings, "LoadControls", flags);
+        var settingsTabs = (TabControl)GetField(settings, "SettingsTabs", flags);
+        settingsTabs.SelectedIndex = 1;
+        Invoke(settings, "RefreshPreview", flags);
+        var previewPanel = (Border)GetField(settings, "PreviewPanel", flags);
+        var previewScale = (ScaleTransform)GetField(settings, "PreviewPanelScale", flags);
+        var previewRows = (ItemsControl)GetField(settings, "PreviewConsistentRows", flags);
+        previewPanel.Child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double previewNaturalWidth = previewPanel.Child.DesiredSize.Width
+            + previewPanel.Padding.Left + previewPanel.Padding.Right
+            + previewPanel.BorderThickness.Left + previewPanel.BorderThickness.Right;
+        double previewRenderedWidth = previewNaturalWidth * previewScale.ScaleX;
+        double previewNaturalHeight = previewPanel.Child.DesiredSize.Height
+            + previewPanel.Padding.Top + previewPanel.Padding.Bottom
+            + previewPanel.BorderThickness.Top + previewPanel.BorderThickness.Bottom;
+        double previewRenderedHeight = previewNaturalHeight * previewScale.ScaleY;
+        bool vanillaPreview = Math.Abs(Canvas.GetLeft(previewPanel)
+                                       - (720 - previewRenderedWidth) / 2) < 0.5;
+        bool previewVerticalPosition = Canvas.GetTop(previewPanel)
+            < 405 - previewRenderedHeight - 100;
+        bool previewSpacingApplied = previewRows.Tag is Thickness previewMargin
+            && Math.Abs(previewMargin.Left - 12) < 0.001
+            && Math.Abs(previewMargin.Top + 3) < 0.001;
+        bool previewGrid = previewRows.ItemsSource is IEnumerable previewRowSource
+            && previewRowSource.Cast<IEnumerable>()
+                .Select(row => row.Cast<object>().Count())
+                .SequenceEqual(new[] { 4, 2 });
+
+        var separatePreviewConfig = config.Clone();
+        separatePreviewConfig.ConsistentSeparateYou = true;
+        var separatePreview = new SettingsWindow(separatePreviewConfig, () => { });
+        Invoke(separatePreview, "LoadControls", flags);
+        var separatePreviewTabs = (TabControl)GetField(separatePreview, "SettingsTabs", flags);
+        separatePreviewTabs.SelectedIndex = 1;
+        Invoke(separatePreview, "RefreshPreview", flags);
+        var previewSeparatePanel = (Border)GetField(separatePreview, "PreviewPanel", flags);
+        var previewSeparateScale = (ScaleTransform)GetField(separatePreview,
+                                                               "PreviewPanelScale", flags);
+        var previewYouPanel = (Border)GetField(separatePreview, "PreviewYouPanel", flags);
+        var previewYouCards = (ItemsControl)GetField(separatePreview,
+                                                       "PreviewConsistentYouCards", flags);
+        var previewSeparateRows = (ItemsControl)GetField(separatePreview,
+                                                          "PreviewConsistentRows", flags);
+        bool separateYouPreview = previewYouPanel.Visibility == Visibility.Visible
+            && previewYouCards.ItemsSource is IEnumerable previewYouSource
+            && previewYouSource.Cast<object>().Count() == 1
+            && previewYouCards.Tag == null
+            && previewSeparateRows.ItemsSource is IEnumerable previewSeparateRowSource
+            && previewSeparateRowSource.Cast<IEnumerable>()
+                .Select(row => row.Cast<object>().Count())
+                .SequenceEqual(new[] { 3, 2 })
+            && Canvas.GetLeft(previewYouPanel) > 360;
+        previewSeparatePanel.Child.Measure(new Size(double.PositiveInfinity,
+                                                    double.PositiveInfinity));
+        double separatePreviewNaturalWidth = previewSeparatePanel.Child.DesiredSize.Width
+            + previewSeparatePanel.Padding.Left + previewSeparatePanel.Padding.Right
+            + previewSeparatePanel.BorderThickness.Left + previewSeparatePanel.BorderThickness.Right;
+        double separatePreviewRenderedWidth = separatePreviewNaturalWidth
+            * previewSeparateScale.ScaleX;
+        bool separatePreviewGap = Canvas.GetLeft(previewYouPanel)
+            - (Canvas.GetLeft(previewSeparatePanel) + separatePreviewRenderedWidth)
+            >= 720 * ConsistentHudPolicy.SeparateYouGapFraction - 1.0;
+
+        var verticalSettingsConfig = config.Clone();
+        verticalSettingsConfig.ConsistentTemplate = ConsistentHudPolicy.VanillaVertical;
+        var verticalSettings = new SettingsWindow(verticalSettingsConfig, () => { });
+        Invoke(verticalSettings, "LoadControls", flags);
+        var verticalSettingsTabs = (TabControl)GetField(verticalSettings, "SettingsTabs", flags);
+        verticalSettingsTabs.SelectedIndex = 1;
+        Invoke(verticalSettings, "RefreshPreview", flags);
+        var previewVerticalRows = (ItemsControl)GetField(verticalSettings,
+                                                          "PreviewConsistentRows", flags);
+        var previewVerticalCards = (ItemsControl)GetField(verticalSettings,
+                                                           "PreviewConsistentVerticalCards", flags);
+        bool previewVertical = previewVerticalRows.Visibility == Visibility.Collapsed
+            && previewVerticalCards.Visibility == Visibility.Visible
+            && previewVerticalCards.ItemsSource is IEnumerable previewVerticalSource
+            && previewVerticalSource.Cast<object>().Count() == 6
+            && previewVerticalCards.Tag is Thickness previewVerticalMargin
+            && Math.Abs(previewVerticalMargin.Left - 12) < 0.001
+            && Math.Abs(previewVerticalMargin.Top + 3) < 0.001;
+        bool retiredBottomRightMigrates = ConsistentHudPolicy.Parse("bottom-right")
+                == ConsistentHudPolicy.VanillaBottomCenter
+            && ConsistentHudPolicy.For("bottom-right").Anchor == "BottomCenter";
+        bool retiredTopHorizontalMigrates = ConsistentHudPolicy.Parse("top-vertical")
+                == ConsistentHudPolicy.VanillaBottomCenter
+            && ConsistentHudPolicy.For("top-vertical").Anchor == "BottomCenter";
+        var rows27 = ConsistentHudPolicy.SplitRows(Enumerable.Range(0, 27).ToList());
+        bool adaptiveGrid = rows27.Select(row => row.Count).SequenceEqual(new[] { 9, 9, 9 });
+        var separateRows7 = ConsistentHudPolicy.SplitRows(
+            Enumerable.Range(0, 7).ToList(), ConsistentHudPolicy.SeparateRosterColumns);
+        bool separateAdaptiveGrid = separateRows7.Select(row => row.Count)
+            .SequenceEqual(new[] { 3, 3, 1 });
+
+        // Regression: a normal geometry/key render can arrive with _dirty=false. It must
+        // leave the independent card on screen instead of clearing it before returning.
+        window.EndLivePreview(true);
+        config.AlwaysShow = true;
+        config.ConsistentSeparateYou = true;
+        config.ConsistentTemplate = ConsistentHudPolicy.VanillaBottomCenter;
+        string noOpStatePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            $"OverlayHudConsistentNoOp-{Guid.NewGuid():N}.json");
+        string NoOpSnapshot(long seq) =>
+            $"{{\"v\":\"1.2.0\",\"seq\":{seq},\"time\":1,\"count\":1," +
+            "\"survivors\":[{\"uid\":1,\"name\":\"Host\",\"local\":true," +
+            "\"cls\":\"survivor\",\"hp\":100,\"maxhp\":100}]}";
+        System.IO.File.WriteAllText(noOpStatePath, NoOpSnapshot(1));
+        var noOpReader = new StateReader(noOpStatePath, TimeSpan.FromMilliseconds(100), 5.0);
+        Invoke(noOpReader, "Poll", flags);
+        System.IO.File.WriteAllText(noOpStatePath, NoOpSnapshot(2));
+        Invoke(noOpReader, "Poll", flags);
+        typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, noOpReader);
+        typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "ApplyLayout", flags);
+        Invoke(window, "Render", flags);
+        bool youVisibleBeforeNoOp = youPanel.Visibility == Visibility.Visible;
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, false);
+        Invoke(window, "Render", flags);
+        bool youPersistsAfterNoOpRender = youVisibleBeforeNoOp
+            && youPanel.Visibility == Visibility.Visible
+            && youCards.ItemsSource is IEnumerable noOpYouSource
+            && noOpYouSource.Cast<object>().Count() == 1;
+        noOpReader.Dispose();
+        try { System.IO.File.Delete(noOpStatePath); } catch { }
+
+        var toggle = new KeyboardChordState(0x09, 0x2D, 0x76);
+        var toggleDown = toggle.Process(0x76, true, false, false, true);
+        var toggleRepeat = toggle.Process(0x76, true, false, false, true);
+        var toggleUp = toggle.Process(0x76, false, true, false, false);
+        var disabled = new KeyboardChordState(0x09, 0x2D, 0x76)
+            .Process(0x76, true, false, false, false);
+        bool hotkeyState = toggleDown.Consume && toggleDown.TriggerToggle
+            && toggleRepeat.Consume && !toggleRepeat.TriggerToggle
+            && toggleUp.Consume && !toggleUp.TriggerToggle
+            && !disabled.Consume && !disabled.TriggerToggle;
+
+        bool passed = spacingApplied && bottomCenterTemplate && usesHudRenderer
+            && minimalistRenderer && minimalistTempHealth && minimalistFiveBars
+            && themeRenderer && separateYouRenderer
+            && separateGroupGap
+            && vanillaVerticalTemplate
+            && verticalRenderer && lowerRightVerticalTemplate && lowerRightSeparatesToLeft
+            && lowerRightGroupGap
+            && verticalPositionMoved
+            && vanillaPreview && previewVerticalPosition && previewSpacingApplied
+            && previewGrid && separateYouPreview && separatePreviewGap && previewVertical
+            && retiredBottomRightMigrates && retiredTopHorizontalMigrates
+            && adaptiveGrid && separateAdaptiveGrid
+            && youPersistsAfterNoOpRender && hotkeyState;
+        Console.WriteLine(
+            $"spacingApplied={spacingApplied} bottomCenterTemplate={bottomCenterTemplate} " +
+            $"hudRenderer={usesHudRenderer} separateYouRenderer={separateYouRenderer} " +
+            $"minimalistRenderer={minimalistRenderer} " +
+            $"minimalistTempHealth={minimalistTempHealth} " +
+            $"minimalistFiveBars={minimalistFiveBars} themeRenderer={themeRenderer} " +
+            $"separateGroupGap={separateGroupGap}({separateGapPixels:0.0}px) " +
+            $"vanillaVerticalTemplate={vanillaVerticalTemplate} " +
+            $"verticalRenderer={verticalRenderer} " +
+            $"lowerRightVerticalTemplate={lowerRightVerticalTemplate} " +
+            $"lowerRightSeparatesToLeft={lowerRightSeparatesToLeft} " +
+            $"lowerRightGroupGap={lowerRightGroupGap} " +
+            $"verticalPositionMoved={verticalPositionMoved} " +
+            $"vanillaPreviewCentered={vanillaPreview} previewVerticalPosition={previewVerticalPosition} " +
+            $"previewSpacingApplied={previewSpacingApplied} " +
+            $"previewGrid={previewGrid} separateYouPreview={separateYouPreview} " +
+            $"separatePreviewGap={separatePreviewGap} " +
+            $"previewVertical={previewVertical} " +
+            $"retiredBottomRightMigrates={retiredBottomRightMigrates} " +
+            $"retiredTopHorizontalMigrates={retiredTopHorizontalMigrates} " +
+            $"adaptiveGrid={adaptiveGrid} " +
+            $"separateAdaptiveGrid={separateAdaptiveGrid} " +
+            $"youPersistsAfterNoOpRender={youPersistsAfterNoOpRender} " +
+            $"toggleState={hotkeyState}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: consistent HUD renderer, templates, or toggle state machine changed");
+
+        window.EndLivePreview(false);
+        window.Close();
+        settings.Close();
+        separatePreview.Close();
+        verticalSettings.Close();
         app.Shutdown();
         return passed ? 0 : 1;
     }

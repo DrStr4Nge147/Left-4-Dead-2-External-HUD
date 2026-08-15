@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.1.0"
+::OvlHud.VERSION   <- "1.2.0"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -70,6 +70,8 @@
 ::OvlHud.consoleRoute <- -1  // -1 unprobed, 1 SendToConsole, 0 no route
 ::OvlHud.botMode   <- 0      // 0 unknown, 1 IsPlayerABot(), 2 m_fFlags & FL_FAKECLIENT
 ::OvlHud.botProbed <- false
+::OvlHud.hostProbeWarned <- false
+::OvlHud.localUid <- -1      // cached listen-server host userid; -1 when unavailable
 ::OvlHud.decayRate <- 0.34   // overwritten from pain_pills_decay_rate at load if readable
 
 ::OvlHud.FL_FAKECLIENT <- 256
@@ -253,7 +255,7 @@
 // one survivor -> one JSON object
 // ---------------------------------------------------------------------------
 
-::OvlHud.SurvivorJson <- function (p)
+::OvlHud.SurvivorJson <- function (p, localUid = -1)
 {
 	local name = ""
 	local uid  = -1
@@ -322,12 +324,14 @@
 	}
 
 	local bot = this.IsBotPlayer(p)
+	local isLocal = localUid >= 0 && uid == localUid
 
 	local json = "{"
 	json += "\"uid\":" + uid
 	json += ",\"name\":\"" + this.JsonEscape(name) + "\""
 	json += ",\"team\":" + team
 	json += ",\"char\":" + chr
+	json += ",\"local\":" + (isLocal ? "true" : "false")
 	json += ",\"cls\":\"" + this.Classify(p) + "\""
 	json += ",\"bot\":" + ((bot == null) ? "null" : (bot ? "true" : "false"))
 	json += ",\"hp\":" + hp
@@ -450,6 +454,32 @@
 {
 	local body  = ""
 	local count = 0
+	local localUid = this.localUid
+
+	// The app runs on the listen-server host's machine, so the host survivor is the
+	// current player's card. GetListenServerHost is a native on this L4D2 build; keep the
+	// probe inside a guarded boundary so a dedicated-server context still exports the full
+	// roster instead of killing the export loop. A null host at map setup is normal. Keep the
+	// last valid userid through that transient gap so the optional local marker cannot blink
+	// on and off between exporter ticks.
+	try
+	{
+		local host = GetListenServerHost()
+		if (host != null)
+		{
+			local candidate = host.GetPlayerUserId()
+			if (candidate != null && candidate >= 0) { this.localUid = candidate }
+		}
+		localUid = this.localUid
+	}
+	catch (e)
+	{
+		if (!this.hostProbeWarned)
+		{
+			this.hostProbeWarned = true
+			this.Log("local player detection unavailable - exporting local=false: " + e)
+		}
+	}
 
 	for (local ent; ent = Entities.FindByClassname(ent, "player");)
 	{
@@ -461,7 +491,7 @@
 		if (!this.botProbed) { this.DetectBotMode(ent) }
 
 		if (count > 0) { body += "," }
-		body += this.SurvivorJson(ent)
+		body += this.SurvivorJson(ent, localUid)
 		count++
 	}
 
@@ -581,6 +611,8 @@
 	// Bot detection deliberately does not happen here - no players exist yet. The first
 	// export tick that finds a survivor does it.
 	this.botProbed = false
+	this.hostProbeWarned = false
+	this.localUid = -1
 
 	// A chapter change reloads this script while the engine keeps running. Anything the
 	// previous chapter believed about the scoreboard is void: assume it is closed, so the

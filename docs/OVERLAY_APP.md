@@ -5,6 +5,9 @@ survivor roster. **All survivors** includes the four built-in slots; **Extra sur
 keeps the original slot-5-and-up behavior. It reads one JSON file and does not touch the game
 process — no injection, no memory reading, no DirectX hooking.
 
+**Current verification:** the v1.2.0 app and format-v1 addon VPK were live-tested in L4D2 on
+2026-08-15, including the Consistent HUD health-number, black-and-white, and Minimalist options.
+
 ## Running it
 
 ```text
@@ -24,10 +27,11 @@ Choose **Customize UI...** from the notification-area menu. The editor uses the 
 survivor-card template and one-column-first layout calculation as the live overlay, so the
 16:9 preview tracks what will be drawn in game.
 
-The editor controls card size, opacity, scoreboard offsets, bottom-HUD clearance, and the
-one- or two-column limit. Sidebar containment and automatic fitting are calibrated layout
-rules rather than user settings. **Preview extra survivors** only changes the sample roster
-in the preview, supports up to 27 extras, and is not saved as an overlay setting.
+The editor has separate **Scoreboard** and **Consistent HUD** tabs. The Scoreboard tab controls
+card size, opacity, scoreboard offsets, bottom-HUD clearance, and the one- or two-column limit.
+Sidebar containment and automatic fitting are calibrated layout rules rather than user
+settings. **Preview extra survivors** only changes the sample roster in the preview, supports
+up to 27 extras, and is not saved as an overlay setting.
 **UI size** intentionally ranges from 0.60× to 1.00×; values above the normal size are not
 offered and legacy config values above 1.00 are clamped.
 Clicking anywhere on a slider track moves its thumb directly to that position. **Reset UI**
@@ -47,7 +51,7 @@ or keyboard hook.
 - **Save & Apply** writes `config.json` atomically and updates the running overlay.
 - **Cancel** closes the editor without changing the live overlay or config file.
 - **Reset UI** restores UI defaults in the draft. It does not reset the state-file path,
-  game process, hotkey, or debug options, and still requires **Save & Apply**.
+  game process, consistent-HUD hotkey, or debug options, and still requires **Save & Apply**.
 
 For direct access during setup, run `OverlayHud.exe --settings`.
 
@@ -66,14 +70,75 @@ There is no main window. It lives in the notification area — right-click the t
   swallowed, so the game's own scoreboard behaves exactly as before.
 - The panel only draws while L4D2 is the foreground window, so Tab does nothing on the
   desktop.
+- The **Consistent HUD** tab enables a row-major HUD that does not open the game's scoreboard.
+  Its **Bottom - Horizontal Grid** is the default, with **Lower Left Vertical Grid** and
+  **Lower Right Vertical Grid** as the other templates. **Vertical position** moves any of these
+  layouts upward from the bottom edge without changing the scoreboard tab. **Horizontal spacing**
+  and **Vertical spacing** control the card gaps; negative values can overlap cards. **Separate
+  You** uses roster-left/You-right for Bottom - Horizontal and roster-right/You-left for Lower
+  Right Vertical; those spacing values apply only to the remaining roster cards.
+- **Set key** captures one key for the consistent-HUD toggle; F7 is the default. The selected
+  key is consumed only while L4D2 is in front, and pressing it toggles the saved
+  **Show HUD consistently** preference.
 - The window follows the game window's position and size, so it works on any monitor.
-- `Left 4 Dead 2 Customized Overlay HUD - External v1.1.0` appears at the top right while
+- `Left 4 Dead 2 Customized Overlay HUD - External v1.2.0` appears at the top right while
   L4D2 is focused and the exporter is
   inactive, confirming that the app is running in the main menu, lobby, loading screens,
   and pause menu. It disappears when live round exports resume.
 
 **L4D2 must run borderless windowed** (`-windowed -noborder`). Nothing can draw over
 exclusive fullscreen.
+
+## Consistent HUD
+
+The consistent view is designed to behave like an external vanilla HUD rather than a
+scoreboard companion. It removes the scoreboard frame and header, draws survivor cards in a
+four-across row-major grid for horizontal templates, and stays visible while the game is focused
+once **Show HUD consistently** is on. Horizontal grids use up to three rows and add columns for
+larger rosters. The two vertical templates draw one card per row at their named lower corner. The
+vertical-position slider uses a bottom inset: `0%` touches the bottom edge, and larger values
+move the panel upward.
+
+Horizontal and vertical spacing are layout pixels before the HUD scale is applied. Zero keeps
+the original spacing, positive values spread cards apart, and negative values pull them together
+or overlap them.
+
+When **Separate You** is checked, the exporter-marked listen-server host card is removed from
+the shared grid and drawn as one independent card. **Bottom - Horizontal Grid** puts the shared
+roster at lower left and You at lower right, with a reserved gap between the two groups.
+On that horizontal template, the shared roster starts at three columns across when Separate You
+is enabled so the remaining cards use the available space; without Separate You it starts at
+four columns as usual. Larger rosters add columns only when the three-row limit requires them.
+**Lower Right Vertical Grid** keeps the shared roster at lower right and mirrors You to lower
+left with the same separation. **Lower Left Vertical Grid** keeps the shared roster at lower left
+and You at lower right. The selected template, vertical position, and HUD scale still apply to
+both elements, but the horizontal and vertical spacing controls do not apply to You. With an
+older exporter, or on a dedicated server, no local marker is available and the roster stays in
+its original all-in-one layout.
+
+Choose one of these templates in the editor:
+
+| Template | Placement |
+|---|---|
+| **Bottom - Horizontal Grid** | Default bottom-centered four-across grid; three-across shared roster when Separate You is enabled |
+| **Lower Left Vertical Grid** | Previous one-card-per-row HUD at lower left |
+| **Lower Right Vertical Grid** | One-card-per-row HUD at lower right |
+
+The consistent view uses the same roster filter and survivor data as the scoreboard view, but
+has its own size and opacity values. Live preview on this tab shows the actual plain HUD grid;
+it does not hold the game's scoreboard.
+
+Use **HUD design** to choose the card appearance independently of the placement template:
+
+- **Basic** keeps the existing full survivor card with the name, health bar, health value, and
+  item slots in one row.
+- **Minimalist** puts the name and item icons before the health value above a compact segmented
+  health strip. Temporary health keeps the grunge brush texture; items have no bounding boxes and
+  use only a black outline. The item column remains fixed-width, so long names are clipped with an
+  ellipsis and the icons remain visible. The strip uses five vertically compressed segments.
+  **Show health numbers** can hide the numeric value, and **Black & white theme** switches health,
+  state, and follower colors to grayscale. These options apply only to the Consistent HUD,
+  including its simulated preview and separate You card; the Scoreboard tab is unchanged.
 
 ## Reading the panel
 
@@ -161,7 +226,8 @@ Sits next to the exe. Edit and restart the app.
 | `gameProcess` | `left4dead2` | Process name to treat as the game |
 | `holdKey` | `9` | Virtual-key code. 9 = Tab. 160 = left shift, 164 = left alt |
 | `editorKey` | `45` | Key used with `holdKey` to open the editor. 45 = Insert; `0` disables the shortcut |
-| `alwaysShow` | `false` | Ignore the hold key and stay visible. Useful for positioning |
+| `alwaysShow` | `false` | Start the consistent HUD enabled; the configured toggle key changes it during play |
+| `consistentKey` | `118` | Virtual-key code for the consistent-HUD toggle. 118 = F7; `0` disables it |
 | `ignoreForeground` | `false` | Draw even when the game is not focused. Debug aid |
 | `exitWhenGameCloses` | `true` | Exit after an observed L4D2 process closes; `false` keeps the app in the tray |
 | `anchor` | `TopLeft` | `Top`/`Middle`/`Bottom` + `Left`/`Center`/`Right` |
@@ -170,9 +236,18 @@ Sits next to the exe. Edit and restart the app.
 | `autoScale` | `true` | Scale with game-window height |
 | `baselineHeight` | `1080` | Window height at which automatic scale is 1.0 |
 | `scale` | `1.0` | User scale applied on top of automatic scale, clamped to `0.60`–`1.00` |
+| `consistentScale` | `0.85` | Independent scale for the consistent HUD, clamped to `0.60`–`1.00` |
+| `consistentOpacity` | `0.88` | Independent opacity for the consistent HUD |
+| `consistentDesign` | `basic` | Consistent HUD card design: `basic` or `minimalist` |
+| `consistentShowHealthNumbers` | `true` | Show numeric health values in the Consistent HUD |
+| `consistentMonochrome` | `false` | Use grayscale colors in the Consistent HUD |
+| `consistentVerticalOffset` | `0.035` | Bottom inset for the consistent HUD; higher values move it upward |
+| `consistentHorizontalSpacing` | `0.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
+| `consistentVerticalSpacing` | `0.0` | Extra vertical card gap in layout pixels; negative values overlap cards |
 | `minScale` | `0.35` | Smallest fraction of the normal resolution-scaled size allowed by fitting |
 | `bottomReserve` | `0.0` | Optional bottom clearance for custom HUDs; vanilla Tab uses the full remaining height |
 | `opacity` | `0.92` | Panel opacity |
+| `consistentTemplate` | `vanilla-bottom-center` | `vanilla-bottom-center`, legacy `vanilla-vertical`, or `lower-right-vertical`; old `bottom-right` and `top-vertical` values migrate to the default |
 | `rosterFilter` | `all` | `all` = every mortal survivor, `extras` = the previous extra-only roster, `soldiers` = mortal soldiers and followers, `followers` = followers only |
 | `cardsPerColumn` | `0` | `0` measures the real one-column height first; positive values override it |
 | `maxColumns` | `2` | Hard horizontal column limit; overflow is balanced and scaled vertically |

@@ -20,8 +20,11 @@ public static class SampleRoster
     /// <summary>
     /// <paramref name="markFollowers"/> tags a few of the samples as followers so the
     /// marker is visible while laying out, exactly as a mixed live roster would show it.
+    /// The theme and number options mirror the live consistent-HUD renderer.
     /// </summary>
-    public static List<SurvivorCard> Cards(int count, bool markFollowers = false)
+    public static List<SurvivorCard> Cards(int count, bool markFollowers = false,
+                                           bool monochrome = false,
+                                           bool showHealthNumbers = true)
     {
         var result = new List<SurvivorCard>(Math.Max(0, count));
 
@@ -40,7 +43,10 @@ public static class SampleRoster
                 Throwable = new[] { "molotov", "pipebomb", "bile", "", "", "" }[i % 6]
             };
 
-            result.Add(SurvivorCard.From(survivor, markFollowers && i % 4 == 1));
+            result.Add(SurvivorCard.From(survivor,
+                                         markFollowers && i % 4 == 1,
+                                         monochrome,
+                                         showHealthNumbers));
         }
 
         return result;

@@ -11,6 +11,7 @@
     <Window.Resources>
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Foreground" Value="#F0F2F5" />
         </Style>
         <Style x:Key="ControlCard" TargetType="Border">
             <Setter Property="Background" Value="#20252D" />
@@ -153,7 +154,8 @@
                         <Border.LayoutTransform>
                             <ScaleTransform x:Name="PreviewPanelScale" ScaleX="1" ScaleY="1" />
                         </Border.LayoutTransform>
-                        <StackPanel>
+                        <Grid>
+                            <StackPanel x:Name="PreviewScoreboardContent">
                             <DockPanel Margin="2,0,2,6">
                                 <TextBlock x:Name="PreviewHeader"
                                            DockPanel.Dock="Left"
@@ -181,8 +183,51 @@
                                                       ItemTemplate="{StaticResource SurvivorTemplate}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <ItemsControl x:Name="PreviewConsistentRows"
+                                          Visibility="Collapsed">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Vertical" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ItemsControl ItemsSource="{Binding}"
+                                                      Margin="0,0,0,4"
+                                                      Tag="{Binding RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}, Path=Tag}"
+                                                      ItemTemplateSelector="{StaticResource ConsistentHudTemplateSelector}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </StackPanel>
+                            <ItemsControl x:Name="PreviewConsistentVerticalCards"
+                                          Visibility="Collapsed"
+                                          Tag="{x:Null}"
+                                          ItemTemplateSelector="{StaticResource ConsistentHudTemplateSelector}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- The simulated local-player card uses the same root-level placement
+                         as the live overlay, so it stays out of the roster spacing flow. -->
+                    <Border x:Name="PreviewYouPanel"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            Visibility="Collapsed">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="PreviewYouPanelScale" ScaleX="1" ScaleY="1" />
+                        </Border.LayoutTransform>
+                        <ItemsControl x:Name="PreviewConsistentYouCards"
+                                      Tag="{x:Null}"
+                                      ItemTemplateSelector="{StaticResource ConsistentHudTemplateSelector}" />
                     </Border>
                 </Canvas>
             </Viewbox>
@@ -204,6 +249,13 @@
             <ScrollViewer.Resources>
                 <Style TargetType="ScrollBar" BasedOn="{StaticResource VisibleScrollBar}" />
             </ScrollViewer.Resources>
+            <TabControl x:Name="SettingsTabs"
+                        SelectionChanged="OnSettingsTabChanged"
+                        Background="#090B0E"
+                        BorderBrush="#343B46"
+                        Foreground="#F0F2F5"
+                        VerticalContentAlignment="Top">
+            <TabItem Header="Scoreboard">
             <UniformGrid Columns="3">
                 <UniformGrid.Resources>
                     <!-- A final child normally fills a DockPanel even when Dock.Right is
@@ -214,7 +266,8 @@
                 </UniformGrid.Resources>
                 <Border Style="{StaticResource ControlCard}">
                     <StackPanel>
-                        <TextBlock Text="Preview" FontWeight="SemiBold" />
+                        <TextBlock x:Name="PreviewSectionHeading"
+                                   Text="Preview" FontWeight="SemiBold" />
                         <RadioButton x:Name="SimulatedPreviewRadio" GroupName="PreviewMode"
                                      Margin="0,6,0,0" Foreground="#F0F2F5"
                                      Click="OnPreviewModeChanged">
@@ -240,7 +293,8 @@
                 </Border>
                 <Border Style="{StaticResource ControlCard}">
                     <StackPanel>
-                        <TextBlock Text="Who to show" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WhoToShowSectionHeading"
+                                   Text="Who to show" FontWeight="SemiBold" />
                         <RadioButton x:Name="RosterAllRadio" GroupName="RosterFilter"
                                      Margin="0,6,0,0" Foreground="#F0F2F5"
                                      Click="OnOptionChanged">
@@ -279,7 +333,8 @@
                 <Border Style="{StaticResource ControlCard}">
                     <StackPanel>
                         <DockPanel>
-                            <TextBlock Text="UI size" FontWeight="SemiBold" />
+                            <TextBlock x:Name="UiSizeSectionHeading"
+                                       Text="UI size" FontWeight="SemiBold" />
                             <TextBlock x:Name="ScaleValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
                         </DockPanel>
                         <Slider x:Name="ScaleSlider" Minimum="0.60" Maximum="1.00"
@@ -372,21 +427,6 @@
                 </Border>
                 <Border Style="{StaticResource ControlCard}">
                     <StackPanel>
-                        <CheckBox x:Name="AlwaysShowCheckBox"
-                                  FontWeight="SemiBold"
-                                  Foreground="#F0F2F5"
-                                  Click="OnOptionChanged">
-                            <TextBlock Text="Show HUD consistently"
-                                       Foreground="#F0F2F5"
-                                       FontWeight="SemiBold" />
-                        </CheckBox>
-                        <TextBlock Text="Displays the HUD persistently during play instead of only while the hold key is down. It still hides when L4D2 loses focus."
-                                   Margin="22,4,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
                         <CheckBox x:Name="DebugCheckBox"
                                   FontWeight="SemiBold"
                                   Foreground="#F0F2F5"
@@ -416,6 +456,215 @@
                     </StackPanel>
                 </Border>
             </UniformGrid>
+            </TabItem>
+
+            <TabItem Header="Consistent HUD">
+                <UniformGrid Columns="2">
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <CheckBox x:Name="AlwaysShowCheckBox"
+                                      FontWeight="SemiBold"
+                                      Foreground="#F0F2F5"
+                                      Click="OnOptionChanged">
+                                <TextBlock Text="Show HUD consistently"
+                                           Foreground="#F0F2F5"
+                                           FontWeight="SemiBold" />
+                            </CheckBox>
+                            <TextBlock Text="Keeps our survivor HUD visible while L4D2 is focused, like a vanilla HUD. It uses four cards across, up to three rows, and does not open the game's scoreboard."
+                                       Margin="22,4,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <CheckBox x:Name="ConsistentSeparateYouCheckBox"
+                                      FontWeight="SemiBold"
+                                      Foreground="#F0F2F5"
+                                      Click="OnOptionChanged">
+                                <TextBlock Text="Separate You"
+                                           Foreground="#F0F2F5"
+                                           FontWeight="SemiBold" />
+                            </CheckBox>
+                            <TextBlock Text="Moves your current survivor card to the lower right. The rest keeps the selected template; horizontal and vertical spacing apply only to that roster, not to your card."
+                                       Margin="22,4,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <TextBlock Text="Toggle hotkey" FontWeight="SemiBold" />
+                            <Grid Margin="0,7,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="ConsistentHotkeyBox"
+                                         Grid.Column="0"
+                                         IsReadOnly="True"
+                                         VerticalContentAlignment="Center"
+                                         PreviewKeyDown="OnConsistentHotkeyPreviewKeyDown" />
+                                <Button Grid.Column="1" Content="Set key"
+                                        Click="OnConsistentHotkeySetClick" />
+                                <Button Grid.Column="2" Content="Clear"
+                                        Click="OnConsistentHotkeyClearClick" />
+                            </Grid>
+                            <TextBlock Text="Press Set key, then press one key. The toggle is active only while the game is in front; it is consumed so L4D2 does not also receive it."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <TextBlock Text="HUD template" FontWeight="SemiBold" />
+                            <ComboBox x:Name="ConsistentTemplateCombo"
+                                      Margin="0,7,0,0"
+                                      SelectionChanged="OnConsistentTemplateChanged">
+                                <ComboBoxItem Tag="vanilla-bottom-center">Bottom - Horizontal Grid</ComboBoxItem>
+                                <ComboBoxItem Tag="vanilla-vertical">Lower Left Vertical Grid</ComboBoxItem>
+                                <ComboBoxItem Tag="lower-right-vertical">Lower Right Vertical Grid</ComboBoxItem>
+                            </ComboBox>
+                            <TextBlock Text="Horizontal grids fill four columns across and up to three rows; larger rosters add columns. Vertical grids keep one card per row."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <TextBlock Text="HUD design" FontWeight="SemiBold" />
+                            <ComboBox x:Name="ConsistentDesignCombo"
+                                      Margin="0,7,0,0"
+                                      SelectionChanged="OnConsistentDesignChanged">
+                                <ComboBoxItem Tag="basic">Basic</ComboBoxItem>
+                                <ComboBoxItem Tag="minimalist">Minimalist</ComboBoxItem>
+                            </ComboBox>
+                            <TextBlock Text="Basic keeps the full card. Minimalist puts the name and items above a compact five-segment health strip; long names trim so item slots stay visible."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <CheckBox x:Name="ConsistentShowHealthNumbersCheckBox"
+                                      FontWeight="SemiBold"
+                                      Foreground="#F0F2F5"
+                                      Click="OnOptionChanged">
+                                <TextBlock Text="Show health numbers"
+                                           Foreground="#F0F2F5"
+                                           FontWeight="SemiBold" />
+                            </CheckBox>
+                            <TextBlock Text="Show or hide the numeric health value in the Consistent HUD. The Scoreboard tab is unchanged."
+                                       Margin="22,4,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <CheckBox x:Name="ConsistentMonochromeCheckBox"
+                                      FontWeight="SemiBold"
+                                      Foreground="#F0F2F5"
+                                      Click="OnOptionChanged">
+                                <TextBlock Text="Black &amp; white theme"
+                                           Foreground="#F0F2F5"
+                                           FontWeight="SemiBold" />
+                            </CheckBox>
+                            <TextBlock Text="Use grayscale health bars and state colors for the Consistent HUD. The Scoreboard tab is unchanged."
+                                       Margin="22,4,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="HUD size" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ConsistentScaleValue" DockPanel.Dock="Right"
+                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
+                            </DockPanel>
+                            <Slider x:Name="ConsistentScaleSlider" Minimum="0.60" Maximum="1.00"
+                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                    ValueChanged="OnSettingChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="HUD opacity" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ConsistentOpacityValue" DockPanel.Dock="Right"
+                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
+                            </DockPanel>
+                            <Slider x:Name="ConsistentOpacitySlider" Minimum="0.20" Maximum="1.00"
+                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                    ValueChanged="OnSettingChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="Vertical position" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ConsistentVerticalValue" DockPanel.Dock="Right"
+                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
+                            </DockPanel>
+                            <Slider x:Name="ConsistentVerticalSlider" Minimum="0.00" Maximum="0.90"
+                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                    ValueChanged="OnSettingChanged" />
+                            <TextBlock Text="0% is the bottom edge; higher values move the HUD upward."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="Horizontal spacing" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ConsistentHorizontalSpacingValue" DockPanel.Dock="Right"
+                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
+                            </DockPanel>
+                            <Slider x:Name="ConsistentHorizontalSpacingSlider"
+                                    Minimum="-100" Maximum="100" TickFrequency="10"
+                                    IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
+                            <TextBlock Text="Negative values pull cards together and can overlap them."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="Vertical spacing" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ConsistentVerticalSpacingValue" DockPanel.Dock="Right"
+                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
+                            </DockPanel>
+                            <Slider x:Name="ConsistentVerticalSpacingSlider"
+                                    Minimum="-20" Maximum="40" TickFrequency="5"
+                                    IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
+                            <TextBlock Text="Negative values pull rows and cards together and can overlap them."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ControlCard}">
+                        <StackPanel>
+                            <TextBlock Text="Shared roster" FontWeight="SemiBold" />
+                            <TextBlock Text="The consistent HUD uses the same Who to show selection from the Scoreboard tab, including All survivors and Extra survivors. Change that filter there."
+                                       Margin="0,5,0,0" TextWrapping="Wrap"
+                                       Foreground="#AAB2BE" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+            </TabItem>
+            </TabControl>
         </ScrollViewer>
 
             <!-- Right margin clears the scrollbar so the thumb is never dimmed. -->

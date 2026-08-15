@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Navigation;
 using System.Windows.Threading;
@@ -18,18 +19,19 @@ public partial class SettingsWindow : Window
 
     private readonly AppConfig _live;
     private readonly Action _apply;
-    private readonly Action<AppConfig, int, bool>? _startLivePreview;
+    private readonly Action<AppConfig, int, bool, bool>? _startLivePreview;
     private readonly Action<bool>? _endLivePreview;
     private readonly Action<bool>? _toggleDebug;
     private AppConfig _draft;
     private bool _ready;
     private bool _saved;
+    private bool _capturingConsistentKey;
     private Rect _windowedBounds;
     private string? _statePath;
     private readonly DispatcherTimer _gameStatusTimer;
 
     public SettingsWindow(AppConfig config, Action apply,
-                          Action<AppConfig, int, bool>? startLivePreview = null,
+                          Action<AppConfig, int, bool, bool>? startLivePreview = null,
                           Action<bool>? endLivePreview = null,
                           Action<bool>? toggleDebug = null)
     {
@@ -174,6 +176,21 @@ public partial class SettingsWindow : Window
     {
         ScaleSlider.Value = Math.Clamp(_draft.Scale, ScaleSlider.Minimum, ScaleSlider.Maximum);
         OpacitySlider.Value = Math.Clamp(_draft.Opacity, OpacitySlider.Minimum, OpacitySlider.Maximum);
+        ConsistentScaleSlider.Value = Math.Clamp(_draft.ConsistentScale,
+                                                 ConsistentScaleSlider.Minimum,
+                                                 ConsistentScaleSlider.Maximum);
+        ConsistentOpacitySlider.Value = Math.Clamp(_draft.ConsistentOpacity,
+                                                   ConsistentOpacitySlider.Minimum,
+                                                   ConsistentOpacitySlider.Maximum);
+        ConsistentVerticalSlider.Value = Math.Clamp(_draft.ConsistentVerticalOffset,
+                                                    ConsistentVerticalSlider.Minimum,
+                                                    ConsistentVerticalSlider.Maximum);
+        ConsistentHorizontalSpacingSlider.Value = Math.Clamp(_draft.ConsistentHorizontalSpacing,
+                                                             ConsistentHorizontalSpacingSlider.Minimum,
+                                                             ConsistentHorizontalSpacingSlider.Maximum);
+        ConsistentVerticalSpacingSlider.Value = Math.Clamp(_draft.ConsistentVerticalSpacing,
+                                                           ConsistentVerticalSpacingSlider.Minimum,
+                                                           ConsistentVerticalSpacingSlider.Maximum);
         OffsetXSlider.Value = Math.Clamp(_draft.OffsetX, OffsetXSlider.Minimum, OffsetXSlider.Maximum);
         OffsetYSlider.Value = Math.Clamp(_draft.OffsetY, OffsetYSlider.Minimum, OffsetYSlider.Maximum);
         BottomReserveSlider.Value = Math.Clamp(_draft.BottomReserve,
@@ -182,6 +199,12 @@ public partial class SettingsWindow : Window
         MaxColumnsSlider.Value = Math.Clamp(_draft.MaxColumns, 1, 2);
         ExitWhenGameClosesCheckBox.IsChecked = _draft.ExitWhenGameCloses;
         AlwaysShowCheckBox.IsChecked = _draft.AlwaysShow;
+        ConsistentSeparateYouCheckBox.IsChecked = _draft.ConsistentSeparateYou;
+        ConsistentShowHealthNumbersCheckBox.IsChecked = _draft.ConsistentShowHealthNumbers;
+        ConsistentMonochromeCheckBox.IsChecked = _draft.ConsistentMonochrome;
+        ConsistentHotkeyBox.Text = HotkeyDisplay.Name(_draft.ConsistentKey);
+        SelectConsistentTemplate(_draft.ConsistentTemplate);
+        SelectConsistentDesign(_draft.ConsistentDesign);
         ShowStatusBadgeCheckBox.IsChecked = _draft.ShowStatusBadge;
         DebugCheckBox.IsChecked = _draft.Debug;
         DebugCheckBox.IsEnabled = _toggleDebug != null;
@@ -217,6 +240,16 @@ public partial class SettingsWindow : Window
         RefreshLabels();
         RefreshPreview();
         SaveStatus.Text = "Unsaved changes";
+    }
+
+    private bool IsConsistentTab => SettingsTabs.SelectedIndex == 1;
+
+    private void OnSettingsTabChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || e.Source != SettingsTabs) return;
+
+        RefreshScrollHint();
+        RefreshPreview();
     }
 
     private bool IsLivePreview => LivePreviewRadio.IsChecked == true && _startLivePreview != null;
@@ -299,7 +332,8 @@ public partial class SettingsWindow : Window
         if (!IsLivePreview) return;
 
         _startLivePreview?.Invoke(_draft, (int)Math.Round(PreviewCountSlider.Value),
-                                  ShowScoreboardCheckBox.IsChecked == true);
+                                  !IsConsistentTab && ShowScoreboardCheckBox.IsChecked == true,
+                                  IsConsistentTab);
     }
 
     private void OnOptionChanged(object sender, RoutedEventArgs e)
@@ -346,6 +380,100 @@ public partial class SettingsWindow : Window
         _ready = wasReady;
     }
 
+    /// <summary>Keeps the consistent-HUD checkbox in sync when its global hotkey is used.</summary>
+    public void SetConsistentHudChecked(bool on)
+    {
+        _draft.AlwaysShow = on;
+
+        bool wasReady = _ready;
+        _ready = false;
+        AlwaysShowCheckBox.IsChecked = on;
+        _ready = wasReady;
+    }
+
+    private void SelectConsistentTemplate(string? value)
+    {
+        string wanted = ConsistentHudPolicy.Parse(value);
+        ConsistentTemplateCombo.SelectedItem = ConsistentTemplateCombo.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag as string, wanted,
+                                                   StringComparison.OrdinalIgnoreCase))
+            ?? ConsistentTemplateCombo.Items[0];
+    }
+
+    private void SelectConsistentDesign(string? value)
+    {
+        string wanted = ConsistentHudPolicy.ParseDesign(value);
+        ConsistentDesignCombo.SelectedItem = ConsistentDesignCombo.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag as string, wanted,
+                                                   StringComparison.OrdinalIgnoreCase))
+            ?? ConsistentDesignCombo.Items[0];
+    }
+
+    private void OnConsistentTemplateChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || e.Source != ConsistentTemplateCombo) return;
+
+        ReadControls();
+        RefreshPreview();
+        SaveStatus.Text = "Unsaved changes";
+    }
+
+    private void OnConsistentDesignChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || e.Source != ConsistentDesignCombo) return;
+
+        ReadControls();
+        RefreshPreview();
+        SaveStatus.Text = "Unsaved changes";
+    }
+
+    private void OnConsistentHotkeySetClick(object sender, RoutedEventArgs e)
+    {
+        _capturingConsistentKey = true;
+        ConsistentHotkeyBox.Text = "Press a key...";
+        ConsistentHotkeyBox.Focus();
+        Keyboard.Focus(ConsistentHotkeyBox);
+        SaveStatus.Text = "Press the key to use for the consistent HUD";
+    }
+
+    private void OnConsistentHotkeyClearClick(object sender, RoutedEventArgs e)
+    {
+        _capturingConsistentKey = false;
+        _draft.ConsistentKey = 0;
+        ConsistentHotkeyBox.Text = HotkeyDisplay.Name(0);
+        SaveStatus.Text = "Unsaved changes";
+    }
+
+    private void OnConsistentHotkeyPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!_capturingConsistentKey) return;
+
+        e.Handled = true;
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+
+        if (key == Key.Escape)
+        {
+            _capturingConsistentKey = false;
+            ConsistentHotkeyBox.Text = HotkeyDisplay.Name(_draft.ConsistentKey);
+            SaveStatus.Text = "Hotkey capture cancelled";
+            return;
+        }
+
+        int virtualKey = KeyInterop.VirtualKeyFromKey(key);
+        if (virtualKey == 0 || virtualKey == _draft.HoldKey || virtualKey == _draft.EditorKey)
+        {
+            SaveStatus.Text = "Choose a key other than the scoreboard or editor key";
+            return;
+        }
+
+        _draft.ConsistentKey = virtualKey;
+        _capturingConsistentKey = false;
+        ConsistentHotkeyBox.Text = HotkeyDisplay.Name(virtualKey);
+        SaveStatus.Text = "Unsaved changes";
+    }
+
     private RosterMode SelectedRosterMode()
     {
         if (RosterExtrasRadio.IsChecked == true) return RosterMode.Extras;
@@ -359,6 +487,15 @@ public partial class SettingsWindow : Window
     {
         _draft.Scale = ScaleSlider.Value;
         _draft.Opacity = OpacitySlider.Value;
+        _draft.ConsistentScale = ConsistentScaleSlider.Value;
+        _draft.ConsistentOpacity = ConsistentOpacitySlider.Value;
+        _draft.ConsistentVerticalOffset = ConsistentVerticalSlider.Value;
+        _draft.ConsistentHorizontalSpacing = ConsistentHorizontalSpacingSlider.Value;
+        _draft.ConsistentVerticalSpacing = ConsistentVerticalSpacingSlider.Value;
+        _draft.ConsistentSeparateYou = ConsistentSeparateYouCheckBox.IsChecked == true;
+        _draft.ConsistentShowHealthNumbers =
+            ConsistentShowHealthNumbersCheckBox.IsChecked == true;
+        _draft.ConsistentMonochrome = ConsistentMonochromeCheckBox.IsChecked == true;
         _draft.OffsetUnits = "percent";
         _draft.OffsetX = OffsetXSlider.Value;
         _draft.OffsetY = OffsetYSlider.Value;
@@ -368,12 +505,21 @@ public partial class SettingsWindow : Window
         _draft.AlwaysShow = AlwaysShowCheckBox.IsChecked == true;
         _draft.ShowStatusBadge = ShowStatusBadgeCheckBox.IsChecked == true;
         _draft.RosterFilter = RosterPolicy.ToConfigValue(SelectedRosterMode());
+        if (ConsistentTemplateCombo.SelectedItem is ComboBoxItem item)
+            _draft.ConsistentTemplate = ConsistentHudPolicy.Parse(item.Tag as string);
+        if (ConsistentDesignCombo.SelectedItem is ComboBoxItem design)
+            _draft.ConsistentDesign = ConsistentHudPolicy.ParseDesign(design.Tag as string);
     }
 
     private void RefreshLabels()
     {
         ScaleValue.Text = $"{ScaleSlider.Value:0.00}x";
         OpacityValue.Text = $"{OpacitySlider.Value:P0}";
+        ConsistentScaleValue.Text = $"{ConsistentScaleSlider.Value:0.00}x";
+        ConsistentOpacityValue.Text = $"{ConsistentOpacitySlider.Value:P0}";
+        ConsistentVerticalValue.Text = $"{ConsistentVerticalSlider.Value:P1} from bottom";
+        ConsistentHorizontalSpacingValue.Text = $"{ConsistentHorizontalSpacingSlider.Value:0} px";
+        ConsistentVerticalSpacingValue.Text = $"{ConsistentVerticalSpacingSlider.Value:0} px";
         OffsetXValue.Text = $"{OffsetXSlider.Value:P1}";
         OffsetYValue.Text = $"{OffsetYSlider.Value:P0}";
         BottomReserveValue.Text = $"{BottomReserveSlider.Value:P0}";
@@ -383,6 +529,8 @@ public partial class SettingsWindow : Window
 
     private void RefreshPreview()
     {
+        ConsistentHudDesign.SetDesign(PreviewSurface, _draft.ConsistentDesign);
+
         // In live mode the real overlay is the preview, so every refresh becomes a push.
         if (IsLivePreview)
         {
@@ -391,14 +539,142 @@ public partial class SettingsWindow : Window
         }
 
         var mode = RosterPolicy.Parse(_draft.RosterFilter);
-        var cards = SampleRoster.Cards((int)Math.Round(PreviewCountSlider.Value),
-                                       mode != RosterMode.Followers);
+        bool consistent = IsConsistentTab;
+        var cards = SampleRoster.Cards(
+            (int)Math.Round(PreviewCountSlider.Value),
+            mode != RosterMode.Followers,
+            monochrome: consistent && _draft.ConsistentMonochrome,
+            showHealthNumbers: !consistent || _draft.ConsistentShowHealthNumbers);
+        var youCards = new List<SurvivorCard>();
+        if (consistent && _draft.ConsistentSeparateYou && cards.Count > 0)
+        {
+            youCards.Add(cards[0]);
+            cards.RemoveAt(0);
+        }
 
-        // The simulated preview always draws its own scoreboard block - it is simulating the
-        // game, and there is no real scoreboard for the checkbox to reach here.
-        PreviewScoreboard.Visibility = Visibility.Visible;
-        PreviewHeader.Text = $"{RosterPolicy.Header(RosterPolicy.Parse(_draft.RosterFilter))}  {cards.Count}";
+        bool vertical = ConsistentHudPolicy.IsVertical(_draft.ConsistentTemplate);
+        PreviewSidebar.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
+        PreviewScoreboardContent.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
+        PreviewConsistentRows.Visibility = consistent && !vertical
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        PreviewConsistentVerticalCards.Visibility = consistent && vertical
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        PreviewScoreboard.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
+        PreviewBottomReserve.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
+        PreviewYouPanel.Visibility = Visibility.Collapsed;
+        PreviewConsistentYouCards.ItemsSource = null;
+
+        if (consistent)
+        {
+            PreviewPanel.Padding = new Thickness(0);
+            PreviewPanel.Background = Brushes.Transparent;
+            PreviewPanel.BorderBrush = Brushes.Transparent;
+            PreviewPanel.BorderThickness = new Thickness(0);
+            PreviewPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
+            if (vertical)
+            {
+                PreviewConsistentRows.ItemsSource = null;
+                PreviewConsistentVerticalCards.ItemsSource = cards;
+            }
+            else
+            {
+                PreviewConsistentVerticalCards.ItemsSource = null;
+                int minimumColumns = youCards.Count > 0
+                    ? ConsistentHudPolicy.SeparateRosterColumns
+                    : ConsistentHudPolicy.MinimumColumns;
+                PreviewConsistentRows.ItemsSource = ConsistentHudPolicy.SplitRows(
+                    cards, minimumColumns);
+            }
+            PreviewColumns.ItemsSource = null;
+
+            var cardMargin = ConsistentHudSpacing.CardMargin(_draft.ConsistentHorizontalSpacing,
+                                                             _draft.ConsistentVerticalSpacing);
+            PreviewConsistentRows.Tag = cardMargin;
+            PreviewConsistentVerticalCards.Tag = cardMargin;
+            PreviewConsistentYouCards.ItemsSource = youCards;
+            PreviewYouPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
+
+            var placement = ConsistentHudPolicy.For(_draft.ConsistentTemplate);
+            var template = ConsistentHudPolicy.Parse(_draft.ConsistentTemplate);
+            bool rosterOnLeft = youCards.Count > 0
+                && template == ConsistentHudPolicy.VanillaBottomCenter;
+            string rosterAnchor = rosterOnLeft ? "BottomLeft" : placement.Anchor;
+            double insetX = PreviewWidth * placement.HorizontalInset;
+            double insetY = PreviewHeight
+                * Math.Clamp(_draft.ConsistentVerticalOffset, 0.0, 0.90);
+            double hudBaseScale = (PreviewHeight / PreviewBaselineHeight)
+                                  * Math.Clamp(_draft.ConsistentScale, 0.1, 1.0);
+
+            PreviewPanelScale.ScaleX = PreviewPanelScale.ScaleY = hudBaseScale;
+            Size hudNatural = LayoutMeasurement.NaturalSize(PreviewPanel);
+            double hudRenderedWidth = hudNatural.Width * hudBaseScale;
+            double hudRenderedHeight = hudNatural.Height * hudBaseScale;
+            double hudRoomWidth;
+            double hudWidthForFit = hudRenderedWidth;
+            if (youCards.Count > 0)
+            {
+                Size youNaturalForFit = LayoutMeasurement.NaturalSize(PreviewYouPanel);
+                hudWidthForFit += youNaturalForFit.Width * hudBaseScale;
+                hudRoomWidth = Math.Max(1, PreviewWidth - insetX * 2
+                    - PreviewWidth * ConsistentHudPolicy.SeparateYouGapFraction);
+            }
+            else
+            {
+                hudRoomWidth = Math.Max(1, PreviewWidth
+                    - (rosterAnchor.Contains("Center", StringComparison.OrdinalIgnoreCase)
+                        ? insetX * 2
+                        : insetX));
+            }
+            double hudRoomHeight = Math.Max(1, PreviewHeight - insetY);
+            double hudAdjustment = Math.Min(hudRoomWidth / Math.Max(1, hudWidthForFit),
+                                            hudRoomHeight / Math.Max(1, hudRenderedHeight));
+            double hudMinFit = Math.Clamp(_draft.MinScale, 0.1, 1.0);
+            double hudMaxFit = Math.Max(hudMinFit, LayoutPolicy.MaxFitScale);
+            double hudFit = Math.Clamp(hudAdjustment, hudMinFit, hudMaxFit);
+
+            double finalWidth = hudRenderedWidth * hudFit;
+            double finalHeight = hudRenderedHeight * hudFit;
+            PreviewPanelScale.ScaleX = PreviewPanelScale.ScaleY = hudBaseScale * hudFit;
+            double finalLeft = rosterAnchor.Contains("Right", StringComparison.OrdinalIgnoreCase)
+                ? PreviewWidth - insetX - finalWidth
+                : rosterAnchor.Contains("Center", StringComparison.OrdinalIgnoreCase)
+                    ? (PreviewWidth - finalWidth) / 2
+                    : insetX;
+            Canvas.SetLeft(PreviewPanel, finalLeft);
+            Canvas.SetTop(PreviewPanel, rosterAnchor.StartsWith("Bottom", StringComparison.OrdinalIgnoreCase)
+                ? PreviewHeight - insetY - finalHeight
+                : insetY);
+
+            if (youCards.Count > 0)
+            {
+                PreviewYouPanelScale.ScaleX = PreviewYouPanelScale.ScaleY = hudBaseScale * hudFit;
+                Size youNatural = LayoutMeasurement.NaturalSize(PreviewYouPanel);
+                double youRenderedWidth = youNatural.Width * hudBaseScale * hudFit;
+                double youRenderedHeight = youNatural.Height * hudBaseScale * hudFit;
+                bool youOnLeft = template == ConsistentHudPolicy.LowerRightVertical;
+                Canvas.SetLeft(PreviewYouPanel, youOnLeft
+                    ? insetX
+                    : PreviewWidth - insetX - youRenderedWidth);
+                Canvas.SetTop(PreviewYouPanel, PreviewHeight - insetY - youRenderedHeight);
+                PreviewYouPanel.Visibility = Visibility.Visible;
+            }
+            return;
+        }
+
+        // Scoreboard preview: this is the old framed panel beside the simulated vanilla
+        // scoreboard, with the editor's sidebar geometry and column fitting intact.
+        PreviewPanel.Padding = new Thickness(10, 8, 10, 8);
+        PreviewPanel.Background = new SolidColorBrush(Color.FromArgb(0x8C, 0x05, 0x07, 0x0A));
+        PreviewPanel.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+        PreviewPanel.BorderThickness = new Thickness(1);
         PreviewPanel.Opacity = Math.Clamp(_draft.Opacity, 0.1, 1.0);
+        PreviewHeader.Text = $"{RosterPolicy.Header(RosterPolicy.Parse(_draft.RosterFilter))}  {cards.Count}";
+        PreviewConsistentRows.ItemsSource = null;
+        PreviewConsistentVerticalCards.ItemsSource = null;
+        PreviewConsistentYouCards.ItemsSource = null;
+        PreviewYouPanel.Visibility = Visibility.Collapsed;
 
         double sidebarEdge = PreviewWidth * LayoutPolicy.SidebarWidthFraction;
         double top = PreviewHeight * Math.Clamp(_draft.OffsetY, 0.0, 0.95);
@@ -502,6 +778,7 @@ public partial class SettingsWindow : Window
         // layout, and neither of these is layout.
         _live.ExitWhenGameCloses = _draft.ExitWhenGameCloses;
         _live.AlwaysShow = _draft.AlwaysShow;
+        _live.ConsistentKey = _draft.ConsistentKey;
         _live.PreviewMode = _draft.PreviewMode;
         _live.PreviewScoreboard = _draft.PreviewScoreboard;
         _live.Debug = _draft.Debug;

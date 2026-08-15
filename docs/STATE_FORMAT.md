@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "1.1.0",
+  "v": "1.2.0",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -31,6 +31,7 @@ under the old name too, because that is the only name an older addon reads.
       "name": "Cpl. Blake",
       "team": 2,
       "char": 8,
+      "local": false,
       "cls": "soldier",
       "bot": true,
       "hp": 87,
@@ -60,6 +61,7 @@ under the old name too, because that is the only name an older addon reads.
 | `name` | Display name — "Cpl. Blake", "Louis", or the human's Steam name |
 | `team` | 2 or 4. Both are survivors (see below) |
 | `char` | `m_survivorCharacter`. **Unreliable for spawned soldiers** — all four read 8 |
+| `local` | `true` for the listen-server host's current survivor; omitted by older exporters |
 | `cls` | `survivor`, `soldier`, `follower`, or `holdout` (see below). Absent before v0.6.5 |
 | `bot` | `true` / `false` / `null` when the install exposes no bot test |
 | `hp` | Permanent health |
@@ -100,6 +102,12 @@ exporter older than v0.6.5, which the overlay treats as the previous behavior.
 **Do not identify survivors by `char`.** All four spawned soldiers report `char: 8`. Use
 `uid` for identity and `name` for display. `char` is only a hint for picking a portrait for
 the four original survivors.
+
+**`local` identifies the host, not an arbitrary remote client.** This addon requires the
+application to run on the listen-server host's machine, so `GetListenServerHost()` is the
+identity used by the app's optional **Separate You** consistent-HUD setting. A dedicated
+server or an older exporter has no usable local marker; in that case the app keeps the
+original all-in-roster layout.
 
 **Reads can tear.** The addon rewrites the file in place with no atomic swap, so a read can
 catch a half-written file. The app must treat a parse failure as "keep the last good state"

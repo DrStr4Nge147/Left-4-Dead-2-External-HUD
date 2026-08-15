@@ -1,7 +1,9 @@
-# Testing — exporter v1.1.0 + overlay app v1.1.0
+# Testing — exporter v1.2.0 + overlay app v1.2.0
 
-The exporter is live-tested. This run is about the overlay app: whether it appears over the
-game, follows Tab, and stays out of the way.
+The exporter and the v1.2.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-15,
+including the Consistent HUD presentation options. This checklist remains the repeatable
+regression procedure for future builds: whether the overlay appears over the game, follows
+Tab, and stays out of the way.
 
 ## Setup
 
@@ -9,17 +11,20 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.1.0.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.2.0.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
    ```
 
+   Use the rebuilt VPK with format version **1**. The target L4D2 build rejects VPK v2 with
+   `Unknown version 2`.
+
 4. Launch options must include **`-windowed -noborder`**. Without borderless, nothing can
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.1.0 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 1.2.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -75,11 +80,48 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 - Confirm the settings list shows an obvious blue scrollbar without hovering it, that
   dragging that bar scrolls the list, and that the blue **More settings below** line under
   the buttons disappears once the list is scrolled to the bottom.
-- Tick **Show HUD consistently**, **Save & Apply**, and confirm in game that the HUD stays
-  on screen without holding Tab and still hides when L4D2 loses focus. Untick it afterwards
-  to return to hold-to-show.
-- Set **Preview roster size** to 27, click **Reset UI**, and confirm **Show HUD
-  consistently** and **Exit when L4D2 closes** keep their values.
+- Open the **Consistent HUD** tab. Confirm **Show HUD consistently** is separate from the
+  Scoreboard tab, the default toggle key reads **F7**, and **Set key** captures a different
+  key while **Clear** disables it. Save a changed key and confirm it is still shown after
+  reopening the editor.
+- In the Consistent HUD tab, switch through **Bottom - Horizontal Grid**, **Lower Left Vertical
+  Grid**, and **Lower Right Vertical Grid**. Horizontal previews should show four-across rows
+  without the scoreboard block or its header: six cards should appear as 4+2, and 12 cards as
+  4+4+4. The bottom horizontal grid should be centered, and the vertical grids should keep one
+  card per row at their named lower corner. Move **Vertical position** from `0%` upward and
+  confirm both simulated and live previews move the HUD without moving the scoreboard. Set
+  **Horizontal spacing** and **Vertical spacing** to positive values, then negative values, and
+  confirm cards spread apart and can overlap. Live preview should show the selected plain HUD
+  layout and must not hold L4D2's real scoreboard.
+- In the Consistent HUD tab, switch **HUD design** between **Basic** and **Minimalist**. Basic
+  should keep the existing full cards. Minimalist should show the survivor name and item icons
+  before the health value above a five-segment, vertically compressed strip. Give a survivor temporary health and confirm
+  the buffer portion keeps the brush/grunge texture; item icons should have no rectangular slot
+  box, only a black outline. Try a long survivor name and confirm it truncates while all icons
+  remain present. Confirm the same design is used by live preview, simulated preview, vertical
+  cards, and the separate You card; the Scoreboard tab should not change.
+- Toggle **Show health numbers** off and confirm the numeric value disappears from both designs
+  while the bars remain. Toggle **Black & white theme** on and confirm health bars, state labels,
+  follower markers, and warning edges use only grayscale colors. The Scoreboard tab should retain
+  its normal colored health/state presentation.
+- Tick **Separate You** in the Consistent HUD tab. In simulated preview, the first sample card
+  should leave the shared grid and appear as one independent card at the lower right for the
+  bottom horizontal and lower-left vertical templates; six total samples should then show three
+  shared roster cards on the first row and two on the second. This is the three-column layout
+  used when Separate You is enabled; unticking it should restore six cards as 4+2. For **Lower
+  Right Vertical Grid**, the shared roster stays lower right and the You card mirrors to lower
+  left. Change horizontal and
+  vertical spacing, including negative values: only the shared roster cards should move or
+  overlap, while the You card keeps its own spacing-free position and a visible gap remains
+  between the two groups. With the rebuilt exporter in a hosted game, confirm the current host
+  survivor is the separated card and does not blink when the overlay is redrawn. Untick it and
+  confirm all cards return to the original shared roster layout.
+- Tick **Show HUD consistently**, **Save & Apply**, and confirm in game that the compact HUD
+  stays on screen without holding Tab and still hides when L4D2 loses focus. Press the selected
+  toggle key and confirm it turns off/on once per press, with key-repeat not causing extra
+  toggles. Untick it afterwards to return to hold-to-show.
+- Set **Preview roster size** to 27, click **Reset UI**, and confirm **Show HUD consistently**,
+  its template, the toggle key, and **Exit when L4D2 closes** keep their values.
 - Confirm the editor opens on **Live, on the real overlay** on a fresh configuration, and on
   whichever preview was last used afterwards. With **Preview** on live, the editor should
   fold its preview away, move clear of the top-left sidebar, and the real panel should appear over the game
@@ -117,7 +159,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.1.0` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.2.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

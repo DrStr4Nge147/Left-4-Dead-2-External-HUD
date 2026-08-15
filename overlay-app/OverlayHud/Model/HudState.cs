@@ -22,6 +22,12 @@ public sealed class Survivor
     [JsonPropertyName("char")]    public int Character { get; set; }
 
     /// <summary>
+    /// True for the listen-server host's survivor. Older exporters omit this field and
+    /// therefore leave it false, preserving the original all-in-roster behavior.
+    /// </summary>
+    [JsonPropertyName("local")]   public bool IsLocal { get; set; }
+
+    /// <summary>
     /// survivor / soldier / follower / holdout. Empty from an exporter older than 0.6.5,
     /// which is treated as "survivor" - see RosterPolicy.
     /// </summary>

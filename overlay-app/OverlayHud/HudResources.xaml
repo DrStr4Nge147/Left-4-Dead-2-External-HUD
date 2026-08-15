@@ -1,8 +1,15 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:services="clr-namespace:OverlayHud.Services">
     <FontFamily x:Key="HudFont">Segoe UI Semibold</FontFamily>
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+    <DropShadowEffect x:Key="MinimalistItemStroke"
+                      Color="#FF000000"
+                      BlurRadius="1.2"
+                      ShadowDepth="0"
+                      Opacity="1" />
 
     <!-- The black-and-white outline, pulsing. Deliberately ONE shared brush animated once at
          startup (see MainWindow.StartBlackAndWhitePulse) rather than a per-card storyboard:
@@ -11,6 +18,7 @@
          also keeps every black-and-white card pulsing in step, which reads as one alarm
          instead of several. -->
     <SolidColorBrush x:Key="BwPulseBrush" Color="#FF6060" />
+    <SolidColorBrush x:Key="MonochromePulseBrush" Color="#FFFFFFFF" />
 
     <!-- One carried item. An empty slot draws as a dim outline. -->
     <DataTemplate x:Key="ChipTemplate">
@@ -29,6 +37,32 @@
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center" />
         </Border>
+    </DataTemplate>
+
+    <!-- Minimalist keeps all three slots in a compact top row. The item column is Auto,
+         so a long survivor name gives up width and trims instead of hiding the items. The
+         icon has no slot box; the zero-depth shadow supplies only a black edge. -->
+    <DataTemplate x:Key="MinimalistChipTemplate">
+        <Image Width="18" Height="14" Margin="1,0,0,0"
+               Source="{Binding Icon}"
+               Stretch="Uniform"
+               SnapsToDevicePixels="True"
+               UseLayoutRounding="True"
+               Opacity="{Binding Opacity}"
+               Effect="{StaticResource MinimalistItemStroke}"
+               ToolTip="{Binding Label}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="MinimalistSegmentTemplate">
+        <Grid Width="48.5" Height="4" Margin="0,0,3.5,0">
+            <Border Background="#FF3A3D41" />
+            <Rectangle HorizontalAlignment="Left"
+                       Width="{Binding TotalFillWidth}"
+                       Fill="{Binding TotalFill}" />
+            <Rectangle HorizontalAlignment="Left"
+                       Width="{Binding PermanentFillWidth}"
+                       Fill="{Binding PermanentFill}" />
+        </Grid>
     </DataTemplate>
 
     <!-- Shared by the live overlay and the customization preview. -->
@@ -71,7 +105,7 @@
                                    Margin="0,0,6,0"
                                    FontFamily="{StaticResource HudFont}"
                                    FontSize="10"
-                                   Foreground="#6FB4FF"
+                                   Foreground="{Binding FollowerBrush}"
                                    Visibility="{Binding IsFollower,
                                                 Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding StateText}"
@@ -101,6 +135,8 @@
                                FontFamily="{StaticResource HudFont}"
                                FontSize="11"
                                Foreground="#FFFFFF"
+                               Visibility="{Binding ShowHealthNumbers,
+                                            Converter={StaticResource BoolToVisibility}}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center" />
                 </Grid>
@@ -118,4 +154,208 @@
             </Grid>
         </Border>
     </DataTemplate>
+
+    <!-- The consistent HUD is a row-major grid, not a framed scoreboard. It keeps the same
+         survivor-card values and item order, but removes the roster header and outer panel so
+         it reads as a persistent in-game HUD. -->
+    <DataTemplate x:Key="ConsistentSurvivorTemplate">
+        <Border Margin="{Binding RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}},
+                                Path=Tag}"
+                Padding="6,4"
+                CornerRadius="2"
+                Background="#8505070A"
+                Opacity="{Binding CardOpacity}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="#38FFFFFF" />
+                    <Setter Property="BorderThickness" Value="0,0,0,1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBlackAndWhite}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource BwPulseBrush}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsMonochrome}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource MonochromePulseBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="190" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="{Binding Name}"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="12"
+                               Foreground="#F2F2F2"
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="FOLLOW"
+                                   Margin="0,0,5,0"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="9"
+                                   Foreground="{Binding FollowerBrush}"
+                                   Visibility="{Binding IsFollower,
+                                                Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding StateText}"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="9"
+                                   Foreground="{Binding StateBrush}"
+                                   Visibility="{Binding HasState,
+                                                Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Grid Grid.Column="1" Width="190" Height="16" VerticalAlignment="Center">
+                    <Border Background="#66000000" CornerRadius="2" />
+                    <Rectangle HorizontalAlignment="Left"
+                               Width="{Binding TotalWidth}"
+                               Fill="{Binding TempBrush}"
+                               RadiusX="2" RadiusY="2" />
+                    <Rectangle HorizontalAlignment="Left"
+                               Width="{Binding PermanentWidth}"
+                               Fill="{Binding HealthBrush}"
+                               RadiusX="2" RadiusY="2" />
+                    <TextBlock Text="{Binding HealthText}"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="10"
+                               Foreground="#FFFFFF"
+                               Visibility="{Binding ShowHealthNumbers,
+                                            Converter={StaticResource BoolToVisibility}}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <ItemsControl Grid.Column="2"
+                              ItemsSource="{Binding ItemSlots}"
+                              VerticalAlignment="Center"
+                              Margin="8,0,0,0"
+                              ItemTemplate="{StaticResource ChipTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <!-- A compact health strip: the name, item icons, and health value sit above the bar.
+         The three item slots stay in their own Auto column and remain visible when the name
+         is longer than the card. -->
+    <DataTemplate x:Key="ConsistentMinimalistTemplate">
+        <Border Margin="{Binding RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}},
+                                Path=Tag}"
+                MinWidth="260"
+                Padding="0,2,0,0"
+                Background="Transparent"
+                Opacity="{Binding CardOpacity}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBlackAndWhite}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource BwPulseBrush}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsMonochrome}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource MonochromePulseBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="6" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" MinHeight="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0" MinWidth="0" Margin="0,0,4,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Name}"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="11"
+                                   Foreground="#F2F2F2"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="FOLLOW"
+                                   Margin="4,0,0,0"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="8"
+                                   Foreground="{Binding FollowerBrush}"
+                                   Visibility="{Binding IsFollower,
+                                                Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding StateText}"
+                                   Margin="4,0,0,0"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="8"
+                                   Foreground="{Binding StateBrush}"
+                                   Visibility="{Binding HasState,
+                                                Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+
+                    <ItemsControl Grid.Column="1"
+                                  ItemsSource="{Binding ItemSlots}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,6,0"
+                                  ItemTemplate="{StaticResource MinimalistChipTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding HealthText}"
+                               Margin="4,0,0,0"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF"
+                               Visibility="{Binding ShowHealthNumbers,
+                                            Converter={StaticResource BoolToVisibility}}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <ItemsControl Grid.Row="1"
+                              Width="260"
+                              Height="4"
+                              ItemsSource="{Binding MinimalistSegments}"
+                              ItemTemplate="{StaticResource MinimalistSegmentTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <services:ConsistentHudTemplateSelector x:Key="ConsistentHudTemplateSelector"
+                                            BasicTemplate="{StaticResource ConsistentSurvivorTemplate}"
+                                            MinimalistTemplate="{StaticResource ConsistentMinimalistTemplate}" />
 </ResourceDictionary>

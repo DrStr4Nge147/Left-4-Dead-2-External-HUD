@@ -13,14 +13,27 @@ namespace OverlayHud.ViewModel;
 public sealed class SurvivorCard
 {
     public const double BarWidth = 190;
+    public const double MinimalistBarWidth = 260;
+    public const int MinimalistSegmentCount = 5;
+    public const double MinimalistSegmentGap = 3.5;
+    public const double MinimalistSegmentHeight = 4;
+    public const double MinimalistRowHeight = 6;
+    public const double MinimalistSegmentWidth =
+        (MinimalistBarWidth - MinimalistSegmentCount * MinimalistSegmentGap)
+        / MinimalistSegmentCount;
 
     public string Name { get; init; } = "";
     public string HealthText { get; init; } = "";
+    public bool ShowHealthNumbers { get; init; } = true;
+    public bool IsMonochrome { get; init; }
 
     public double PermanentWidth { get; init; }
     public double TotalWidth { get; init; }
+    public IReadOnlyList<MinimalistHealthSegment> MinimalistSegments { get; init; } =
+        Array.Empty<MinimalistHealthSegment>();
 
     public Brush HealthBrush { get; init; } = Brushes.LimeGreen;
+    public Brush FollowerBrush { get; init; } = Brushes.LightSkyBlue;
 
     /// <summary>
     /// The temp-health segment: the game's scratched-up overlay in the health bar's own
@@ -56,8 +69,11 @@ public sealed class SurvivorCard
     private static readonly SolidColorBrush Red   = Frozen(0xC8, 0x3C, 0x3C);
     private static readonly SolidColorBrush Bone  = Frozen(0xD8, 0xD8, 0xD0);
     private static readonly SolidColorBrush Grey  = Frozen(0x6A, 0x6A, 0x6A);
+    private static readonly SolidColorBrush Mono  = Frozen(0xF2, 0xF2, 0xF2);
+    private static readonly SolidColorBrush FollowerBlue = Frozen(0x6F, 0xB4, 0xFF);
 
-    public static SurvivorCard From(Survivor s, bool markFollower = false)
+    public static SurvivorCard From(Survivor s, bool markFollower = false,
+                                    bool monochrome = false, bool showHealthNumbers = true)
     {
         int max = s.MaxHp > 0 ? s.MaxHp : 100;
 
@@ -75,13 +91,14 @@ public sealed class SurvivorCard
         // "one more hit", not "this much health left", and the game separates the two the
         // same way. The temp overlay below follows whichever of these wins, so a survivor on
         // his last strike who drinks pills gets a grey overlay, not a green one.
-        SolidColorBrush fill =
-            dead                 ? Grey   :
-            down                 ? Red    :
-            s.BlackAndWhite      ? Bone   :
-            hp >= max * 0.40     ? Green  :
-            hp >= max * 0.25     ? Amber  :
-                                   Red;
+        SolidColorBrush fill = monochrome
+            ? dead                 ? Grey  : Mono
+            : dead                 ? Grey  :
+              down                 ? Red   :
+              s.BlackAndWhite      ? Bone  :
+              hp >= max * 0.40     ? Green :
+              hp >= max * 0.25     ? Amber :
+                                     Red;
 
         string stateText =
             dead                ? "DEAD"    :
@@ -91,24 +108,34 @@ public sealed class SurvivorCard
             s.BlackAndWhite     ? "B&W"     :
                                   "";
 
-        Brush stateBrush = dead ? Grey : s.BlackAndWhite && !down ? Bone : Red;
+        Brush stateBrush = monochrome
+            ? dead ? Grey : Mono
+            : dead ? Grey : s.BlackAndWhite && !down ? Bone : Red;
 
         string healthText = dead
             ? "--"
             : temp > 0 ? $"{hp} + {temp}" : hp.ToString();
 
+        Brush healthBrush = down ? Grunge(fill) : fill;
+        Brush tempBrush = Grunge(fill);
+
         return new SurvivorCard
         {
             Name           = s.Name,
             HealthText     = healthText,
+            ShowHealthNumbers = showHealthNumbers,
+            IsMonochrome   = monochrome,
             PermanentWidth = dead ? 0 : BarWidth * hp / max,
             TotalWidth     = dead ? 0 : BarWidth * total / max,
+            MinimalistSegments = BuildMinimalistSegments(hp, total, max,
+                                                          healthBrush, tempBrush),
             // Down draws the whole bar scratched, not flat: incap health in the game's own
             // panels is a hatched red bar, and a solid block was the obvious difference when
             // the two were put side by side. Everyone else keeps a solid bar with the
             // scratched overlay only on the buffer past current health.
-            HealthBrush    = down ? Grunge(fill) : fill,
-            TempBrush      = Grunge(fill),
+            HealthBrush    = healthBrush,
+            FollowerBrush  = monochrome ? Mono : FollowerBlue,
+            TempBrush      = tempBrush,
             StateText      = stateText,
             StateBrush     = stateBrush,
             IsFollower     = markFollower,
@@ -125,6 +152,37 @@ public sealed class SurvivorCard
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
         brush.Freeze();
         return brush;
+    }
+
+    private static IReadOnlyList<MinimalistHealthSegment> BuildMinimalistSegments(
+        int permanent, int total, int max, Brush permanentFill, Brush tempFill)
+    {
+        double totalSegments = max > 0
+            ? MinimalistSegmentCount * Math.Clamp(total / (double)max, 0.0, 1.0)
+            : 0.0;
+        double permanentSegments = max > 0
+            ? MinimalistSegmentCount * Math.Clamp(permanent / (double)max, 0.0, 1.0)
+            : 0.0;
+
+        return Enumerable.Range(0, MinimalistSegmentCount)
+            .Select(index => new MinimalistHealthSegment
+            {
+                TotalFillWidth = MinimalistSegmentWidth
+                    * Math.Clamp(totalSegments - index, 0.0, 1.0),
+                PermanentFillWidth = MinimalistSegmentWidth
+                    * Math.Clamp(permanentSegments - index, 0.0, 1.0),
+                TotalFill = tempFill,
+                PermanentFill = permanentFill
+            })
+            .ToArray();
+    }
+
+    public sealed class MinimalistHealthSegment
+    {
+        public double TotalFillWidth { get; init; }
+        public double PermanentFillWidth { get; init; }
+        public Brush TotalFill { get; init; } = Brushes.Transparent;
+        public Brush PermanentFill { get; init; } = Brushes.Transparent;
     }
 
     /// <summary>
