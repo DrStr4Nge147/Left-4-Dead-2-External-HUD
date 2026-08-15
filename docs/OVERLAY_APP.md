@@ -236,14 +236,15 @@ Sits next to the exe. Edit and restart the app.
 | `autoScale` | `true` | Scale with game-window height |
 | `baselineHeight` | `1080` | Window height at which automatic scale is 1.0 |
 | `scale` | `1.0` | User scale applied on top of automatic scale, clamped to `0.60`–`1.00` |
-| `consistentScale` | `0.85` | Independent scale for the consistent HUD, clamped to `0.60`–`1.00` |
-| `consistentOpacity` | `0.88` | Independent opacity for the consistent HUD |
+| `consistentScale` | `0.65` Basic / `1.00` Minimalist | Independent scale for the consistent HUD, clamped to `0.60`–`1.00` |
+| `consistentOpacity` | `0.90` | Independent opacity for the consistent HUD |
 | `consistentDesign` | `basic` | Consistent HUD card design: `basic` or `minimalist` |
 | `consistentShowHealthNumbers` | `true` | Show numeric health values in the Consistent HUD |
-| `consistentMonochrome` | `false` | Use grayscale colors in the Consistent HUD |
-| `consistentVerticalOffset` | `0.035` | Bottom inset for the consistent HUD; higher values move it upward |
-| `consistentHorizontalSpacing` | `0.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
+| `consistentMonochrome` | `false` Basic / `true` Minimalist | Use grayscale colors in the Consistent HUD |
+| `consistentVerticalOffset` | `0.03` | Bottom inset for the consistent HUD; higher values move it upward |
+| `consistentHorizontalSpacing` | `10.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
 | `consistentVerticalSpacing` | `0.0` | Extra vertical card gap in layout pixels; negative values overlap cards |
+| `consistentSeparateYou` | `true` | Move the current survivor into a separate Consistent HUD card |
 | `minScale` | `0.35` | Smallest fraction of the normal resolution-scaled size allowed by fitting |
 | `bottomReserve` | `0.0` | Optional bottom clearance for custom HUDs; vanilla Tab uses the full remaining height |
 | `opacity` | `0.92` | Panel opacity |

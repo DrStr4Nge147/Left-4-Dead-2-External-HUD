@@ -424,10 +424,43 @@ public partial class SettingsWindow : Window
     {
         if (!_ready || e.Source != ConsistentDesignCombo) return;
 
+        ApplyConsistentDesignDefaultsIfUnchanged();
         ReadControls();
         RefreshPreview();
         SaveStatus.Text = "Unsaved changes";
     }
+
+    /// <summary>
+    /// Treats the design selector as a preset only while the controls still carry the
+    /// previous design's defaults. Once a value has been customized, changing designs
+    /// preserves that choice instead of silently resetting it.
+    /// </summary>
+    private void ApplyConsistentDesignDefaultsIfUnchanged()
+    {
+        if (ConsistentDesignCombo.SelectedItem is not ComboBoxItem selected) return;
+
+        string previousDesign = ConsistentHudPolicy.ParseDesign(_draft.ConsistentDesign);
+        string nextDesign = ConsistentHudPolicy.ParseDesign(selected.Tag as string);
+        if (previousDesign == nextDesign) return;
+
+        var previous = ConsistentHudPolicy.DefaultsFor(previousDesign);
+        var next = ConsistentHudPolicy.DefaultsFor(nextDesign);
+
+        if (NearlyEqual(ConsistentScaleSlider.Value, previous.Scale))
+            ConsistentScaleSlider.Value = next.Scale;
+        if (NearlyEqual(ConsistentOpacitySlider.Value, previous.Opacity))
+            ConsistentOpacitySlider.Value = next.Opacity;
+        if (NearlyEqual(ConsistentVerticalSlider.Value, previous.VerticalPosition))
+            ConsistentVerticalSlider.Value = next.VerticalPosition;
+        if (NearlyEqual(ConsistentHorizontalSpacingSlider.Value, previous.HorizontalSpacing))
+            ConsistentHorizontalSpacingSlider.Value = next.HorizontalSpacing;
+        if (NearlyEqual(ConsistentVerticalSpacingSlider.Value, previous.VerticalSpacing))
+            ConsistentVerticalSpacingSlider.Value = next.VerticalSpacing;
+        if (ConsistentMonochromeCheckBox.IsChecked == previous.Monochrome)
+            ConsistentMonochromeCheckBox.IsChecked = next.Monochrome;
+    }
+
+    private static bool NearlyEqual(double left, double right) => Math.Abs(left - right) < 0.0001;
 
     private void OnConsistentHotkeySetClick(object sender, RoutedEventArgs e)
     {

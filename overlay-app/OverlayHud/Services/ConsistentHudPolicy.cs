@@ -18,6 +18,14 @@ internal static class ConsistentHudPolicy
     public const string BasicDesign = "basic";
     public const string MinimalistDesign = "minimalist";
 
+    public readonly record struct DesignDefaults(
+        double Scale,
+        double Opacity,
+        double VerticalPosition,
+        double HorizontalSpacing,
+        double VerticalSpacing,
+        bool Monochrome);
+
     // Retained only as migration aliases for configs created before the current template
     // set became the default. Neither retired value is exposed as an editor option.
     private const string LegacyBottomRight = "bottom-right";
@@ -53,6 +61,12 @@ internal static class ConsistentHudPolicy
     {
         MinimalistDesign => MinimalistDesign,
         _ => BasicDesign
+    };
+
+    public static DesignDefaults DefaultsFor(string? value) => ParseDesign(value) switch
+    {
+        MinimalistDesign => new DesignDefaults(1.00, 0.90, 0.03, 10, 0, true),
+        _ => new DesignDefaults(0.65, 0.90, 0.03, 10, 0, false)
     };
 
     /// <summary>

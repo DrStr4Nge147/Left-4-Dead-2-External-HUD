@@ -223,7 +223,7 @@
                     <TextBlock Text="{Binding HealthText}"
                                FontFamily="{StaticResource HudFont}"
                                FontSize="10"
-                               Foreground="#FFFFFF"
+                               Foreground="{Binding BasicHealthNumberBrush}"
                                Visibility="{Binding ShowHealthNumbers,
                                             Converter={StaticResource BoolToVisibility}}"
                                HorizontalAlignment="Center"

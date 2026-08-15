@@ -33,6 +33,7 @@ public sealed class SurvivorCard
         Array.Empty<MinimalistHealthSegment>();
 
     public Brush HealthBrush { get; init; } = Brushes.LimeGreen;
+    public Brush BasicHealthNumberBrush { get; init; } = Brushes.White;
     public Brush FollowerBrush { get; init; } = Brushes.LightSkyBlue;
 
     /// <summary>
@@ -134,6 +135,7 @@ public sealed class SurvivorCard
             // the two were put side by side. Everyone else keeps a solid bar with the
             // scratched overlay only on the buffer past current health.
             HealthBrush    = healthBrush,
+            BasicHealthNumberBrush = monochrome ? Brushes.Black : Brushes.White,
             FollowerBrush  = monochrome ? Mono : FollowerBlue,
             TempBrush      = tempBrush,
             StateText      = stateText,

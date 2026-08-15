@@ -440,10 +440,12 @@ internal static class Program
             }
             && new AppConfig().ConsistentKey == 0x76
             && new AppConfig().ConsistentDesign == ConsistentHudPolicy.BasicDesign
-            && Math.Abs(new AppConfig().ConsistentVerticalOffset - 0.035) < 0.0001
-            && Math.Abs(new AppConfig().ConsistentHorizontalSpacing) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentScale - 0.65) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentOpacity - 0.90) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentVerticalOffset - 0.03) < 0.0001
+            && Math.Abs(new AppConfig().ConsistentHorizontalSpacing - 10) < 0.0001
             && Math.Abs(new AppConfig().ConsistentVerticalSpacing) < 0.0001
-            && !new AppConfig().ConsistentSeparateYou
+            && new AppConfig().ConsistentSeparateYou
             && new AppConfig().ConsistentShowHealthNumbers
             && !new AppConfig().ConsistentMonochrome
             && new AppConfig().ConsistentTemplate == ConsistentHudPolicy.VanillaBottomCenter;
@@ -533,9 +535,44 @@ internal static class Program
             (CheckBox)GetField(settings, "ConsistentMonochromeCheckBox", flags);
         var editorDraft = (AppConfig)GetField(settings, "_draft", flags);
         var designCombo = (ComboBox)GetField(settings, "ConsistentDesignCombo", flags);
-        bool separateYouLoadsOff = separateYouCheckBox.IsChecked == false;
+        bool separateYouLoadsOn = separateYouCheckBox.IsChecked == true;
         bool themeOptionsLoadDefaults = showHealthNumbersCheckBox.IsChecked == true
             && monochromeCheckBox.IsChecked == false;
+
+        var presetSettings = new SettingsWindow(new AppConfig(), () => { });
+        Invoke(presetSettings, "LoadControls", flags);
+        var presetDesignCombo = (ComboBox)GetField(presetSettings, "ConsistentDesignCombo", flags);
+        var presetScaleSlider = (Slider)GetField(presetSettings, "ConsistentScaleSlider", flags);
+        var presetOpacitySlider = (Slider)GetField(presetSettings, "ConsistentOpacitySlider", flags);
+        var presetVerticalSlider = (Slider)GetField(presetSettings, "ConsistentVerticalSlider", flags);
+        var presetHorizontalSlider =
+            (Slider)GetField(presetSettings, "ConsistentHorizontalSpacingSlider", flags);
+        var presetVerticalSpacingSlider =
+            (Slider)GetField(presetSettings, "ConsistentVerticalSpacingSlider", flags);
+        var presetMonochromeCheckBox =
+            (CheckBox)GetField(presetSettings, "ConsistentMonochromeCheckBox", flags);
+        bool basicDesignDefaults = Math.Abs(presetScaleSlider.Value - 0.65) < 0.0001
+            && Math.Abs(presetOpacitySlider.Value - 0.90) < 0.0001
+            && Math.Abs(presetVerticalSlider.Value - 0.03) < 0.0001
+            && Math.Abs(presetHorizontalSlider.Value - 10) < 0.0001
+            && Math.Abs(presetVerticalSpacingSlider.Value) < 0.0001
+            && presetMonochromeCheckBox.IsChecked == false;
+        presetDesignCombo.SelectedIndex = 1;
+        Invoke(presetSettings, "ApplyConsistentDesignDefaultsIfUnchanged", flags);
+        Invoke(presetSettings, "ReadControls", flags);
+        bool minimalistDesignDefaults = Math.Abs(presetScaleSlider.Value - 1.0) < 0.0001
+            && Math.Abs(presetOpacitySlider.Value - 0.90) < 0.0001
+            && Math.Abs(presetVerticalSlider.Value - 0.03) < 0.0001
+            && Math.Abs(presetHorizontalSlider.Value - 10) < 0.0001
+            && Math.Abs(presetVerticalSpacingSlider.Value) < 0.0001
+            && presetMonochromeCheckBox.IsChecked == true;
+        presetDesignCombo.SelectedIndex = 0;
+        Invoke(presetSettings, "ApplyConsistentDesignDefaultsIfUnchanged", flags);
+        Invoke(presetSettings, "ReadControls", flags);
+        bool basicDesignDefaultsRestore = Math.Abs(presetScaleSlider.Value - 0.65) < 0.0001
+            && presetMonochromeCheckBox.IsChecked == false;
+        presetSettings.Close();
+
         separateYouCheckBox.IsChecked = true;
         showHealthNumbersCheckBox.IsChecked = false;
         monochromeCheckBox.IsChecked = true;
@@ -583,9 +620,10 @@ internal static class Program
             && previewLimitIs27 && userScaleRangeIsUseful && slidersJumpToClick
             && resetRestoresSix && obviousScrollBar && tabAndScoreboardOptions
             && separateConsistentTab && templateNames && sectionHeadingsReadable
-            && separateYouLoadsOff && separateYouWrites && themeOptionsLoadDefaults
+            && separateYouLoadsOn && separateYouWrites && themeOptionsLoadDefaults
             && themeOptionsWrite && themeOptionsCopyToLive
             && designNames && designLoadsBasic && designWritesMinimalist && designCopiesToLive
+            && basicDesignDefaults && minimalistDesignDefaults && basicDesignDefaultsRestore
             && resetRestoresThemeDefaults
             && resetKeepsBehaviorOptions
             && previewChoiceRemembered && livePreviewIsDefault
@@ -603,12 +641,15 @@ internal static class Program
             $"scrollHint={hintExists} darkerWellWithFade={wellIsDarker} " +
             $"tabAndScoreboardOptions={tabAndScoreboardOptions} " +
             $"separateConsistentTab={separateConsistentTab} " +
-            $"separateYouLoadsOff={separateYouLoadsOff} separateYouWrites={separateYouWrites} " +
+            $"separateYouLoadsOn={separateYouLoadsOn} separateYouWrites={separateYouWrites} " +
             $"themeOptionsLoadDefaults={themeOptionsLoadDefaults} " +
             $"themeOptionsWrite={themeOptionsWrite} themeOptionsCopyToLive={themeOptionsCopyToLive} " +
             $"templateNames={templateNames} " +
             $"designNames={designNames} designLoadsBasic={designLoadsBasic} " +
             $"designWritesMinimalist={designWritesMinimalist} designCopiesToLive={designCopiesToLive} " +
+            $"basicDesignDefaults={basicDesignDefaults} " +
+            $"minimalistDesignDefaults={minimalistDesignDefaults} " +
+            $"basicDesignDefaultsRestore={basicDesignDefaultsRestore} " +
             $"resetRestoresThemeDefaults={resetRestoresThemeDefaults} " +
             $"sectionHeadingsReadable={sectionHeadingsReadable} " +
             $"resetKeepsBehaviorOptions={resetKeepsBehaviorOptions} " +
@@ -710,6 +751,8 @@ internal static class Program
                 .FirstOrDefault() is { ShowHealthNumbers: false, IsMonochrome: true } themedCard
             && ((SolidColorBrush)themedCard.HealthBrush).Color
                 == Color.FromRgb(0xF2, 0xF2, 0xF2)
+            && ((SolidColorBrush)themedCard.BasicHealthNumberBrush).Color
+                == Colors.Black
             && ((SolidColorBrush)themedCard.FollowerBrush).Color
                 == Color.FromRgb(0xF2, 0xF2, 0xF2);
 
@@ -1584,6 +1627,13 @@ internal static class Program
         var settings = new SettingsWindow(new AppConfig(), () => { });
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         var badge = (TextBlock)GetField(main, "MenuBadgeText", flags);
+        var mainConfig = (AppConfig)GetField(main, "_cfg", flags);
+        mainConfig.AlwaysShow = true;
+        mainConfig.ConsistentScale = 0.65;
+        Invoke(main, "ApplyLayout", flags);
+        var badgeScale = (ScaleTransform)GetField(main, "MenuBadgeScale", flags);
+        bool badgeFixedAtNativeScale = Math.Abs(badgeScale.ScaleX - 1.0) < 0.0001
+            && Math.Abs(badgeScale.ScaleY - 1.0) < 0.0001;
 
         var assembly = typeof(MainWindow).Assembly;
         string? product = assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
@@ -1616,6 +1666,7 @@ internal static class Program
             && product == expected
             && title == expected
             && authorShown
+            && badgeFixedAtNativeScale
             && iconUsable;
 
         Console.WriteLine(
@@ -1623,6 +1674,7 @@ internal static class Program
             $"settingsTitle={settings.Title == expected} badge={badge.Text.StartsWith(expected + " v", StringComparison.Ordinal)} " +
             $"productMetadata={product == expected} titleMetadata={title == expected} " +
             $"author={authorShown} companyMetadata=\"{company}\" " +
+            $"badgeFixedAtNativeScale={badgeFixedAtNativeScale} " +
             $"icon={iconUsable} trayIcon={trayIcon.Width}x{trayIcon.Height} " +
             $"windowIcon={windowIcon.Width:0}");
         Console.WriteLine(passed ? "PASS" : "FAIL: app name or author is inconsistent");

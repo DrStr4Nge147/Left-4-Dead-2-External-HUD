@@ -53,10 +53,10 @@ public sealed class AppConfig
     [JsonPropertyName("scale")] public double Scale { get; set; } = 1.0;
 
     /// <summary>Scale used by the consistent HUD, independently of the scoreboard panel.</summary>
-    [JsonPropertyName("consistentScale")] public double ConsistentScale { get; set; } = 0.85;
+    [JsonPropertyName("consistentScale")] public double ConsistentScale { get; set; } = 0.65;
 
     /// <summary>Opacity used by the consistent HUD, independently of the scoreboard panel.</summary>
-    [JsonPropertyName("consistentOpacity")] public double ConsistentOpacity { get; set; } = 0.88;
+    [JsonPropertyName("consistentOpacity")] public double ConsistentOpacity { get; set; } = 0.90;
 
     /// <summary>Card design used only by the consistent HUD: "basic" or "minimalist".</summary>
     [JsonPropertyName("consistentDesign")] public string ConsistentDesign { get; set; } = "basic";
@@ -73,10 +73,10 @@ public sealed class AppConfig
     /// Fraction of the game window kept below the consistent HUD. Zero touches the bottom
     /// edge; higher values move the HUD upward. This is independent of the scoreboard offset.
     /// </summary>
-    [JsonPropertyName("consistentVerticalOffset")] public double ConsistentVerticalOffset { get; set; } = 0.035;
+    [JsonPropertyName("consistentVerticalOffset")] public double ConsistentVerticalOffset { get; set; } = 0.03;
 
     /// <summary>Extra horizontal gap between consistent-HUD cards, in layout pixels.</summary>
-    [JsonPropertyName("consistentHorizontalSpacing")] public double ConsistentHorizontalSpacing { get; set; }
+    [JsonPropertyName("consistentHorizontalSpacing")] public double ConsistentHorizontalSpacing { get; set; } = 10;
 
     /// <summary>Extra vertical gap between consistent-HUD cards, in layout pixels.</summary>
     [JsonPropertyName("consistentVerticalSpacing")] public double ConsistentVerticalSpacing { get; set; }
@@ -85,7 +85,7 @@ public sealed class AppConfig
     /// Moves the local listen-server host's card out of the shared consistent-HUD roster
     /// and places it at the lower-right edge. The scoreboard view never uses this option.
     /// </summary>
-    [JsonPropertyName("consistentSeparateYou")] public bool ConsistentSeparateYou { get; set; }
+    [JsonPropertyName("consistentSeparateYou")] public bool ConsistentSeparateYou { get; set; } = true;
 
     /// <summary>Smallest fraction of the resolution-scaled size used by overflow fitting.</summary>
     [JsonPropertyName("minScale")] public double MinScale { get; set; } = 0.35;

@@ -4,13 +4,20 @@
 
 This addon is the exporter half. It writes live survivor state to a file and draws nothing. The application reads that file and draws the HUD. Subscribe to this, download that, or you will see no difference in game at all.
 
+Use the matching [b]v1.2.0[/b] exporter addon and overlay application together. The application is available in two builds:
+
+[list]
+[*][b]Standalone[/b] includes the required .NET components and needs no separate runtime installation.
+[*][b]Compact[/b] is smaller, but requires the [url=https://dotnet.microsoft.com/download/dotnet/9.0].NET 9 Desktop Runtime for Windows x64[/url]. Choose [b]Desktop Runtime[/b], not only the base .NET Runtime or ASP.NET Core Runtime.
+[/list]
+
 [h1]WHAT IT IS[/h1]
 
 An external survivor HUD that shows [b]every[/b] survivor in the session, not just the four the built-in HUD has room for. Built for oversized rosters - [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] and anything else that spawns more than four survivors.
 
 Each card shows what the vanilla HUD shows: name, permanent health, temp health from pills or adrenaline, black-and-white state, incapacitated / hanging / dying / dead, and the medkit, pills and throwable being carried.
 
-Hold [b]Tab[/b] to show the panel, release to hide it. No key binds are changed - the application watches the key itself, so your Tab still opens the real scoreboard exactly as before.
+The application has separate [b]Scoreboard[/b] and [b]Consistent HUD[/b] views. Hold [b]Tab[/b] to show the scoreboard panel, release to hide it. The Consistent HUD can stay visible during play and does not open the game's scoreboard. No key binds are changed - the application watches the key itself, so Tab still opens the real scoreboard exactly as before.
 
 [h1]REQUIREMENTS - READ THESE, THEY ARE NOT OPTIONAL[/h1]
 
@@ -18,6 +25,7 @@ Hold [b]Tab[/b] to show the panel, release to hide it. No key binds are changed 
 [*][b]You must host the session.[/b] Single player, or coop where you are the host. VScript runs on the server, so on someone else's server there is no data to export and the HUD stays empty. It does not work as a client joining a dedicated server or someone else's lobby.
 [*][b]L4D2 must run borderless windowed[/b] - launch options [b]-windowed -noborder[/b]. Nothing outside the game can draw over exclusive fullscreen. This is a limit of Windows, not of the addon.
 [*]Windows only. The application is a Windows program.
+[*]The [b]Standalone[/b] application needs no runtime. The smaller [b]Compact[/b] application requires the .NET 9 Desktop Runtime for Windows x64.
 [/list]
 
 [h1]HOW IT WORKS[/h1]
@@ -38,20 +46,25 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 [*][b]Live preview.[/b] The editor draws the real panel over the real game with your real roster, updating as you move a slider. Cancel puts everything back; nothing is written until Save & Apply.
 [*][b]Hold the game's scoreboard open[/b] while you lay the panel out, so you can see what it sits next to. The addon runs the command for you - an external application cannot.
 [*][b]Position, scale, opacity, columns[/b], and guide lines for the sidebar edge that the game itself cannot draw.
-[*][b]Show HUD consistently[/b] keeps the panel up during play instead of only while Tab is held. It still hides when L4D2 loses focus.
+[*][b]Show HUD consistently[/b] moves to its own tab and keeps the HUD up during play instead of only while Tab is held. It still hides when L4D2 loses focus.
+[*][b]Three Consistent HUD templates[/b] are available: [b]Bottom - Horizontal Grid[/b] (the default), [b]Lower Left Vertical Grid[/b], and [b]Lower Right Vertical Grid[/b]. The horizontal layout uses four cards across and up to three rows, then adds columns for larger rosters.
+[*][b]Two Consistent HUD designs[/b] are available. [b]Basic[/b] uses full cards. [b]Minimalist[/b] puts the name and icon-only items before the health value above a compact five-segment health strip, keeps the temporary-health grunge texture, and clips long names without hiding items.
+[*][b]Separate You[/b] can split the current survivor into an independent card. On the bottom grid the roster stays on the left and the You card sits on the lower right; on the lower-right vertical grid the roster stays on the right and the You card moves to the left. The roster group reserves a visible gap so the two groups do not overlap.
+[*][b]Health numbers, black-and-white theme, horizontal spacing, vertical spacing, vertical position, opacity, and HUD size[/b] are independently configurable for the Consistent HUD. Negative spacing is allowed for intentional overlap. The top-right status badge remains fixed at 1.0x while the HUD is resized.
 [*][b]Exit when L4D2 closes[/b], on by default. Turn it off to keep the overlay in the tray between sessions.
 [/list]
 
 [h1]WHO THE PANEL SHOWS[/h1]
 
-Past the four survivor slots L4D2 already draws, every other survivor in the session gets a card - name, health, temp health, black-and-white state, incap/hanging/dying/dead, and carried items. [b]Who to show[/b] in the editor picks which of them appear. Immortal holdout soldiers are never drawn in any mode; nothing can hurt them, so a health card for one carries no information.
+Every mortal survivor in the session can get a card - name, health, temp health, black-and-white state, incap/hanging/dying/dead, and carried items. [b]Who to show[/b] in the editor picks which roster appears. Immortal holdout soldiers are never drawn in any mode; nothing can hurt them, so a health card for one carries no information.
 
 [h2]For Finale Soldiers[/h2]
 
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] spawns rosters far past four, and is what this overlay exists for. Without it installed, nothing is ever classified as a soldier or a follower, so the two options below just show an empty panel.
 
 [list]
-[*][b]All survivors[/b] - the default. Every mortal soldier, every follower, and any extra plain survivor past the vanilla four, all together in one panel.
+[*][b]All survivors[/b] - the default. Every mortal survivor, including the four survivors already shown by the vanilla HUD.
+[*][b]Extra survivors[/b] - the previous All behavior. Mortal soldiers, followers, and plain survivors from slot 5 onward, without duplicating the vanilla four.
 [*][b]Mortal soldiers + followers[/b] - soldiers and followers only, with plain survivors dropped from the panel. Use this if the survivor rows are already covered by another HUD and only the soldiers need watching.
 [*][b]Followers only[/b] - just the soldiers currently following a player, for tracking a small escort without the rest of the holdout roster on screen.
 [/list]
@@ -67,13 +80,14 @@ Immortal holdout soldiers are never drawn, in any of the three.
 [*]Keep the application and the addon on the same version - they are downloaded separately, so updating is on you.
 [/list]
 
-[b]Current: v1.0.8[/b] - includes the v1.0.5 input/status fixes and keeps the HUD alive through a same-map round restart. When a full-team wipe restarts the map and another addon puts your extra survivors back, they are written to the HUD again within about a second instead of leaving a false empty roster behind. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
+[b]Current: v1.2.0[/b] - separates the Tab scoreboard from the persistent Consistent HUD, adds the three templates and Basic / Minimalist designs, supports complete-roster and extras-only filters, and adds configurable health presentation, spacing, positioning, and Separate You layout. The exporter and application must both be v1.2.0. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
 
 [h1]IF NOTHING APPEARS[/h1]
 
 [list]
 [*]Look at the top right first. The application's badge appears there whenever nothing is being exported, and the line under it says what is wrong when the cause is the addon itself - not installed, installed twice, or turned off in the Add-ons screen.
 [*]If it says the addon is installed and nothing appears anyway, the pack was most likely updated while L4D2 was open: close the game and start it again.
+[*]If the Compact application does not start, install the .NET 9 Desktop Runtime for Windows x64 from the link above. The Standalone build includes its runtime.
 [*]Nothing at all on screen, not even the badge, usually means the game is in exclusive fullscreen. Set [b]-windowed -noborder[/b].
 [*]No panel during a round, with no badge either, means there is simply nobody to draw: the roster filter is set to a Finale Soldiers option and there are no soldiers, or nobody is past the four the game already shows.
 [*]For anything else, turn on the [b]debug console[/b] in the application. It reports what it is reading, whether the addon is exporting, and every problem it hits, and saves a log you can attach to a comment here.

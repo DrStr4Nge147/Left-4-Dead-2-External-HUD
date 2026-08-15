@@ -602,7 +602,10 @@ public partial class MainWindow : Window
         double scale = baseScale * Math.Clamp(_fitScale, minFit, maxFit);
 
         PanelScale.ScaleX = PanelScale.ScaleY = scale;
-        MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = baseScale;
+        // Keep the status badge and its notice at native size. The survivor panel can be
+        // scaled for the scoreboard or Consistent HUD, but the setup/version message must
+        // remain readable and must not change size with either layout.
+        MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = 1.0;
         ConsistentYouPanelScale.ScaleX = ConsistentYouPanelScale.ScaleY = scale;
 
         // The badge and its notice have their own fixed corner: roster anchor settings must

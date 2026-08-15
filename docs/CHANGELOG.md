@@ -38,6 +38,10 @@ placement, and controls. The editor now keeps those jobs separate.
 - Adds independent consistent-HUD size and opacity controls, plus a configurable single-key
   toggle (F7 by default). The toggle is consumed by the app, works only while L4D2 is in
   front, and saves its enabled/disabled state.
+- Sets the Consistent HUD defaults to 90% opacity, 3% vertical position, 0 px vertical spacing,
+  and 10 px horizontal spacing. Basic starts at 0.65x with Black & white theme off; Minimalist
+  starts at 1.00x with the theme on. Separate You is enabled by default, and Basic health numbers
+  use a contrasting black brush when monochrome is enabled.
 - Sets the settings section headings to an explicit light foreground so they remain readable
   on the dark control cards.
 - Keeps `rosterFilter` shared between both views, so All survivors, Extra survivors, and the
