@@ -70,9 +70,10 @@ public sealed class AppConfig
     [JsonPropertyName("opacity")] public double Opacity { get; set; } = 0.92;
 
     /// <summary>
-    /// Which part of the roster the panel draws: "all" (everything the vanilla HUD does
-    /// not already show), "soldiers" (mortal soldiers and followers), or "followers".
-    /// Immortal team-4 holdout soldiers are excluded by all three.
+    /// Which part of the roster the panel draws: "all" (every mortal survivor, including
+    /// the four vanilla slots), "extras" (the previous All behavior), "soldiers" (mortal
+    /// soldiers and followers), or "followers". Immortal team-4 holdout soldiers are
+    /// excluded by all four.
     /// </summary>
     [JsonPropertyName("rosterFilter")] public string RosterFilter { get; set; } = "all";
 

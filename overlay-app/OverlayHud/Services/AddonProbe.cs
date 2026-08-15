@@ -3,7 +3,8 @@ using System.IO;
 namespace OverlayHud.Services;
 
 /// <summary>One installed copy of the exporter, wherever it came from.</summary>
-internal readonly record struct AddonPack(string Path, bool FromWorkshop, bool Enabled)
+internal readonly record struct AddonPack(string Path, bool FromWorkshop, bool Enabled,
+                                          string? Version = null)
 {
     public string Name => System.IO.Path.GetFileName(Path);
 }
@@ -26,6 +27,19 @@ internal readonly record struct AddonPresence(bool Located, IReadOnlyList<AddonP
     public bool Disabled => Located && Packs.Count > 0 && Packs.All(pack => !pack.Enabled);
 
     public bool Installed => Located && Packs.Count == 1 && Packs[0].Enabled;
+
+    /// <summary>
+    /// What the installed pack says its version is, from its own addoninfo.txt. Null when
+    /// nothing is installed, or when the manifest could not be read - both mean "unknown",
+    /// and unknown never produces a warning.
+    ///
+    /// An enabled pack is preferred over a disabled one: with both present, the enabled one
+    /// is the copy the game will actually mount.
+    /// </summary>
+    public string? Version =>
+        Packs.FirstOrDefault(pack => pack.Enabled && !string.IsNullOrWhiteSpace(pack.Version))
+             .Version
+        ?? Packs.FirstOrDefault(pack => !string.IsNullOrWhiteSpace(pack.Version)).Version;
 }
 
 /// <summary>
@@ -118,7 +132,8 @@ internal static class AddonProbe
 
         foreach (var file in files)
         {
-            if (!VpkReader.ContainsExporter(file.FullName)) continue;
+            var contents = VpkReader.Read(file.FullName);
+            if (!contents.HasExporter) continue;
 
             bool workshop = string.Equals(file.Directory?.Name, "workshop",
                                           StringComparison.OrdinalIgnoreCase);
@@ -127,7 +142,8 @@ internal static class AddonProbe
             // Workshop entry: "workshop\123456789.vpk".
             string key = workshop ? $"workshop\\{file.Name}" : file.Name;
 
-            packs.Add(new AddonPack(file.FullName, workshop, !disabled.Contains(key)));
+            packs.Add(new AddonPack(file.FullName, workshop, !disabled.Contains(key),
+                                    contents.AddonVersion));
         }
 
         return new AddonPresence(true, packs, addonsFolder);

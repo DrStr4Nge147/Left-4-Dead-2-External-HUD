@@ -88,6 +88,28 @@
                     <TextBlock x:Name="AuthorText" Margin="10,0,0,0"
                                Foreground="#8EC5FF" FontSize="13" FontWeight="SemiBold" />
                 </StackPanel>
+
+                <!-- Shown only when the installed addon and this build are on different
+                     versions. The overlay says the same thing in game, but it is
+                     click-through by design, so this is the copy that carries the link. -->
+                <Border x:Name="UpdateBanner" Margin="0,12,0,0" Padding="14,10"
+                        HorizontalAlignment="Left"
+                        Background="#2B2416" BorderBrush="#7A6027" BorderThickness="1"
+                        CornerRadius="6" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="UpdateBannerTitle"
+                                   Foreground="#F1B85B" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock x:Name="UpdateBannerBody" Margin="0,4,0,0" MaxWidth="820"
+                                   TextWrapping="Wrap" Foreground="#D6DCE4" FontSize="13" />
+                        <TextBlock x:Name="UpdateBannerLinkLine" Margin="0,6,0,0" FontSize="13">
+                            <Hyperlink x:Name="ReleasesLink"
+                                       RequestNavigate="OnReleasesNavigate"
+                                       Foreground="#8EC5FF">
+                                <Run x:Name="ReleasesLinkText" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
             </StackPanel>
             <Border Grid.Column="1" Margin="0,0,8,0" Background="#26303A"
                     CornerRadius="12" Padding="12,6" VerticalAlignment="Center">
@@ -224,7 +246,12 @@
                                      Click="OnOptionChanged">
                             <TextBlock Text="All survivors" Foreground="#F0F2F5" />
                         </RadioButton>
-                        <!-- Same GroupName, so the three stay mutually exclusive. The rule
+                        <RadioButton x:Name="RosterExtrasRadio" GroupName="RosterFilter"
+                                     Margin="0,4,0,0" Foreground="#F0F2F5"
+                                     Click="OnOptionChanged">
+                            <TextBlock Text="Extra survivors" Foreground="#F0F2F5" />
+                        </RadioButton>
+                        <!-- Same GroupName, so all four stay mutually exclusive. The rule
                              below is only a divider: the two options under it mean nothing
                              without Finale Soldiers installed. -->
                         <Border x:Name="RosterSectionRule"
@@ -244,7 +271,7 @@
                                      Click="OnOptionChanged">
                             <TextBlock Text="Followers only" Foreground="#F0F2F5" />
                         </RadioButton>
-                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the three."
+                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the four."
                                    Margin="22,6,0,0" TextWrapping="Wrap"
                                    Foreground="#AAB2BE" FontSize="11" />
                     </StackPanel>

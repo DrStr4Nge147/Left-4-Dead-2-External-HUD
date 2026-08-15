@@ -1,4 +1,4 @@
-# Testing — exporter v1.0.8 + overlay app v1.0.8
+# Testing — exporter v1.1.0 + overlay app v1.1.0
 
 The exporter is live-tested. This run is about the overlay app: whether it appears over the
 game, follows Tab, and stays out of the way.
@@ -9,7 +9,7 @@ game, follows Tab, and stays out of the way.
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
 2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.0.8.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v1.1.0.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -19,7 +19,7 @@ game, follows Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.0.8 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 1.1.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -57,10 +57,10 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
   pointer instead of stepping one increment left or right.
 - Confirm there are no **Automatic enlargement** or **Sidebar width** controls. These are
   fixed layout rules because the vanilla scoreboard dimensions are not user-adjustable.
-- Confirm **Who to show** offers **All survivors**, **Mortal soldiers + followers**, and
-  **Followers only**, that **All survivors** is selected by default, and that the preview
-  header changes to `EXTRA SURVIVORS` / `SOLDIERS + FOLLOWERS` / `FOLLOWERS` as it is
-  changed.
+- Confirm **Who to show** offers **All survivors**, **Extra survivors**, **Mortal soldiers +
+  followers**, and **Followers only**, that **All survivors** is selected by default, and that
+  the preview header changes to `ALL SURVIVORS` / `EXTRA SURVIVORS` / `SOLDIERS + FOLLOWERS` /
+  `FOLLOWERS` as it is changed.
 - Confirm **Exit when L4D2 closes** has clearly readable white text, is checked by default,
   and persists after Save & Apply.
 - Confirm the editor header shows amber **L4D2: NOT RUNNING** before launch and changes to
@@ -117,7 +117,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.0.8` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.1.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**
@@ -132,8 +132,22 @@ Start a campaign with the soldiers spawning, then:
   restarting the app**: the line must clear within a few seconds. Subscribe to the Workshop
   copy while the manual VPK is still in `addons\` — `MORE THAN ONE COPY`. A Workshop-only
   install must be recognised as installed, despite being stored under a numeric filename.
+- **Version match.** With the shipped pair installed, confirm nothing about versions appears
+  anywhere — no line under the badge, no banner in the editor. Then edit `addonversion` in a
+  copy of the pack's `addoninfo.txt`, rebuild it as `1.1.1`, and restart both:
+  - The status corner must read `UPDATE THE OVERLAY APP` **at the main menu and during a
+    round**, naming both versions and the releases URL. The panel, the roster filters and
+    the scoreboard hold must all keep working exactly as before.
+  - The editor must show an amber **Update the overlay app** banner with a clickable link
+    that opens the releases page in the default browser.
+  - Set the pack back to a version *below* the app's and confirm the message becomes
+    `UPDATE THE EXPORTER ADDON`, with no link in the editor — that half comes from the
+    Workshop, not from a download.
+  - Untick **Show status badge** and confirm the in-game line goes with the rest of the
+    corner.
 - **Tick Debug console** in the editor, or open it from the tray menu. Confirm the top block
-  shows `exporter live` during a round and `export stopped` at the menu, that the state file
+  shows `exporter live` during a round and `export stopped` at the menu, that it names this
+  app's version, the addon's and the verdict, that the state file
   path is the one the addon is writing, and that alt-tabbing produces focus lines. Close the
   window and confirm the checkbox and the tray tick both clear.
 - **Hold Tab.** The panel should appear at top left, directly below the scoreboard, within
@@ -168,8 +182,11 @@ Start a campaign with the soldiers spawning, then:
   loses focus or minimises when the panel appears, stop and say so.
 - **Roster filters.** Spawn soldiers, turn `!cfmortal` on, and send one soldier to follow
   you, so all three classes are present at once. Then, for each **Who to show** option:
-  - **All survivors** — every mortal soldier, the follower, and any extra survivor appear;
-    no card for an immortal holdout soldier, and no duplicate of the vanilla four.
+  - **All survivors** — every mortal soldier, the follower, the four original survivors, and
+    any extra plain survivor appear; no card for an immortal holdout soldier. The four vanilla
+    survivors appearing here is intentional.
+  - **Extra survivors** — the four original plain survivors drop off; the extra plain survivor,
+    mortal soldier, and follower remain. This is the previous All behavior.
   - **Mortal soldiers + followers** — extra plain survivors drop off; soldiers stay.
   - **Followers only** — only the soldier following you remains. Press the follow key
     again and the panel should empty within a fraction of a second.
@@ -180,6 +197,9 @@ Start a campaign with the soldiers spawning, then:
   dodge the bot-catchup teleport). It must **stay** on the panel, not flicker off and back.
 - Get incapped, get revived, go black-and-white, let a soldier die, pop pills. Check each
   reads correctly on the panel.
+- Check the bar colour at the boundaries, easiest with `give health` / `hurtme` on a listen
+  server: 40 HP must be green, 39 amber, 25 amber, 24 red. Exactly 40 and exactly 25 were
+  one step off through v1.0.8.
 - With an addon that restores extra survivor bots, let the whole team go down and wait for
   the same-map round restart. Confirm `console.log` prints
   `[OVLHUD] re-arming exporter (scriptedmode, first export in 1s)` or the same line for
@@ -206,8 +226,9 @@ Start a campaign with the soldiers spawning, then:
 | Thing | Expected |
 |---|---|
 | Menu/lobby badge | Top-right version appears only while L4D2 is focused and exports are inactive |
-| Survivor count | Only roster positions 5 and up; the vanilla first four are not duplicated |
-| Holdout soldiers | Never on the panel, in any of the three filters |
+| Version match | Silent while both halves agree; names the stale half in the menu and in game when they do not, and blocks nothing either way |
+| Survivor count | All survivors includes the vanilla first four; Extra survivors keeps only positions 5 and up for plain survivors |
+| Holdout soldiers | Never on the panel, in any of the four filters |
 | Panel header | Names the active filter and counts what it drew |
 | Oversized roster | At most two balanced columns, contained within the scoreboard sidebar |
 | Health bar | Matches the in-game HUD |

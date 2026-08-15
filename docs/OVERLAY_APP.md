@@ -1,8 +1,9 @@
 # Left 4 Dead 2 Customized Overlay HUD - External
 
-A transparent, click-through, always-on-top window that supplements L4D2's four built-in
-survivor slots with roster positions 5 and up. It reads one JSON file. It does not touch
-the game process — no injection, no memory reading, no DirectX hooking.
+A transparent, click-through, always-on-top window that draws the selected part of L4D2's
+survivor roster. **All survivors** includes the four built-in slots; **Extra survivors**
+keeps the original slot-5-and-up behavior. It reads one JSON file and does not touch the game
+process — no injection, no memory reading, no DirectX hooking.
 
 ## Running it
 
@@ -66,7 +67,7 @@ There is no main window. It lives in the notification area — right-click the t
 - The panel only draws while L4D2 is the foreground window, so Tab does nothing on the
   desktop.
 - The window follows the game window's position and size, so it works on any monitor.
-- `Left 4 Dead 2 Customized Overlay HUD - External v0.6.4` appears at the top right while
+- `Left 4 Dead 2 Customized Overlay HUD - External v1.1.0` appears at the top right while
   L4D2 is focused and the exporter is
   inactive, confirming that the app is running in the main menu, lobby, loading screens,
   and pause menu. It disappears when live round exports resume.
@@ -78,7 +79,7 @@ exclusive fullscreen.
 
 | Element | Meaning |
 |---|---|
-| Bar, green → amber → red | Permanent health as a fraction of max |
+| Bar, green → amber → red | Permanent health as a fraction of max: green from 40%, amber from 25%, red below |
 | Pale segment past the bar | Temp health from pills or adrenaline |
 | `48 + 12` | Permanent + temp |
 | Bone-white bar | Black and white — one more down and they die |
@@ -104,14 +105,51 @@ is actually in `left4dead2\addons`:
 | `MORE THAN ONE COPY` | Installed twice — one mounts, unpredictably. Keep one |
 | `ADDON TURNED OFF` | Installed but disabled in the game's Add-ons screen |
 | `GAME NOT FOUND` | No install located. Set `statePath` by hand |
+| `UPDATE THE OVERLAY APP` | The installed addon is on a newer version than this app |
+| `UPDATE THE EXPORTER ADDON` | This app is newer than the installed addon |
 
 Packs are identified by their contents, not their filenames: a Workshop subscription lives
 at `addons\workshop\<publishedfileid>.vpk`, which says nothing about what is inside it.
 
-Only roster positions 5 and up receive cards; the first four remain on L4D2's vanilla HUD.
-When there are four or fewer survivors, holding Tab draws no roster panel. Extra cards use
-one column while they fit naturally, then balance across at most two columns. The panel
-shrinks inside the scoreboard sidebar instead of adding more columns across the screen.
+## Version match
+
+The two halves ship under one version, and they arrive by different routes: the addon updates
+itself through the Workshop, and the app has to be downloaded. So the app is the half that
+goes stale without saying anything, and the addon's version is the one to measure against.
+
+The app reads `addonversion` straight out of the installed pack's own `addoninfo.txt`. That
+is answerable at a main menu — before a map has loaded and before anything has been exported.
+The `v` field in `state.json` is the fallback for an install whose manifest cannot be read.
+
+**A mismatch changes nothing.** The HUD, the editor, the roster filters and the scoreboard
+hold all keep working across versions; the difference is only reported. The line appears
+under the top-right badge in the main menu **and during a round**, since someone who only
+holds Tab mid-round would otherwise never see it. **Show status badge** turns the whole
+corner off, this line included.
+
+The editor carries the same message with a clickable link to
+<https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases>, because the overlay
+itself is click-through by design and cannot hold one.
+
+If no version can be read — no pack installed, an unreadable manifest, or a version string
+that is not a version — nothing is claimed and nothing is shown.
+
+## Who to show
+
+The editor's **Who to show** setting controls the roster drawn in the panel:
+
+| Option | Cards shown |
+|---|---|
+| **All survivors** | Every mortal survivor, including the four vanilla slots |
+| **Extra survivors** | The previous behavior: plain survivors from slot 5 onward, plus mortal soldiers and followers |
+| **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
+| **Followers only** | Only soldiers currently following a player |
+
+Immortal team-4 holdout soldiers are excluded from every option. In **Extra survivors**, when
+there are four or fewer plain survivors and no soldier/follower cards, holding Tab draws no
+roster panel. Cards use one column while they fit naturally, then balance across at most two
+columns. The panel shrinks inside the scoreboard sidebar instead of adding more columns across
+the screen.
 
 ## config.json
 
@@ -135,6 +173,7 @@ Sits next to the exe. Edit and restart the app.
 | `minScale` | `0.35` | Smallest fraction of the normal resolution-scaled size allowed by fitting |
 | `bottomReserve` | `0.0` | Optional bottom clearance for custom HUDs; vanilla Tab uses the full remaining height |
 | `opacity` | `0.92` | Panel opacity |
+| `rosterFilter` | `all` | `all` = every mortal survivor, `extras` = the previous extra-only roster, `soldiers` = mortal soldiers and followers, `followers` = followers only |
 | `cardsPerColumn` | `0` | `0` measures the real one-column height first; positive values override it |
 | `maxColumns` | `2` | Hard horizontal column limit; overflow is balanced and scaled vertically |
 | `staleAfterSeconds` | `2.0` | Seconds without a new `seq` before the export counts as stopped |
@@ -161,7 +200,8 @@ The status line says why, and includes the path it is watching:
 the app is working when the panel cannot, because the panel is the thing missing.
 
 The top block is current state, refreshed twice a second: whether the exporter is live,
-stopped, or has never been seen; the state file being watched; polls completed and the size
+stopped, or has never been seen; the version this app is on and the version the installed
+addon claims; the state file being watched; polls completed and the size
 of the last roster read; whether L4D2 is in front and at what size; whether the hold key is
 down and how many times the keyboard hook has had to be reinstalled; and whether the panel
 is drawing.

@@ -40,23 +40,28 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v1.0.8 — exporter restart recovery, confirmed in-game: a full-team wipe that restarts the
-map no longer leaves the panel showing an empty roster.**
+**v1.1.0 — the app can now show every mortal survivor, including the original four, while
+keeping the previous extra-only roster as a separate choice. Both halves also compare their
+versions and report a mismatch without blocking the HUD. Not yet live-tested. v1.0.8's
+exporter restart recovery is confirmed in-game: a full-team wipe that restarts the map no
+longer leaves the panel showing an empty roster.**
 
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v1.0.8** — exports every survivor plus a `cls` classification field for
+- **Exporter addon v1.1.0** — exports every survivor plus a `cls` classification field for
   Finale Soldiers rosters, and holds the game's scoreboard open on request. Both still need
   one in-game confirmation. Its two transport files live in `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v1.0.8** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v1.1.0** — includes source-faithful
   monochrome item icons, a built-in UI editor with simulated *and* live preview, the
-  default Tab+Insert editor shortcut and the three roster filters. The Tab hold, the
+  default Tab+Insert editor shortcut and the four roster filters. The Tab hold, the
   foreground gate and following the game window are written but not yet confirmed in-game.
+  Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
+  and reports a mismatch rather than enforcing one.
 
-1.0.x marks feature completeness, not a completed test pass — `docs/TESTING.md` is the
+1.1.x marks feature completeness, not a completed test pass — `docs/TESTING.md` is the
 run to make. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
@@ -75,17 +80,18 @@ the hold key is down. It still hides when L4D2 loses focus.
 
 ## Who the panel shows
 
-**Who to show** in the editor picks one of three rosters. The lower two are grouped under
+**Who to show** in the editor picks one of four rosters. The lower two are grouped under
 **For Finale Soldiers Mod** — without that addon nothing is ever classified as a soldier or
 a follower, so they would show an empty panel:
 
 | Option | Shows |
 |---|---|
-| **All survivors** | Every mortal soldier, follower, and extra survivor past the four L4D2 already draws |
+| **All survivors** | Every mortal survivor, including the four slots L4D2 already draws |
+| **Extra survivors** | The previous All behavior: mortal soldiers, followers, and plain survivors from slot 5 onward |
 | **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
 | **Followers only** | Only the soldiers currently following a player |
 
-Immortal team-4 holdout soldiers are never drawn in any of the three: nothing can hurt them,
+Immortal team-4 holdout soldiers are never drawn in any of the four: nothing can hurt them,
 so a health card for one carries no information.
 
 Followers carry a blue **FOLLOW** marker in the first two options, where the roster is

@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "1.0.8",
+  "v": "1.1.0",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -52,7 +52,7 @@ under the old name too, because that is the only name an older addon reads.
 
 | Field | Meaning |
 |---|---|
-| `v` | Exporter version that wrote the file |
+| `v` | Exporter version that wrote the file. The app's version check prefers the installed pack's `addoninfo.txt`, which answers at a main menu, and falls back to this |
 | `seq` | Increments every write. Same `seq` twice = the game is paused, stopped, or gone |
 | `time` | Server `Time()` in seconds since map load |
 | `count` | Length of `survivors` |

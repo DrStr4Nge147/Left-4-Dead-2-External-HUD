@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private System.Windows.Forms.ToolStripMenuItem? _debugMenuItem;
 
     private Native.RECT _lastRect;
+    private VersionCheck _version;
     private bool _gameForeground;
     private volatile bool _settingsActive;
     private bool _dirty = true;
@@ -315,6 +316,9 @@ public partial class MainWindow : Window
         return string.Join(Environment.NewLine, new[]
         {
             $"exporter    {exporting}   status: {status}{diagnostic}",
+            $"versions    app v{_version.AppVersion}   addon " +
+                $"{(_version.AddonVersion.Length > 0 ? $"v{_version.AddonVersion}" : "unknown")}" +
+                $"   {_version.Verdict}",
             $"state file  {path}",
             $"polls       {_reader?.Polls ?? 0}   survivors in last read: {survivors}   " +
                 $"proven: {(_cfg.ExporterProven ? "yes" : "no")}",
@@ -628,13 +632,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string DisplayVersion()
-    {
-        var version = typeof(MainWindow).Assembly.GetName().Version;
-        if (version == null) return "unknown";
-
-        return $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
-    }
+    private static string DisplayVersion() => AppIdentity.DisplayVersion;
 
     private double EffectiveScale => PanelScale.ScaleX <= 0 ? 1.0 : PanelScale.ScaleX;
 
@@ -737,13 +735,26 @@ public partial class MainWindow : Window
     {
         TrackExporterHealth();
 
+        // Probed only when something would show the answer. The scan is backgrounded and
+        // cached, but it still opens every pack in addons\, and a proven setup running with
+        // the status corner switched off has no reason to pay for it at all.
+        var addon = _cfg.ShowStatusBadge || _debug != null
+            ? AddonProbe.Look(_reader?.Path)
+            : default;
+
+        _version = VersionGate.Check(addon, _reader?.Current?.Version);
+
         // Fresh exports mean an active round. No/frozen exports mean main menu, lobby,
         // loading, or pause; the transport cannot distinguish those inactive states.
+        //
+        // A version mismatch is the one thing worth saying during a round as well: the
+        // update is the whole point of the message, and someone who only ever holds Tab
+        // mid-round would never see it if it were menu-only.
         bool showMenuBadge = _cfg.ShowStatusBadge
-                             && _gameForeground && (_reader == null || _reader.IsStale)
-                             && !LivePreview;
+                             && _gameForeground && !LivePreview
+                             && (_reader == null || _reader.IsStale || _version.Mismatched);
         MenuBadge.Visibility = showMenuBadge ? Visibility.Visible : Visibility.Collapsed;
-        UpdateNotice(showMenuBadge);
+        UpdateNotice(showMenuBadge, addon);
 
         // A stale read is last session's roster, or this session's before the map ended.
         // Drawing it is worse than drawing nothing: it is wrong, and it looks authoritative.
@@ -753,9 +764,9 @@ public partial class MainWindow : Window
         // The exporter's observed roster order is preserved; RosterPolicy decides which of
         // it belongs on the panel for the configured filter.
         var mode = RosterPolicy.Parse(_cfg.RosterFilter);
-        var extras = RosterPolicy.Apply(survivors, mode);
+        var selectedRoster = RosterPolicy.Apply(survivors, mode);
 
-        bool hasActiveExtras = !(_reader?.IsStale ?? true) && extras.Count > 0;
+        bool hasActiveRoster = !(_reader?.IsStale ?? true) && selectedRoster.Count > 0;
 
         // The panel draws a roster or it draws nothing. It used to carry the "no export"
         // explanation as well, which meant holding Tab at a main menu produced an alarm
@@ -763,7 +774,7 @@ public partial class MainWindow : Window
         // working perfectly - the app cannot tell "not installed" from "no map loaded" from
         // the state file alone. That explanation now lives under the top-right badge, where
         // it is backed by an actual look at the addons folder. See UpdateNotice.
-        bool show = ShouldShow() && (hasActiveExtras || _cfg.AlwaysShow || LivePreview);
+        bool show = ShouldShow() && (hasActiveRoster || _cfg.AlwaysShow || LivePreview);
 
         Panel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 
@@ -783,13 +794,13 @@ public partial class MainWindow : Window
         if (!_dirty && !LivePreview) return;
         _dirty = false;
 
-        var cards = extras
+        var cards = selectedRoster
             .Select(s => SurvivorCard.From(s, RosterPolicy.MarksFollower(s, mode)))
             .ToList();
 
         // Nothing exporting - menu, lobby, or L4D2 not running at all. Stand-in cards keep
         // the panel measurable so layout can still be tuned.
-        bool usingSampleCards = LivePreview && !hasActiveExtras;
+        bool usingSampleCards = LivePreview && !hasActiveRoster;
         if (usingSampleCards)
             cards = SampleRoster.Cards(_livePreviewSampleCount, mode != RosterMode.Followers);
 
@@ -817,7 +828,7 @@ public partial class MainWindow : Window
     /// writing. Nothing exporting on an install with the pack present is not a fault - it is
     /// a menu or a load - and saying otherwise is what made the old message untrustworthy.
     /// </summary>
-    private void UpdateNotice(bool badgeShowing)
+    private void UpdateNotice(bool badgeShowing, AddonPresence addon)
     {
         if (!badgeShowing || _reader == null)
         {
@@ -825,7 +836,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        var addon = AddonProbe.Look(_reader.Path);
         string title;
         string body;
 
@@ -855,6 +865,22 @@ public partial class MainWindow : Window
             title = "ADDON TURNED OFF";
             body = $"{addon.Packs[0].Name} is installed but switched off in the game's "
                  + "Add-ons screen, so it never runs. Enable it and restart L4D2.";
+        }
+        else if (_version.Verdict == VersionVerdict.AppBehind)
+        {
+            // The addon updates itself through Steam and this app does not, so this is the
+            // ordinary way the pair drifts apart.
+            title = "UPDATE THE OVERLAY APP";
+            body = $"The addon is v{_version.AddonVersion} and this app is "
+                 + $"v{_version.AppVersion}. The HUD keeps working; get the matching build "
+                 + $"from {AppIdentity.ReleasesUrl}";
+        }
+        else if (_version.Verdict == VersionVerdict.AddonBehind)
+        {
+            title = "UPDATE THE EXPORTER ADDON";
+            body = $"This app is v{_version.AppVersion} and the addon is "
+                 + $"v{_version.AddonVersion}. The HUD keeps working; restart L4D2 to let "
+                 + "Steam re-sync the addon, or reinstall the pack.";
         }
         else if (!ExporterProven)
         {

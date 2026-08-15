@@ -35,6 +35,8 @@ internal static class Program
         return RunRosterFilterCheck();
     if (args.Length > 0 && string.Equals(args[0], "app-name", StringComparison.OrdinalIgnoreCase))
         return RunAppNameCheck();
+    if (args.Length > 0 && string.Equals(args[0], "health-colour", StringComparison.OrdinalIgnoreCase))
+        return RunHealthColourCheck();
     if (args.Length > 0 && string.Equals(args[0], "game-lifecycle", StringComparison.OrdinalIgnoreCase))
         return RunGameLifecycleCheck();
     if (args.Length > 0 && string.Equals(args[0], "single-instance", StringComparison.OrdinalIgnoreCase))
@@ -47,6 +49,8 @@ internal static class Program
         return RunMenuStaleCheck();
     if (args.Length > 0 && string.Equals(args[0], "debug-log", StringComparison.OrdinalIgnoreCase))
         return RunDebugLogCheck();
+    if (args.Length > 0 && string.Equals(args[0], "version-gate", StringComparison.OrdinalIgnoreCase))
+        return RunVersionGateCheck();
 
     int count = args.Length > 0 ? int.Parse(args[0]) : 11;
     double width = args.Length > 1 ? double.Parse(args[1]) : 1920;
@@ -414,9 +418,9 @@ internal static class Program
         var remembered = new SettingsWindow(
             new AppConfig { PreviewMode = "live", PreviewScoreboard = false }, () => { });
         Invoke(remembered, "LoadControls", BindingFlags.Instance | BindingFlags.NonPublic);
-        // The two Finale Soldiers options are visually sectioned off, but they must stay in
-        // the same radio group as All survivors - splitting the group would let two filters
-        // be selected at once.
+        // The two Finale Soldiers options are visually sectioned off, but all four choices
+        // must stay in the same radio group - splitting the group would let two filters be
+        // selected at once.
         bool rosterSectionIsCosmetic =
             settings.FindName("RosterSectionRule") is Border
             && settings.FindName("RosterSectionHeading") is TextBlock
@@ -424,9 +428,11 @@ internal static class Program
                 Text: "FOR FINALE SOLDIERS MOD"
             }
             && settings.FindName("RosterAllRadio") is RadioButton allRadio
+            && settings.FindName("RosterExtrasRadio") is RadioButton extrasRadio
             && settings.FindName("RosterSoldiersRadio") is RadioButton soldiersRadio
             && settings.FindName("RosterFollowersRadio") is RadioButton followersRadio
-            && allRadio.GroupName == soldiersRadio.GroupName
+            && allRadio.GroupName == extrasRadio.GroupName
+            && extrasRadio.GroupName == soldiersRadio.GroupName
             && soldiersRadio.GroupName == followersRadio.GroupName;
 
         bool previewChoiceRemembered =
@@ -888,7 +894,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// Locks the three roster filters against one roster that contains every class the
+    /// Locks the four roster filters against one roster that contains every class the
     /// exporter can report, plus a legacy roster with no class field at all.
     /// </summary>
     private static int RunRosterFilterCheck()
@@ -907,32 +913,41 @@ internal static class Program
         };
 
         string[] all = Names(RosterPolicy.Apply(roster, RosterMode.All));
+        string[] extras = Names(RosterPolicy.Apply(roster, RosterMode.Extras));
         string[] soldiers = Names(RosterPolicy.Apply(roster, RosterMode.SoldiersAndFollowers));
         string[] followers = Names(RosterPolicy.Apply(roster, RosterMode.Followers));
 
         // No cls at all: an exporter older than v0.6.5. Everything is a plain survivor, so
-        // "all" must still behave exactly like the previous positional-skip build.
+        // All includes the four vanilla entries and Extras keeps the previous skip.
         var legacy = new List<Survivor>
         {
             Named("Host", ""), Named("Ellis", ""), Named("Coach", ""),
             Named("Rochelle", ""), Named("Pvt. Chambers", "")
         };
         string[] legacyAll = Names(RosterPolicy.Apply(legacy, RosterMode.All));
+        string[] legacyExtras = Names(RosterPolicy.Apply(legacy, RosterMode.Extras));
 
         bool noHoldoutAnywhere = !all.Concat(soldiers).Concat(followers)
             .Any(name => name is "Cpl. Blake" or "Cpl. Foster");
         bool allMode = all.SequenceEqual(
+            new[] { "Host", "Ellis", "Coach", "Rochelle", "Extra bot",
+                    "Cpl. Nguyen", "Pvt. Chambers" });
+        bool extrasMode = extras.SequenceEqual(
             new[] { "Extra bot", "Cpl. Nguyen", "Pvt. Chambers" });
         bool soldierMode = soldiers.SequenceEqual(
             new[] { "Cpl. Nguyen", "Pvt. Chambers" });
         bool followerMode = followers.SequenceEqual(new[] { "Pvt. Chambers" });
-        bool legacyUnchanged = legacyAll.SequenceEqual(new[] { "Pvt. Chambers" });
-        bool headersDiffer = RosterPolicy.Header(RosterMode.All) == "EXTRA SURVIVORS"
+        bool legacyAllIncludesVanilla = legacyAll.SequenceEqual(
+            new[] { "Host", "Ellis", "Coach", "Rochelle", "Pvt. Chambers" });
+        bool legacyExtrasUnchanged = legacyExtras.SequenceEqual(new[] { "Pvt. Chambers" });
+        bool headersDiffer = RosterPolicy.Header(RosterMode.All) == "ALL SURVIVORS"
+            && RosterPolicy.Header(RosterMode.Extras) == "EXTRA SURVIVORS"
             && RosterPolicy.Header(RosterMode.SoldiersAndFollowers) == "SOLDIERS + FOLLOWERS"
             && RosterPolicy.Header(RosterMode.Followers) == "FOLLOWERS";
         bool roundTrips = new[]
             {
-                RosterMode.All, RosterMode.SoldiersAndFollowers, RosterMode.Followers
+                RosterMode.All, RosterMode.Extras, RosterMode.SoldiersAndFollowers,
+                RosterMode.Followers
             }
             .All(mode => RosterPolicy.Parse(RosterPolicy.ToConfigValue(mode)) == mode)
             && RosterPolicy.Parse(null) == RosterMode.All
@@ -947,7 +962,7 @@ internal static class Program
             && !RosterPolicy.MarksFollower(follower, RosterMode.Followers)
             && !RosterPolicy.MarksFollower(soldier, RosterMode.All);
 
-        // The editor is the only way to reach the setting, so its three controls are part
+        // The editor is the only way to reach the setting, so all four controls are part
         // of the contract: they must load from config and write back to it.
         var app = new App();
         app.InitializeComponent();
@@ -956,43 +971,59 @@ internal static class Program
         bool markerRenders =
             FollowerMarkerVisible(app, SurvivorCard.From(follower, true))
             && !FollowerMarkerVisible(app, SurvivorCard.From(follower, false));
-        var settings = new SettingsWindow(new AppConfig { RosterFilter = "followers" }, () => { });
+        var settings = new SettingsWindow(new AppConfig { RosterFilter = "extras" }, () => { });
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         Invoke(settings, "LoadControls", flags);
 
-        bool editorLoadsSetting = settings.FindName("RosterFollowersRadio")
+        bool editorLoadsSetting = settings.FindName("RosterExtrasRadio")
                 is RadioButton { IsChecked: true }
             && settings.FindName("RosterAllRadio") is RadioButton { IsChecked: false }
             && settings.FindName("RosterSoldiersRadio") is RadioButton { IsChecked: false };
 
-        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = true;
+        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "RosterAllRadio", flags)).IsChecked = true;
+        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = false;
         ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = false;
         Invoke(settings, "ReadControls", flags);
         var draft = (AppConfig)GetField(settings, "_draft", flags);
-        bool editorWritesSetting = draft.RosterFilter == "soldiers";
+        bool editorWritesAll = draft.RosterFilter == "all";
+
+        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "RosterAllRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = true;
+        Invoke(settings, "ReadControls", flags);
+        bool editorWritesExtras = draft.RosterFilter == "extras";
 
         // Reset UI is a layout reset; it may return the filter to its default, but the
         // filter must survive Save & Apply through the same UI copy the sliders use.
         var live = new AppConfig { RosterFilter = "all" };
+        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = true;
+        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
+        Invoke(settings, "ReadControls", flags);
         live.CopyUiFrom(draft);
+        bool editorWritesSoldiers = draft.RosterFilter == "soldiers";
         bool appliedToLiveConfig = live.RosterFilter == "soldiers";
 
         settings.Close();
         app.Shutdown();
 
-        bool passed = noHoldoutAnywhere && allMode && soldierMode && followerMode
-            && legacyUnchanged && headersDiffer && roundTrips
-            && editorLoadsSetting && editorWritesSetting && appliedToLiveConfig
+        bool passed = noHoldoutAnywhere && allMode && extrasMode && soldierMode && followerMode
+            && legacyAllIncludesVanilla && legacyExtrasUnchanged && headersDiffer && roundTrips
+            && editorLoadsSetting && editorWritesAll && editorWritesExtras && editorWritesSoldiers
+            && appliedToLiveConfig
             && marksOnMixedRosters && markerRenders;
 
         Console.WriteLine(
             $"all=[{string.Join(", ", all)}] " +
+            $"extras=[{string.Join(", ", extras)}] " +
             $"soldiers=[{string.Join(", ", soldiers)}] " +
             $"followers=[{string.Join(", ", followers)}] " +
             $"legacyAll=[{string.Join(", ", legacyAll)}] " +
+            $"legacyExtras=[{string.Join(", ", legacyExtras)}] " +
             $"holdoutHiddenEverywhere={noHoldoutAnywhere} " +
             $"headers={headersDiffer} configRoundTrip={roundTrips} " +
-            $"editorLoads={editorLoadsSetting} editorWrites={editorWritesSetting} " +
+            $"editorLoads={editorLoadsSetting} editorWritesAll={editorWritesAll} " +
+            $"editorWritesExtras={editorWritesExtras} editorWritesSoldiers={editorWritesSoldiers} " +
             $"appliedToLiveConfig={appliedToLiveConfig} " +
             $"followerMarkedOnMixedOnly={marksOnMixedRosters} markerRenders={markerRenders}");
         Console.WriteLine(passed
@@ -1095,6 +1126,53 @@ internal static class Program
 
         settings.Close();
         main.Close();
+        app.Shutdown();
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The health-colour bands, at their boundaries. 40 and 25 are the cases that were
+    /// wrong through v1.0.8: the comparisons were exclusive and the amber floor sat at
+    /// 20% of max, so 40 HP drew amber and 24 HP drew amber instead of red.
+    /// </summary>
+    private static int RunHealthColourCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        Color Colour(int hp)
+        {
+            var card = SurvivorCard.From(new Survivor { Hp = hp, MaxHp = 100 });
+            return ((SolidColorBrush)card.HealthBrush).Color;
+        }
+
+        var green = Color.FromRgb(0x4C, 0xC0, 0x4C);
+        var amber = Color.FromRgb(0xE0, 0xA8, 0x30);
+        var red   = Color.FromRgb(0xC8, 0x3C, 0x3C);
+
+        (int Hp, Color Want, string Name)[] cases =
+        {
+            (100, green, "green"), (40, green, "green"),
+            (39, amber, "amber"),  (25, amber, "amber"),
+            (24, red,   "red"),    (1,  red,   "red")
+        };
+
+        bool passed = true;
+        foreach (var (hp, want, name) in cases)
+        {
+            var got = Colour(hp);
+            bool ok = got == want;
+            passed &= ok;
+            Console.WriteLine($"hp={hp} want={name} got={got} {(ok ? "ok" : "WRONG")}");
+        }
+
+        // A 50-max survivor bands off his own maximum, not off 100.
+        var halfMax = SurvivorCard.From(new Survivor { Hp = 20, MaxHp = 50 });
+        bool scales = ((SolidColorBrush)halfMax.HealthBrush).Color == green;
+        passed &= scales;
+        Console.WriteLine($"maxhp=50 hp=20 green={scales}");
+
+        Console.WriteLine(passed ? "PASS" : "FAIL: health colour bands are off");
         app.Shutdown();
         return passed ? 0 : 1;
     }
@@ -1229,8 +1307,11 @@ internal static class Program
         System.IO.Directory.CreateDirectory(folder);
         var file = System.IO.Path.Combine(folder, "state.json");
 
+        // Written with this build's own version: an exporter one version behind is a real
+        // condition with its own notice, and it is not what this check is about.
         string Snapshot(long seq) =>
-            $"{{\"v\":\"1.0.8\",\"seq\":{seq},\"time\":1,\"count\":2,\"survivors\":[" +
+            $"{{\"v\":\"{AppIdentity.DisplayVersion}\",\"seq\":{seq},\"time\":1,\"count\":2," +
+            "\"survivors\":[" +
             // Soldiers, so the vanilla-four skip does not decide the count for us.
             "{\"uid\":1,\"name\":\"Leftover A\",\"cls\":\"soldier\",\"hp\":100,\"maxhp\":100}," +
             "{\"uid\":2,\"name\":\"Leftover B\",\"cls\":\"soldier\",\"hp\":80,\"maxhp\":100}]}";
@@ -1353,12 +1434,221 @@ internal static class Program
     }
 
     /// <summary>
+    /// The two halves ship on one version but arrive by different routes - the addon updates
+    /// itself through Steam, the app does not - so the app is the half that goes stale
+    /// silently. The version is read from the installed pack's own addoninfo.txt, which is
+    /// answerable at a main menu, before any map has loaded and before anything has been
+    /// exported.
+    /// </summary>
+    private static int RunVersionGateCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        // Stated against the running build, so this check does not need editing at every
+        // version bump.
+        var self = AppIdentity.Version;
+        string same = AppIdentity.DisplayVersion;
+        string newer = $"{self.Major}.{self.Minor}.{Math.Max(0, self.Build) + 1}";
+        string older = self.Build > 0
+            ? $"{self.Major}.{self.Minor}.{self.Build - 1}"
+            : $"{Math.Max(0, self.Major - 1)}.{self.Minor}.0";
+
+        // The manifest is hand-written Valve KeyValues, and quotes are optional in it.
+        bool readsQuoted = VpkReader.AddonVersionFrom(
+            "\"AddonInfo\"\n{\n\taddontitle\t\t\"x\"\n\taddonversion\t\t\"1.2.3\"\n}") == "1.2.3";
+        bool readsBare = VpkReader.AddonVersionFrom("addonversion 4.5.6") == "4.5.6";
+        bool absentIsNull = VpkReader.AddonVersionFrom("\"AddonInfo\"\n{\n\taddontitle\t\"x\"\n}")
+                            == null;
+
+        var install = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "OverlayHudCheck",
+                                             $"version-{Guid.NewGuid():N}");
+
+        // One install per case: the probe caches per addons folder, and a shared folder
+        // would have each case answering with the previous one's pack.
+        string Case(string name, string? addonVersion, bool versionInPreload = true)
+        {
+            var game = System.IO.Path.Combine(install, name, "left4dead2");
+            var addons = System.IO.Path.Combine(game, "addons");
+            System.IO.Directory.CreateDirectory(addons);
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(game, "ems", "overlay_hud"));
+
+            var pack = "overlay_hud_export.vpk";
+            WritePack(System.IO.Path.Combine(addons, pack), withExporter: true, addonVersion,
+                      versionInPreload);
+
+            System.IO.File.WriteAllText(System.IO.Path.Combine(game, "addonlist.txt"),
+                $"\"AddonList\"\n{{\n\t\t\"{pack}\"\t\t\"1\"\n}}\n");
+
+            return System.IO.Path.Combine(game, "ems", "overlay_hud", "state.json");
+        }
+
+        VersionCheck Verdict(string statePath, string? exported = null) =>
+            VersionGate.Check(AddonProbe.Refresh(statePath), exported);
+
+        // A small file can be stored inline in the directory tree or in the data section
+        // after it. vpk.exe picks; both have to be readable.
+        var behindPath = Case("app-behind", newer);
+        var behind = Verdict(behindPath);
+        bool appBehindIsSeen = behind.Verdict == VersionVerdict.AppBehind
+            && behind.AddonVersion == newer && behind.AppVersion == same;
+
+        var dataSection = Verdict(Case("data-section", newer, versionInPreload: false));
+        bool dataSectionIsRead = dataSection.Verdict == VersionVerdict.AppBehind
+            && dataSection.AddonVersion == newer;
+
+        bool matchIsQuiet = Verdict(Case("matched", same)) is
+            { Verdict: VersionVerdict.Matched, Mismatched: false };
+
+        bool addonBehindIsSeen = Verdict(Case("addon-behind", older)).Verdict
+            == VersionVerdict.AddonBehind;
+
+        // No manifest to read: the exporter stamps its version into every state file, so a
+        // running round still answers the question.
+        var unreadable = Case("no-manifest", null);
+        bool unknownIsSilent = !Verdict(unreadable).Mismatched
+            && Verdict(unreadable).Verdict == VersionVerdict.Unknown;
+        bool exportedVersionIsTheFallback = Verdict(unreadable, newer).Verdict
+            == VersionVerdict.AppBehind;
+
+        // A version that is not a version claims nothing rather than warning about nothing.
+        bool junkIsIgnored = Verdict(Case("junk", "not-a-version")).Verdict
+            == VersionVerdict.Unknown;
+
+        // ...and the overlay says so, during a round as well as at the menu. Someone who
+        // only ever holds Tab mid-round would never see a menu-only message.
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.GameProcess = "OverlayHudCheckNoSuchGame";
+        config.AlwaysShow = true;
+        config.IgnoreForeground = true;
+        config.ShowStatusBadge = true;
+        config.ExporterProven = true;
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+        typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+
+        var badge = (Border)GetField(window, "MenuBadge", flags);
+        var notice = (Border)GetField(window, "Notice", flags);
+        var noticeTitle = (TextBlock)GetField(window, "NoticeTitle", flags);
+        var noticeBody = (TextBlock)GetField(window, "NoticeBody", flags);
+
+        // A round actually running: the file has to be seen advancing, or the reader is
+        // stale and this proves nothing about the in-game case.
+        void Export(string statePath, long seq) =>
+            System.IO.File.WriteAllText(statePath,
+                $"{{\"v\":\"{newer}\",\"seq\":{seq},\"time\":1,\"count\":1,\"survivors\":[" +
+                "{\"uid\":1,\"name\":\"A\",\"cls\":\"soldier\",\"hp\":100,\"maxhp\":100}]}");
+
+        StateReader Watch(string statePath)
+        {
+            var reader = new StateReader(statePath, TimeSpan.FromMilliseconds(100), 5.0);
+            typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, reader);
+
+            AddonProbe.Refresh(statePath);
+
+            Export(statePath, 1);
+            Invoke(reader, "Poll", flags);
+            Export(statePath, 2);
+            Invoke(reader, "Poll", flags);
+
+            typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+            Invoke(window, "Render", flags);
+
+            return reader;
+        }
+
+        var live = Watch(behindPath);
+        bool roundIsLive = live.HasExported && !live.IsStale;
+        bool warnsInGame = roundIsLive
+            && badge.Visibility == Visibility.Visible
+            && notice.Visibility == Visibility.Visible
+            && noticeTitle.Text == "UPDATE THE OVERLAY APP"
+            && noticeBody.Text.Contains(AppIdentity.ReleasesUrl, StringComparison.Ordinal)
+            && noticeBody.Text.Contains($"v{newer}", StringComparison.Ordinal);
+        live.Dispose();
+
+        // Matched versions during a round: nothing to say, and nothing on screen.
+        var matchedInstall = Case("matched-live", same);
+        var quiet = Watch(matchedInstall);
+        bool quietWhenMatched = badge.Visibility != Visibility.Visible
+            && notice.Visibility != Visibility.Visible;
+        quiet.Dispose();
+
+        // The editor is where the link can be clicked - the overlay is click-through.
+        AddonProbe.Refresh(behindPath);
+        var editor = new SettingsWindow(new AppConfig { StatePath = behindPath }, () => { });
+        Invoke(editor, "UpdateVersionBanner", flags);
+
+        var bannerBorder = (Border)GetField(editor, "UpdateBanner", flags);
+        var bannerTitle = (TextBlock)GetField(editor, "UpdateBannerTitle", flags);
+        var bannerBody = (TextBlock)GetField(editor, "UpdateBannerBody", flags);
+        var link = (System.Windows.Documents.Hyperlink)GetField(editor, "ReleasesLink", flags);
+        var linkText = (System.Windows.Documents.Run)GetField(editor, "ReleasesLinkText", flags);
+
+        bool editorOffersTheLink = bannerBorder.Visibility == Visibility.Visible
+            && bannerTitle.Text == "Update the overlay app"
+            && bannerBody.Text.Contains($"v{newer}", StringComparison.Ordinal)
+            && link.NavigateUri?.AbsoluteUri == AppIdentity.ReleasesUrl
+            && linkText.Text == AppIdentity.ReleasesUrl;
+
+        AddonProbe.Refresh(matchedInstall);
+        var quietEditor = new SettingsWindow(new AppConfig { StatePath = matchedInstall },
+                                             () => { });
+        Invoke(quietEditor, "UpdateVersionBanner", flags);
+        bool editorIsQuietWhenMatched =
+            ((Border)GetField(quietEditor, "UpdateBanner", flags)).Visibility
+                != Visibility.Visible;
+
+        bool passed = readsQuoted && readsBare && absentIsNull
+            && appBehindIsSeen && dataSectionIsRead && matchIsQuiet && addonBehindIsSeen
+            && unknownIsSilent && exportedVersionIsTheFallback && junkIsIgnored
+            && warnsInGame && quietWhenMatched
+            && editorOffersTheLink && editorIsQuietWhenMatched;
+
+        Console.WriteLine(
+            $"readsQuoted={readsQuoted} readsBare={readsBare} absentIsNull={absentIsNull}");
+        Console.WriteLine(
+            $"appBehind={appBehindIsSeen} dataSection={dataSectionIsRead} " +
+            $"matched={matchIsQuiet} addonBehind={addonBehindIsSeen}");
+        Console.WriteLine(
+            $"unknownIsSilent={unknownIsSilent} exportedFallback={exportedVersionIsTheFallback} " +
+            $"junkIgnored={junkIsIgnored}");
+        Console.WriteLine(
+            $"warnsInGame={warnsInGame} (round live={roundIsLive}) quietWhenMatched={quietWhenMatched}");
+        Console.WriteLine(
+            $"editorLink={editorOffersTheLink} editorQuiet={editorIsQuietWhenMatched}");
+        Console.WriteLine(passed ? "PASS" : "FAIL: the version gate is not reporting honestly");
+
+        editor.Close();
+        quietEditor.Close();
+        window.Close();
+        app.Shutdown();
+
+        try { System.IO.Directory.Delete(install, recursive: true); } catch { }
+
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
     /// Writes a real VPK v2 whose directory tree either carries the exporter's script or
     /// does not. Fixtures have to be real packs: the app identifies an addon by opening it,
     /// because a Workshop subscription's filename is a publishedfileid and says nothing.
+    ///
+    /// With <paramref name="addonVersion"/> given the pack also carries an addoninfo.txt at
+    /// its root, the way a built addon does. <paramref name="versionInPreload"/> chooses
+    /// which of the two places vpk.exe can put a small file's bytes: inline in the directory
+    /// tree, or in the data section after it. Both have to be readable.
     /// </summary>
-    private static void WritePack(string path, bool withExporter)
+    private static void WritePack(string path, bool withExporter, string? addonVersion = null,
+                                  bool versionInPreload = true)
     {
+        var info = addonVersion == null
+            ? null
+            : System.Text.Encoding.ASCII.GetBytes(
+                $"\"AddonInfo\"\n{{\n\taddontitle\t\t\"Overlay HUD Export\"\n" +
+                $"\taddonversion\t\t\"{addonVersion}\"\n}}\n");
+
         var tree = new System.IO.MemoryStream();
         using (var writer = new System.IO.BinaryWriter(tree, System.Text.Encoding.ASCII, true))
         {
@@ -1368,22 +1658,38 @@ internal static class Program
                 writer.Write((byte)0);
             }
 
-            void Entry()
+            void Block(string extension, string directory, string name, byte[]? preload,
+                       uint length)
             {
-                writer.Write((uint)0);        // crc
-                writer.Write((ushort)0);      // preload bytes
-                writer.Write((ushort)0x7FFF); // archive index
-                writer.Write((uint)0);        // entry offset
-                writer.Write((uint)0);        // entry length
-                writer.Write((ushort)0xFFFF); // terminator
+                Text(extension);
+                Text(directory);
+                Text(name);
+
+                writer.Write((uint)0);                        // crc
+                writer.Write((ushort)(preload?.Length ?? 0)); // preload bytes
+                writer.Write((ushort)0x7FFF);                 // archive index
+                writer.Write((uint)0);                        // entry offset
+                writer.Write(length);                         // entry length
+                writer.Write((ushort)0xFFFF);                 // terminator
+                if (preload != null) writer.Write(preload);
+
+                Text("");                                     // end of names
+                Text("");                                     // end of directories
             }
 
-            Text(withExporter ? "nut" : "txt");
-            Text(withExporter ? "scripts/vscripts" : "materials/readme");
-            Text(withExporter ? "overlay_hud_export" : "notes");
-            Entry();
-            Text("");                          // end of names
-            Text("");                          // end of directories
+            Block(withExporter ? "nut" : "txt",
+                  withExporter ? "scripts/vscripts" : "materials/readme",
+                  withExporter ? "overlay_hud_export" : "notes",
+                  null, 0);
+
+            // VPK spells the root directory " ", which is where addoninfo.txt lives.
+            if (info != null)
+            {
+                Block("txt", " ", "addoninfo",
+                      versionInPreload ? info : null,
+                      versionInPreload ? 0u : (uint)info.Length);
+            }
+
             Text("");                          // end of extensions
         }
 
@@ -1399,6 +1705,10 @@ internal static class Program
         header.Write(0u);                      // other md5 section
         header.Write(0u);                      // signature section
         header.Write(bytes);
+
+        // The data section starts immediately after the tree, which is what an entry offset
+        // of zero points at.
+        if (info != null && !versionInPreload) header.Write(info);
     }
 
     /// <summary>

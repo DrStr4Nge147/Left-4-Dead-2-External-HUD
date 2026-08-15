@@ -79,8 +79,8 @@ public sealed class SurvivorCard
             dead                 ? Grey   :
             down                 ? Red    :
             s.BlackAndWhite      ? Bone   :
-            hp > max * 0.40      ? Green  :
-            hp > max * 0.20      ? Amber  :
+            hp >= max * 0.40     ? Green  :
+            hp >= max * 0.25     ? Amber  :
                                    Red;
 
         string stateText =

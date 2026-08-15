@@ -1,5 +1,75 @@
 # Dev log
 
+## 2026-08-15 - v1.0.10: which half is stale, and how it can know
+
+The addon half updates itself. Someone subscribes on the Workshop and Steam keeps it
+current without them thinking about it. The app half is a zip on a releases page, and
+nothing on this machine ever goes looking for a newer one. That asymmetry is the whole
+problem: the app is the half that quietly falls behind, and it was the half with no way to
+find out.
+
+The version had to come from the addon, and there were two places to read it. `state.json`
+already carries a `v` field, which is nearly free - the app parses that file five times a
+second anyway. But it only answers during a round, or from whatever leftover file the last
+session left behind, and the main menu is exactly where someone is in a position to go and
+download something. `addoninfo.txt` inside the installed pack answers at any time, on a
+cold install that has never loaded a map.
+
+So the manifest is the source and `v` is the fallback. The cost turned out to be near
+nothing: `VpkReader` already walks the directory tree of every pack in `addons\` to decide
+which one is the exporter, and it was throwing each file entry away as it went. Now it keeps
+the one for `addoninfo.txt` and reads the handful of bytes behind it. Two storage forms had
+to be handled - a small file can sit inline in the tree as preload data, or in the data
+section after it - plus the numbered sibling archive a `_dir.vpk` uses. Both inline forms
+are covered by the check; the sibling-archive path is written but has no fixture, because
+nothing builds an addon this small as a multi-chunk pack.
+
+The message shows during a round as well as at the menu. That is a deliberate break from how
+the status corner has worked until now - it has always been a menu-only thing, on the
+principle that a round is not the time for the app to talk about itself. But the badge is
+menu-only because *staleness* is a menu condition, and a version mismatch is not: it is true
+the whole time. Someone whose only habit is holding Tab mid-round would never see a menu-only
+notice at all.
+
+What it deliberately does not do is block anything. The transport has been compatible in
+both directions for its whole life - the app still reads the pre-v1.0.4 loose state file,
+and an exporter older than v0.6.5 that writes no `cls` field is treated as the old behaviour
+rather than as an error. A version mismatch is not a fault, and the wording says so on both
+screens: the HUD keeps working, there is simply a newer build.
+
+The overlay cannot carry the link - it is `WS_EX_TRANSPARENT`, so a hyperlink in it would be
+decoration. The editor gets the real one.
+
+Unknown is silent. No pack, an unreadable manifest, a version string that is not a version:
+all of them claim nothing. That is the same rule the addon probe already runs on - a pack
+that cannot be parsed is not evidence of an addon being absent - and it is what keeps this
+from becoming another message nobody trusts.
+
+The `menu-stale` check failed on the first full run, which is the version gate doing its
+job: its fixture wrote a hard-coded `"v":"1.0.9"` into a fake state file, and against a
+1.0.10 build that is an addon one version behind, with a notice to match. The fixture now
+writes the running build's own version.
+
+## 2026-08-15 - v1.0.9: the health bands were off by one step at both edges
+
+Reported from play: 24 HP still drew yellow, and so did 40. Both are single-character bugs
+in the same expression, and they have different causes.
+
+The upper edge was an exclusive comparison - `hp > max * 0.40` - against a table that reads
+40-100 green. 40 HP is not greater than 40, so the boundary value fell through to the amber
+arm. The lower edge was a plain wrong constant: the amber floor was `0.20`, which put the
+amber band at 21-39 and left red starting at 20 rather than at 24.
+
+Both bands are now `>=` and the floor is `0.25`. The comparison stays proportional to the
+survivor's own maximum rather than becoming a literal 40/25, because a reduced-max survivor
+should band off what he can actually hold; at the default 100 max the two forms are the
+same numbers.
+
+Checked with a new `health-colour` mode in the layout-check harness, which builds real
+`SurvivorCard` instances at 100/40/39/25/24/1 HP and reads the colour back off
+`HealthBrush`. The boundary values are the whole point of the test - a check that only
+sampled band middles would have passed against the broken code.
+
 ## 2026-08-14 - v1.0.8: the temp-health bar was the wrong colour by construction
 
 The buffer segment was a fixed pale blue at 55% opacity over a dark bar. Against green,

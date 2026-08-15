@@ -2,6 +2,72 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.1.0 - 2026-08-15: choose the complete roster or the extras-only panel
+
+The old **All survivors** setting was really an extras-only view: it avoided duplicating the
+four survivor rows that L4D2 already draws. The panel now makes those two meanings explicit.
+
+- **All survivors** draws every mortal survivor in the export, including the four original
+  survivor slots. Immortal team-4 holdout soldiers remain excluded.
+- **Extra survivors** preserves the previous All behavior: plain survivors from slot 5 onward,
+  plus mortal soldiers and followers.
+- The existing **Mortal soldiers + followers** and **Followers only** filters remain unchanged.
+- The editor and live panel now expose four mutually exclusive roster choices, with distinct
+  `ALL SURVIVORS` and `EXTRA SURVIVORS` headers.
+- Advances the exporter addon and desktop overlay together to v1.1.0. The exporter already
+  writes the complete roster, so its runtime behavior is unchanged apart from the version stamp.
+- Extends the roster-filter layout check to cover both complete-roster and extras-only behavior,
+  the legacy no-`cls` export, and all four editor controls.
+
+**Verification**: source-level only. Not yet live-tested — run the v1.1.0 steps in
+`docs/TESTING.md` with both the new app and VPK installed.
+
+## Overlay HUD v1.0.10 - 2026-08-15: the app says when it is the half that is out of date
+
+The two halves ship under one version but arrive by different routes. The addon updates
+itself through the Workshop; the app has to be downloaded. Nothing told anyone when they had
+drifted apart, so an old app could sit there for weeks looking perfectly healthy.
+
+- The app now reads `addonversion` out of the installed pack's own `addoninfo.txt` and
+  compares it against its own build. The manifest is read from the same VPK walk that
+  already identifies the pack, so this costs one extra file entry, not another scan.
+- On a mismatch the status corner carries `UPDATE THE OVERLAY APP` - or
+  `UPDATE THE EXPORTER ADDON` when the app is the newer half - in the main menu **and**
+  during a round, since a mid-round Tab is the only time some players look at it.
+- The editor shows the same message with a clickable link to the releases page. The overlay
+  is click-through by design and cannot hold a link; the editor can.
+- **A mismatch blocks nothing.** The HUD, the roster filters, the editor and the scoreboard
+  hold all keep working; the difference is only reported.
+- Unknown stays silent: no pack installed, an unreadable manifest, or a version string that
+  is not a version claims nothing rather than warning about nothing.
+- `state.json`'s `v` field is the fallback source, for an install whose manifest cannot be
+  read. The manifest is preferred because it answers at a main menu, before any map has
+  loaded and before anything has been exported.
+- The debug console's top block now names both versions and the verdict.
+- Advances the exporter addon and desktop overlay together to v1.0.10. The exporter's
+  behaviour is unchanged; it carries the version so the pair stays on one number.
+- Adds a `version-gate` layout check covering manifest parsing in both storage forms, all
+  four verdicts, the in-game notice and the editor's link.
+
+**Verification**: all 19 layout-check modes pass, `version-gate` included. Not yet
+live-tested in game.
+
+## Overlay HUD v1.0.9 - 2026-08-15: the health colour bands land on their stated numbers
+
+The panel's documented bands are green at 40-100 HP, amber at 25-39, red at 1-24. The bar
+did not draw them: 40 HP came out amber, and the amber band ran all the way down to 21, so
+24 HP was amber where it should have been red.
+
+- Both band comparisons are now inclusive, and the amber floor sits at 25% of max rather
+  than 20%. 40 HP is green, 39 is amber, 25 is amber, 24 is red.
+- Bands remain a fraction of the survivor's own maximum, so a 50-max survivor scales.
+- Advances the exporter addon and desktop overlay together to v1.0.9. The exporter's
+  behaviour is unchanged; it carries the version so the pair stays on one number.
+- Adds a `health-colour` layout check covering every band boundary and the scaled maximum.
+
+**Verification**: the bands were checked by running the shipping card code through the
+`health-colour` check - all boundaries pass. Not yet live-tested in game.
+
 ## Overlay HUD v1.0.8 - 2026-08-14: the HUD survives a same-map round restart
 
 A full-team wipe restarts the map in place, and extra survivors restored by another addon -

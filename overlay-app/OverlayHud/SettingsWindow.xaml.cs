@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Navigation;
 using System.Windows.Threading;
 using OverlayHud.Model;
 using OverlayHud.Services;
@@ -23,6 +25,7 @@ public partial class SettingsWindow : Window
     private bool _ready;
     private bool _saved;
     private Rect _windowedBounds;
+    private string? _statePath;
     private readonly DispatcherTimer _gameStatusTimer;
 
     public SettingsWindow(AppConfig config, Action apply,
@@ -43,11 +46,17 @@ public partial class SettingsWindow : Window
         Icon = AppIcon.ForWindow();
         VersionText.Text = $"v{DisplayVersion()}";
         AuthorText.Text = $"by {AppIdentity.Author}";
+        ReleasesLink.NavigateUri = new Uri(AppIdentity.ReleasesUrl);
+        ReleasesLinkText.Text = AppIdentity.ReleasesUrl;
         _gameStatusTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(1)
         };
-        _gameStatusTimer.Tick += (_, _) => UpdateGameStatus();
+        _gameStatusTimer.Tick += (_, _) =>
+        {
+            UpdateGameStatus();
+            UpdateVersionBanner();
+        };
         Loaded += OnLoaded;
         Closed += (_, _) =>
         {
@@ -70,6 +79,7 @@ public partial class SettingsWindow : Window
         _ready = true;
         ApplyPreviewMode();   // reopens on the remembered preview, live included
         UpdateGameStatus();
+        UpdateVersionBanner();
         _gameStatusTimer.Start();
     }
 
@@ -105,13 +115,60 @@ public partial class SettingsWindow : Window
             : new SolidColorBrush(Color.FromRgb(0xF1, 0xB8, 0x5B));
     }
 
-    private static string DisplayVersion()
+    /// <summary>
+    /// Says out loud when the installed addon and this build are on different versions, and
+    /// puts the download address somewhere it can actually be clicked - the in-game overlay
+    /// is click-through, so its copy of this message cannot carry a link.
+    /// </summary>
+    private void UpdateVersionBanner()
     {
-        var version = typeof(SettingsWindow).Assembly.GetName().Version;
-        return version == null
-            ? "unknown"
-            : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        // Located once. The lookup walks the Steam library folders, which is not something
+        // to repeat every second for an answer that does not move while the editor is open.
+        _statePath ??= string.IsNullOrWhiteSpace(_draft.StatePath)
+            ? StateLocator.Locate()
+            : _draft.StatePath;
+
+        var check = VersionGate.Check(AddonProbe.Look(_statePath), null);
+        if (!check.Mismatched)
+        {
+            UpdateBanner.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        bool appBehind = check.Verdict == VersionVerdict.AppBehind;
+
+        UpdateBannerTitle.Text = appBehind
+            ? "Update the overlay app"
+            : "Update the exporter addon";
+
+        UpdateBannerBody.Text = appBehind
+            ? $"The installed addon is v{check.AddonVersion} and this app is "
+            + $"v{check.AppVersion}. Nothing is broken - the HUD keeps working - but the two "
+            + "halves ship on one version, so the newer build is worth having."
+            : $"This app is v{check.AppVersion} and the installed addon is "
+            + $"v{check.AddonVersion}. Restart L4D2 to let Steam re-sync the Workshop addon, "
+            + "or reinstall the pack by hand.";
+
+        // Only the app half is downloaded from here; a stale addon comes from the Workshop.
+        UpdateBannerLinkLine.Visibility = appBehind ? Visibility.Visible : Visibility.Collapsed;
+        UpdateBanner.Visibility = Visibility.Visible;
     }
+
+    private void OnReleasesNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Write("update", $"could not open the releases page: {ex.Message}");
+        }
+
+        e.Handled = true;
+    }
+
+    private static string DisplayVersion() => AppIdentity.DisplayVersion;
 
     private void LoadControls()
     {
@@ -143,6 +200,7 @@ public partial class SettingsWindow : Window
 
         var mode = RosterPolicy.Parse(_draft.RosterFilter);
         RosterAllRadio.IsChecked = mode == RosterMode.All;
+        RosterExtrasRadio.IsChecked = mode == RosterMode.Extras;
         RosterSoldiersRadio.IsChecked = mode == RosterMode.SoldiersAndFollowers;
         RosterFollowersRadio.IsChecked = mode == RosterMode.Followers;
 
@@ -290,6 +348,7 @@ public partial class SettingsWindow : Window
 
     private RosterMode SelectedRosterMode()
     {
+        if (RosterExtrasRadio.IsChecked == true) return RosterMode.Extras;
         if (RosterSoldiersRadio.IsChecked == true) return RosterMode.SoldiersAndFollowers;
         if (RosterFollowersRadio.IsChecked == true) return RosterMode.Followers;
 
