@@ -158,10 +158,14 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
   pointer instead of stepping one increment left or right.
 - Confirm there are no **Automatic enlargement** or **Sidebar width** controls. These are
   fixed layout rules because the vanilla scoreboard dimensions are not user-adjustable.
-- Confirm **Who to show** offers **All survivors**, **Extra survivors**, **Mortal soldiers +
-  followers**, and **Followers only**, that **All survivors** is selected by default, and that
-  the preview header changes to `ALL SURVIVORS` / `EXTRA SURVIVORS` / `SOLDIERS + FOLLOWERS` /
-  `FOLLOWERS` as it is changed.
+- Confirm the Scoreboard tab's **Who to show** offers **Extra survivors**, **Mortal soldiers +
+  followers**, and **Followers only** — no **All survivors** — that **Extra survivors** is
+  selected by default, and that the preview header changes to `EXTRA SURVIVORS` /
+  `SOLDIERS + FOLLOWERS` / `FOLLOWERS` as it is changed.
+- Confirm the Consistent HUD tab has its own **Who to show** with all four options, defaulting
+  to **All survivors**, and that changing either tab's filter leaves the other's alone.
+- With a config carried over from v1.2.0 where the filter was **All survivors**, confirm the
+  Scoreboard tab opens on **Extra survivors** and the Consistent HUD on **All survivors**.
 - Confirm **Exit when L4D2 closes** has clearly readable white text, is checked by default,
   and persists after Save & Apply.
 - Confirm the editor header shows amber **L4D2: NOT RUNNING** before launch and changes to
@@ -319,12 +323,15 @@ Start a campaign with the soldiers spawning, then:
 - **Click and shoot while holding Tab.** Clicks must pass straight through. If the game
   loses focus or minimises when the panel appears, stop and say so.
 - **Roster filters.** Spawn soldiers, turn `!cfmortal` on, and send one soldier to follow
-  you, so all three classes are present at once. Then, for each **Who to show** option:
-  - **All survivors** — every mortal soldier, the follower, the four original survivors, and
-    any extra plain survivor appear; no card for an immortal holdout soldier. The four vanilla
-    survivors appearing here is intentional.
+  you, so all three classes are present at once. The scoreboard panel and the Consistent HUD
+  have separate filters, so check each view against its own. For each **Who to show** option:
+  - **All survivors** (Consistent HUD only) — every mortal soldier, the follower, the four
+    original survivors, and any extra plain survivor appear; no card for an immortal holdout
+    soldier. The four vanilla survivors appearing here is intentional: the vanilla survivor
+    HUD is hidden while this one is up.
   - **Extra survivors** — the four original plain survivors drop off; the extra plain survivor,
-    mortal soldier, and follower remain. This is the previous All behavior.
+    mortal soldier, and follower remain. This is what the scoreboard panel always does with
+    plain survivors, whichever of its three options is selected.
   - **Mortal soldiers + followers** — extra plain survivors drop off; soldiers stay.
   - **Followers only** — only the soldier following you remains. Press the follow key
     again and the panel should empty within a fraction of a second.
@@ -365,7 +372,7 @@ Start a campaign with the soldiers spawning, then:
 |---|---|
 | Menu/lobby badge | Top-right version appears only while L4D2 is focused and exports are inactive |
 | Version match | Silent while both halves agree; names the stale half in the menu and in game when they do not, and blocks nothing either way |
-| Survivor count | All survivors includes the vanilla first four; Extra survivors keeps only positions 5 and up for plain survivors |
+| Survivor count | The scoreboard never draws the original four; the Consistent HUD's All survivors does, and its Extra survivors keeps only positions 5 and up for plain survivors |
 | Holdout soldiers | Never on the panel, in any of the four filters |
 | Panel header | Names the active filter and counts what it drew |
 | Oversized roster | At most two balanced columns, contained within the scoreboard sidebar |

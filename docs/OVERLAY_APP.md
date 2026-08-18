@@ -1,8 +1,9 @@
 # Left 4 Dead 2 Customized Overlay HUD - External
 
 A transparent, click-through, always-on-top window that draws the selected part of L4D2's
-survivor roster. **All survivors** includes the four built-in slots; **Extra survivors**
-keeps the original slot-5-and-up behavior. It reads one JSON file and does not touch the game
+survivor roster. The Tab scoreboard panel and the Consistent HUD keep separate rosters: the
+scoreboard never repeats the original four that L4D2's own scoreboard lists, while the
+Consistent HUD can draw everyone. It reads one JSON file and does not touch the game
 process — no injection, no memory reading, no DirectX hooking.
 
 **Current verification:** the v1.2.0 app and format-v1 addon VPK were live-tested in L4D2 on
@@ -269,14 +270,29 @@ that is not a version — nothing is claimed and nothing is shown.
 
 ## Who to show
 
-The editor's **Who to show** setting controls the roster drawn in the panel:
+The two views keep separate rosters, and each tab has its own **Who to show**. They answer
+different questions: the scoreboard panel is drawn beside L4D2's own scoreboard, which lists
+the original four already, while the Consistent HUD stands in for the vanilla survivor HUD,
+which is hidden while it is up.
+
+**Scoreboard tab** — the original four are never drawn, so listing them twice on one screen
+is not possible:
 
 | Option | Cards shown |
 |---|---|
-| **All survivors** | Every mortal survivor, including the four vanilla slots |
-| **Extra survivors** | The previous behavior: plain survivors from slot 5 onward, plus mortal soldiers and followers |
+| **Extra survivors** | Plain survivors from slot 5 onward, plus mortal soldiers and followers |
 | **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
 | **Followers only** | Only soldiers currently following a player |
+
+**Consistent HUD tab** — the same three, plus:
+
+| Option | Cards shown |
+|---|---|
+| **All survivors** | Every mortal survivor, including the four the vanilla HUD would have drawn |
+
+A config carried over from an earlier version with `rosterFilter` set to `all` is read by the
+scoreboard as **Extra survivors**; the Consistent HUD's own filter defaults to **All
+survivors**, so nothing disappears from the view that was showing everyone.
 
 Immortal team-4 holdout soldiers are excluded from every option. In **Extra survivors**, when
 there are four or fewer plain survivors and no soldier/follower cards, holding Tab draws no
@@ -322,7 +338,8 @@ Sits next to the exe. Edit and restart the app.
 | `bottomReserve` | `0.0` | Optional bottom clearance for custom HUDs; vanilla Tab uses the full remaining height |
 | `opacity` | `0.92` | Panel opacity |
 | `consistentTemplate` | `vanilla-bottom-center` | `vanilla-bottom-center`, legacy `vanilla-vertical`, or `lower-right-vertical`; old `bottom-right` and `top-vertical` values migrate to the default |
-| `rosterFilter` | `all` | `all` = every mortal survivor, `extras` = the previous extra-only roster, `soldiers` = mortal soldiers and followers, `followers` = followers only |
+| `rosterFilter` | `extras` | Scoreboard roster: `extras` = plain survivors from slot 5 onward plus soldiers and followers, `soldiers` = mortal soldiers and followers, `followers` = followers only. `all` from an older config reads as `extras` |
+| `consistentRosterFilter` | `all` | Consistent HUD roster, independent of the scoreboard's: `all`, `extras`, `soldiers`, or `followers` |
 | `cardsPerColumn` | `0` | `0` measures the real one-column height first; positive values override it |
 | `maxColumns` | `2` | Hard horizontal column limit; overflow is balanced and scaled vertically |
 | `staleAfterSeconds` | `2.0` | Seconds without a new `seq` before the export counts as stopped |

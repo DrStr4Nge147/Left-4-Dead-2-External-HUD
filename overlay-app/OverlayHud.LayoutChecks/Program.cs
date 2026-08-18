@@ -1566,13 +1566,24 @@ internal static class Program
             {
                 Text: "FOR FINALE SOLDIERS MOD"
             }
-            && settings.FindName("RosterAllRadio") is RadioButton allRadio
             && settings.FindName("RosterExtrasRadio") is RadioButton extrasRadio
             && settings.FindName("RosterSoldiersRadio") is RadioButton soldiersRadio
             && settings.FindName("RosterFollowersRadio") is RadioButton followersRadio
-            && allRadio.GroupName == extrasRadio.GroupName
             && extrasRadio.GroupName == soldiersRadio.GroupName
-            && soldiersRadio.GroupName == followersRadio.GroupName;
+            && soldiersRadio.GroupName == followersRadio.GroupName
+            // The scoreboard sits beside L4D2's own, which lists the original four, so it
+            // has no All option at all - not a hidden one, not a disabled one.
+            && settings.FindName("RosterAllRadio") == null
+            // The consistent HUD carries its own four, in their own group, so the two
+            // rosters cannot select each other.
+            && settings.FindName("ConsistentRosterAllRadio") is RadioButton consistentAll
+            && settings.FindName("ConsistentRosterExtrasRadio") is RadioButton consistentExtras
+            && settings.FindName("ConsistentRosterSoldiersRadio") is RadioButton consistentSoldiers
+            && settings.FindName("ConsistentRosterFollowersRadio") is RadioButton consistentFollowers
+            && consistentAll.GroupName == consistentExtras.GroupName
+            && consistentExtras.GroupName == consistentSoldiers.GroupName
+            && consistentSoldiers.GroupName == consistentFollowers.GroupName
+            && consistentAll.GroupName != extrasRadio.GroupName;
 
         bool previewChoiceRemembered =
             remembered.FindName("LivePreviewRadio") is RadioButton { IsChecked: true }
@@ -2622,6 +2633,18 @@ internal static class Program
             && RosterPolicy.Parse(null) == RosterMode.All
             && RosterPolicy.Parse("nonsense") == RosterMode.All;
 
+        // The scoreboard can never resolve to All, whatever the config says, because the
+        // vanilla scoreboard it sits beside already lists the original four. The consistent
+        // HUD keeps All: it replaces the vanilla survivor HUD rather than sitting beside it.
+        bool scoreboardNeverDrawsAll =
+            RosterPolicy.ParseScoreboard("all") == RosterMode.Extras
+            && RosterPolicy.ParseScoreboard(null) == RosterMode.Extras
+            && RosterPolicy.ParseScoreboard("nonsense") == RosterMode.Extras
+            && RosterPolicy.ParseScoreboard("followers") == RosterMode.Followers
+            && RosterPolicy.Parse("all") == RosterMode.All
+            && new AppConfig().RosterFilter == "extras"
+            && new AppConfig().ConsistentRosterFilter == "all";
+
         // The follower marker only means something on a mixed roster.
         var follower = Named("Pvt. Chambers", RosterPolicy.ClassFollower);
         var soldier = Named("Cpl. Nguyen", RosterPolicy.ClassSoldier);
@@ -2640,45 +2663,64 @@ internal static class Program
         bool markerRenders =
             FollowerMarkerVisible(app, SurvivorCard.From(follower, true))
             && !FollowerMarkerVisible(app, SurvivorCard.From(follower, false));
-        var settings = new SettingsWindow(new AppConfig { RosterFilter = "extras" }, () => { });
+        var settings = new SettingsWindow(
+            new AppConfig { RosterFilter = "extras", ConsistentRosterFilter = "followers" },
+            () => { });
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         Invoke(settings, "LoadControls", flags);
 
+        // Each tab loads its own filter, and neither reads the other's.
         bool editorLoadsSetting = settings.FindName("RosterExtrasRadio")
                 is RadioButton { IsChecked: true }
-            && settings.FindName("RosterAllRadio") is RadioButton { IsChecked: false }
-            && settings.FindName("RosterSoldiersRadio") is RadioButton { IsChecked: false };
+            && settings.FindName("RosterSoldiersRadio") is RadioButton { IsChecked: false }
+            && settings.FindName("ConsistentRosterFollowersRadio")
+                is RadioButton { IsChecked: true }
+            && settings.FindName("ConsistentRosterAllRadio") is RadioButton { IsChecked: false };
+
+        // "all" from an older config is the one value the scoreboard cannot honour, and it
+        // must land on Extras rather than on nothing at all.
+        var migrated = new SettingsWindow(new AppConfig { RosterFilter = "all" }, () => { });
+        Invoke(migrated, "LoadControls", flags);
+        bool legacyAllMigrates = migrated.FindName("RosterExtrasRadio")
+            is RadioButton { IsChecked: true };
+        migrated.Close();
 
         ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterAllRadio", flags)).IsChecked = true;
         ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = true;
+        ((RadioButton)GetField(settings, "ConsistentRosterFollowersRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "ConsistentRosterAllRadio", flags)).IsChecked = true;
         Invoke(settings, "ReadControls", flags);
         var draft = (AppConfig)GetField(settings, "_draft", flags);
-        bool editorWritesAll = draft.RosterFilter == "all";
+        bool writesIndependently = draft.RosterFilter == "followers"
+            && draft.ConsistentRosterFilter == "all";
 
-        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterAllRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = false;
         ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = true;
+        ((RadioButton)GetField(settings, "ConsistentRosterAllRadio", flags)).IsChecked = false;
+        ((RadioButton)GetField(settings, "ConsistentRosterSoldiersRadio", flags)).IsChecked = true;
         Invoke(settings, "ReadControls", flags);
-        bool editorWritesExtras = draft.RosterFilter == "extras";
+        bool editorWritesExtras = draft.RosterFilter == "extras"
+            && draft.ConsistentRosterFilter == "soldiers";
 
-        // Reset UI is a layout reset; it may return the filter to its default, but the
-        // filter must survive Save & Apply through the same UI copy the sliders use.
-        var live = new AppConfig { RosterFilter = "all" };
+        // Reset UI is a layout reset; it may return the filters to their defaults, but they
+        // must survive Save & Apply through the same UI copy the sliders use.
+        var live = new AppConfig { RosterFilter = "all", ConsistentRosterFilter = "all" };
         ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = true;
         ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
         Invoke(settings, "ReadControls", flags);
         live.CopyUiFrom(draft);
         bool editorWritesSoldiers = draft.RosterFilter == "soldiers";
-        bool appliedToLiveConfig = live.RosterFilter == "soldiers";
+        bool appliedToLiveConfig = live.RosterFilter == "soldiers"
+            && live.ConsistentRosterFilter == "soldiers";
 
         settings.Close();
         app.Shutdown();
 
         bool passed = noHoldoutAnywhere && allMode && extrasMode && soldierMode && followerMode
             && legacyAllIncludesVanilla && legacyExtrasUnchanged && headersDiffer && roundTrips
-            && editorLoadsSetting && editorWritesAll && editorWritesExtras && editorWritesSoldiers
+            && editorLoadsSetting && writesIndependently && legacyAllMigrates
+            && scoreboardNeverDrawsAll && editorWritesExtras && editorWritesSoldiers
             && appliedToLiveConfig
             && marksOnMixedRosters && markerRenders;
 
@@ -2691,7 +2733,9 @@ internal static class Program
             $"legacyExtras=[{string.Join(", ", legacyExtras)}] " +
             $"holdoutHiddenEverywhere={noHoldoutAnywhere} " +
             $"headers={headersDiffer} configRoundTrip={roundTrips} " +
-            $"editorLoads={editorLoadsSetting} editorWritesAll={editorWritesAll} " +
+            $"editorLoads={editorLoadsSetting} independentFilters={writesIndependently} " +
+            $"legacyAllMigrates={legacyAllMigrates} " +
+            $"scoreboardExcludesOriginalFour={scoreboardNeverDrawsAll} " +
             $"editorWritesExtras={editorWritesExtras} editorWritesSoldiers={editorWritesSoldiers} " +
             $"appliedToLiveConfig={appliedToLiveConfig} " +
             $"followerMarkedOnMixedOnly={marksOnMixedRosters} markerRenders={markerRenders}");

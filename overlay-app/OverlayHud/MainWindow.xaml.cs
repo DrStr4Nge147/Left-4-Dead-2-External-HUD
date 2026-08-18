@@ -1126,7 +1126,12 @@ public partial class MainWindow : Window
 
         // The exporter's observed roster order is preserved; RosterPolicy decides which of
         // it belongs on the panel for the configured filter.
-        var mode = RosterPolicy.Parse(_cfg.RosterFilter);
+        // Two independent rosters. The consistent HUD stands in for the vanilla survivor
+        // HUD, which is hidden while it is up, so the original four are its to draw; the
+        // scoreboard panel sits beside L4D2's own scoreboard, which lists them already.
+        var mode = ConsistentMode
+            ? RosterPolicy.Parse(_cfg.ConsistentRosterFilter)
+            : RosterPolicy.ParseScoreboard(_cfg.RosterFilter);
         var selectedRoster = RosterPolicy.Apply(survivors, mode);
         bool separateYouRequested = ConsistentMode && _cfg.ConsistentSeparateYou;
         Survivor? localSurvivor = separateYouRequested

@@ -46,6 +46,19 @@ public static class RosterPolicy
     public const string ClassFollower = "follower";
     public const string ClassHoldout  = "holdout";
 
+    /// <summary>
+    /// The scoreboard's own reading of the setting. It never resolves to
+    /// <see cref="RosterMode.All"/>: that panel is drawn beside L4D2's own scoreboard,
+    /// which already lists the original four, so including them was the same four names
+    /// twice on one screen. The consistent HUD replaces nothing and keeps the full set of
+    /// modes through <see cref="Parse"/>.
+    /// </summary>
+    public static RosterMode ParseScoreboard(string? value)
+    {
+        var mode = Parse(value);
+        return mode == RosterMode.All ? RosterMode.Extras : mode;
+    }
+
     public static RosterMode Parse(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "extras"    => RosterMode.Extras,

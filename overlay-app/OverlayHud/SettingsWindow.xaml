@@ -893,16 +893,14 @@
                                             <StackPanel>
                                                 <TextBlock x:Name="WhoToShowSectionHeading"
                                                            Text="Who to show" FontWeight="SemiBold" />
-                                                <RadioButton x:Name="RosterAllRadio" GroupName="RosterFilter"
-                                                             Margin="0,6,0,0" Foreground="#F0F2F5"
-                                                             Click="OnOptionChanged">
-                                                    <TextBlock Text="All survivors" Foreground="#F0F2F5" />
-                                                </RadioButton>
                                                 <RadioButton x:Name="RosterExtrasRadio" GroupName="RosterFilter"
-                                                             Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                             Margin="0,6,0,0" Foreground="#F0F2F5"
                                                              Click="OnOptionChanged">
                                                     <TextBlock Text="Extra survivors" Foreground="#F0F2F5" />
                                                 </RadioButton>
+                                                <TextBlock Text="This panel sits beside L4D2's own scoreboard, which already lists the original four, so it never draws them. Use the Consistent HUD tab for a roster that includes them."
+                                                           Margin="22,4,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
                                                 <!-- Same GroupName, so all four stay mutually exclusive. The rule
                                                      below is only a divider: the two options under it mean nothing
                                                      without Finale Soldiers installed. -->
@@ -923,7 +921,7 @@
                                                              Click="OnOptionChanged">
                                                     <TextBlock Text="Followers only" Foreground="#F0F2F5" />
                                                 </RadioButton>
-                                                <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the four."
+                                                <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the three."
                                                            Margin="22,6,0,0" TextWrapping="Wrap"
                                                            Foreground="#AAB2BE" FontSize="11" />
                                             </StackPanel>
@@ -1194,9 +1192,40 @@
                                             </Border>
                         <Border Style="{StaticResource ControlCard}">
                                                 <StackPanel>
-                                                    <TextBlock Text="Shared roster" FontWeight="SemiBold" />
-                                                    <TextBlock Text="The consistent HUD uses the same Who to show selection from the Scoreboard tab, including All survivors and Extra survivors. Change that filter there."
-                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                    <TextBlock Text="Who to show" FontWeight="SemiBold" />
+                                                    <RadioButton x:Name="ConsistentRosterAllRadio"
+                                                                 GroupName="ConsistentRosterFilter"
+                                                                 Margin="0,6,0,0" Foreground="#F0F2F5"
+                                                                 Click="OnOptionChanged">
+                                                        <TextBlock Text="All survivors" Foreground="#F0F2F5" />
+                                                    </RadioButton>
+                                                    <RadioButton x:Name="ConsistentRosterExtrasRadio"
+                                                                 GroupName="ConsistentRosterFilter"
+                                                                 Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                                 Click="OnOptionChanged">
+                                                        <TextBlock Text="Extra survivors" Foreground="#F0F2F5" />
+                                                    </RadioButton>
+                                                    <!-- Same GroupName, so all four stay mutually exclusive. The
+                                                         rule below is only a divider. -->
+                                                    <Border Height="1" Background="#343B46" Margin="0,10,0,0" />
+                                                    <TextBlock Text="FOR FINALE SOLDIERS MOD"
+                                                               Margin="0,6,0,0"
+                                                               FontSize="10" FontWeight="SemiBold"
+                                                               Foreground="#8EC5FF" />
+                                                    <RadioButton x:Name="ConsistentRosterSoldiersRadio"
+                                                                 GroupName="ConsistentRosterFilter"
+                                                                 Margin="0,6,0,0" Foreground="#F0F2F5"
+                                                                 Click="OnOptionChanged">
+                                                        <TextBlock Text="Mortal soldiers + followers" Foreground="#F0F2F5" />
+                                                    </RadioButton>
+                                                    <RadioButton x:Name="ConsistentRosterFollowersRadio"
+                                                                 GroupName="ConsistentRosterFilter"
+                                                                 Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                                 Click="OnOptionChanged">
+                                                        <TextBlock Text="Followers only" Foreground="#F0F2F5" />
+                                                    </RadioButton>
+                                                    <TextBlock Text="This HUD's own roster, independent of the Scoreboard tab's. It keeps All survivors because the vanilla survivor HUD is hidden while it is up, so the original four are its to draw. Holdout soldiers are never shown."
+                                                               Margin="22,6,0,0" TextWrapping="Wrap"
                                                                Foreground="#AAB2BE" FontSize="11" />
                                                 </StackPanel>
                                             </Border>

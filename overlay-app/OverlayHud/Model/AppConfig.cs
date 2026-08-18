@@ -144,12 +144,22 @@ public sealed class AppConfig
     [JsonPropertyName("opacity")] public double Opacity { get; set; } = 0.92;
 
     /// <summary>
-    /// Which part of the roster the panel draws: "all" (every mortal survivor, including
-    /// the four vanilla slots), "extras" (the previous All behavior), "soldiers" (mortal
-    /// soldiers and followers), or "followers". Immortal team-4 holdout soldiers are
-    /// excluded by all four.
+    /// Which part of the roster the SCOREBOARD panel draws: "extras" (everyone past the
+    /// four the vanilla scoreboard already lists), "soldiers" (mortal soldiers and
+    /// followers), or "followers". Immortal team-4 holdout soldiers are excluded by all of
+    /// them. "all" is accepted from older configs and read as "extras": that panel is drawn
+    /// beside L4D2's own scoreboard, so including the original four listed them twice.
     /// </summary>
-    [JsonPropertyName("rosterFilter")] public string RosterFilter { get; set; } = "all";
+    [JsonPropertyName("rosterFilter")] public string RosterFilter { get; set; } = "extras";
+
+    /// <summary>
+    /// Which part of the roster the CONSISTENT HUD draws, independently of the scoreboard:
+    /// "all", "extras", "soldiers", or "followers". It keeps "all" because it replaces
+    /// nothing on screen - the vanilla survivor HUD is hidden while it is up, so the
+    /// original four are its to draw.
+    /// </summary>
+    [JsonPropertyName("consistentRosterFilter")]
+    public string ConsistentRosterFilter { get; set; } = "all";
 
     /// <summary>
     /// Which preview the editor opens with: "live" (the real overlay, the default) or
@@ -243,6 +253,7 @@ public sealed class AppConfig
         BottomReserve = source.BottomReserve;
         Opacity = source.Opacity;
         RosterFilter = source.RosterFilter;
+        ConsistentRosterFilter = source.ConsistentRosterFilter;
         ConsistentTemplate = source.ConsistentTemplate;
         ShowStatusBadge = source.ShowStatusBadge;
         CardsPerColumn = source.CardsPerColumn;

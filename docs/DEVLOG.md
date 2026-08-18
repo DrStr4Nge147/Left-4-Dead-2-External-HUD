@@ -126,7 +126,17 @@ The mark rides the 5 Hz roster rather than the 20 Hz ammunition channel. Switchi
 is a keypress, not a stream, and a fifth of a second on a border is not the same as a fifth
 of a second on a counter that has to follow the trigger.
 
-Deliberately not filtered by `rosterFilter`. The roster filter answers "which survivors do
+Split the two views' rosters at the same time, which the weapon HUD made obvious. The
+scoreboard panel exists beside L4D2's own scoreboard and the consistent HUD exists instead
+of L4D2's survivor HUD, and one shared filter forced the same answer on both: "All
+survivors" printed the original four next to the vanilla scoreboard already listing them,
+and the only way to avoid that was to lose them from the persistent HUD too. So the
+scoreboard's filter drops All entirely - its floor is now Extras, which is the honest
+behaviour for a panel that supplements rather than replaces - and the consistent HUD gets
+its own copy of all four. An older config set to All migrates to Extras on the scoreboard
+and All on the HUD, so the view that was showing everyone still does.
+
+The weapon HUD is deliberately not filtered by either. The roster filter answers "which survivors do
 I want listed"; the weapon HUD is the player's own HUD, and blanking their ammunition
 because they set the filter to Followers Only would be a bug wearing a setting's clothes.
 

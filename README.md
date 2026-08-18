@@ -125,18 +125,22 @@ loses focus.
 
 ## Who the panel shows
 
-**Who to show** in the editor picks one of four rosters. The lower two are grouped under
-**For Finale Soldiers Mod** — without that addon nothing is ever classified as a soldier or
-a follower, so they would show an empty panel:
+Each view has its own **Who to show**, and the two rosters are independent. The lower two
+options are grouped under **For Finale Soldiers Mod** — without that addon nothing is ever
+classified as a soldier or a follower, so they would show an empty panel:
 
-| Option | Shows |
-|---|---|
-| **All survivors** | Every mortal survivor, including the four slots L4D2 already draws |
-| **Extra survivors** | The previous All behavior: mortal soldiers, followers, and plain survivors from slot 5 onward |
-| **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
-| **Followers only** | Only the soldiers currently following a player |
+| Option | Shows | Where |
+|---|---|---|
+| **All survivors** | Every mortal survivor, including the four L4D2 would draw itself | Consistent HUD only |
+| **Extra survivors** | Mortal soldiers, followers, and plain survivors from slot 5 onward | Both |
+| **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only | Both |
+| **Followers only** | Only the soldiers currently following a player | Both |
 
-Immortal team-4 holdout soldiers are never drawn in any of the four: nothing can hurt them,
+The scoreboard panel has no **All survivors**: it is drawn beside L4D2's own scoreboard,
+which lists the original four already, so it always excludes them. The Consistent HUD keeps
+the option because the vanilla survivor HUD is hidden while it is up.
+
+Immortal team-4 holdout soldiers are never drawn under any option: nothing can hurt them,
 so a health card for one carries no information.
 
 Followers carry a blue **FOLLOW** marker in the first two options, where the roster is

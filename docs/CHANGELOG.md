@@ -7,6 +7,13 @@ Two components, released under one shared version: the exporter addon and overla
 Health belongs to the roster; ammunition belongs where you are already looking. The weapon
 slots are their own panel rather than another column on a survivor card.
 
+- Splits the roster in two. The Scoreboard panel and the Consistent HUD now have their own
+  **Who to show**, and neither follows the other. The scoreboard's loses **All survivors**
+  entirely and always excludes the original four: it is drawn beside L4D2's own scoreboard,
+  which lists them already, so showing them was the same four names twice on one screen. The
+  Consistent HUD keeps all four options, because the vanilla survivor HUD is hidden while it
+  is up. An older config set to **All survivors** opens the scoreboard on **Extra survivors**
+  and the Consistent HUD on **All survivors**.
 - Adds a **weapon HUD**: your own primary weapon with its magazine and reserve ammunition,
   and your pistol, Magnum, chainsaw, or melee weapon beneath it. It follows the
   listen-server host's survivor, so it is your weapons, not the roster's.
