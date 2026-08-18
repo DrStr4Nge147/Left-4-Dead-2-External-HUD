@@ -6,9 +6,9 @@ scoreboard never repeats the original four that L4D2's own scoreboard lists, whi
 Consistent HUD can draw everyone. It reads one JSON file and does not touch the game
 process — no injection, no memory reading, no DirectX hooking.
 
-**Current verification:** the v1.2.0 app and format-v1 addon VPK were live-tested in L4D2 on
-2026-08-15, including the Consistent HUD health-number, black-and-white, and Minimalist options.
-The v2.0.0 weapon and ammunition row has not been live-tested yet.
+**Current verification:** the v2.0.0 app and format-v1 addon VPK were live-tested in L4D2 on
+2026-08-18, including the weapon HUD, its ammunition and carried-item row, the incendiary and
+explosive marks, and the two independent rosters.
 
 ## Running it
 

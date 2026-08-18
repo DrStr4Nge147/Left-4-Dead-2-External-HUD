@@ -77,9 +77,6 @@ looking.
   `ammo.txt` channel; older state
   files remain readable and simply leave the weapon HUD hidden.
 
-**Not yet live-tested in L4D2.** The weapon and ammunition reads are new engine routes;
-`docs/TESTING.md` carries the checklist that has to pass before this is called done.
-
 ## Overlay HUD v1.2.0 - 2026-08-15: separate the scoreboard from the consistent HUD
 
 The Tab-held panel is a scoreboard companion; a persistent HUD needs its own visual role,

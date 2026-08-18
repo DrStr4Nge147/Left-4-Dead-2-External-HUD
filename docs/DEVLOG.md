@@ -2,6 +2,13 @@
 
 ## 2026-08-18 - v2.0.0: your own HUD, and what to do when the engine will not answer
 
+**Live-tested and confirmed working** 2026-08-18: the v2.0.0 app and format-v1 VPK together
+in L4D2, over `docs/TESTING.md` - the weapon slots and their ammunition, the carried-item
+row, the green marking of the held slot, the incendiary and explosive marks, and the two
+independent rosters. Two things the engine only answered by being played: the upgrade bits
+sit one place lower than assumed, and the magazine is the wrong number to show while an
+upgrade is loaded. Both are written up below.
+
 Classified weapons by classname, in two tables beside the existing item tables, rather than
 by position in `m_hMyWeapons`. That array is compacted, so the index a weapon sits at says
 nothing about which slot it occupies - the same reason the kit/pill/throwable scan already

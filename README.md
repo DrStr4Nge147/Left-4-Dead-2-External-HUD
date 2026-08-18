@@ -63,8 +63,8 @@ one weapon's art on the next build. It is
 configured under the Consistent HUD tab, has its own size slider on top of that view's
 size, and takes its opacity. The panel also carries your own throwable, kit, and pills as a
 three-slot row under the weapons, so your own Consistent HUD card no longer draws them;
-every other survivor keeps their item slots, and the Scoreboard tab shows the whole team's. This release has not been live-tested
-yet — see `docs/TESTING.md`.**
+every other survivor keeps their item slots, and the Scoreboard tab shows the whole team's.
+Live-tested in L4D2 on 2026-08-18 — see `docs/TESTING.md`.**
 
 **v1.2.0 — the scoreboard panel now has its own editor tab, while a separate Consistent HUD
 tab provides three named templates: Bottom - Horizontal Grid, Lower Left Vertical Grid, and
@@ -89,8 +89,8 @@ has nothing to read.
 
 - **Exporter addon v2.0.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
-  holds the game's scoreboard open on request. The v1.2.0 app/VPK pair has been live-tested in
-  L4D2; v2.0.0's weapon fields have not. Its two transport files live in
+  holds the game's scoreboard open on request. The v2.0.0 app/VPK pair has been live-tested
+  in L4D2, weapon fields included. Its two transport files live in
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
@@ -98,13 +98,12 @@ has nothing to read.
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
-  The Consistent HUD templates and new presentation options are confirmed in-game with the
-  v1.2.0 app/VPK pair.
+  The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
+  in-game with the v2.0.0 app/VPK pair.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-1.2.x is live-tested; v2.0.0 is not, and `docs/TESTING.md` carries its checklist as well as
-the standing regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+Both are live-tested, and `docs/TESTING.md` carries the standing regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over

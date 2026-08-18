@@ -1,12 +1,9 @@
 # Testing — exporter v2.0.0 + overlay app v2.0.0
 
-The exporter and the v1.2.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-15,
-including the Consistent HUD presentation options. This checklist remains the repeatable
+The exporter and the v2.0.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-18,
+including the weapon HUD and its ammunition reads. This checklist remains the repeatable
 regression procedure for future builds: whether the overlay appears over the game, follows
 Tab, and stays out of the way.
-
-**v2.0.0 has not been live-tested.** Its weapon and ammunition reads are new engine routes,
-and the section below is what has to pass before the release is called done.
 
 ## Scoreboard hold vs the Consistent HUD (v2.0.0)
 
