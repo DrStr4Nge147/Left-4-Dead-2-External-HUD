@@ -18,6 +18,9 @@ public partial class MainWindow : Window
     private readonly GameLifetimeState _gameLifetime = new();
 
     private StateReader _reader = null!;
+
+    /// <summary>The 20 Hz ammunition channel. Null until startup finishes.</summary>
+    private AmmoReader? _ammo;
     private KeyWatcher _keys = null!;
     private DispatcherTimer _geometry = null!;
     private System.Windows.Forms.NotifyIcon? _tray;
@@ -41,7 +44,31 @@ public partial class MainWindow : Window
     private bool _livePreviewConsistent;
     private readonly ScoreboardHold _scoreboard;
     private bool LivePreview => _livePreviewBaseline != null;
-    private bool ConsistentMode => _livePreviewConsistent || (!LivePreview && _cfg.AlwaysShow);
+
+    /// <summary>
+    /// True while the hold key is down. Mirrored from the watcher so the presentation can
+    /// be reasoned about - and tested - without a real keyboard hook.
+    /// </summary>
+    private bool _holdKeyDown;
+
+    /// <summary>
+    /// Whether the hold key is down, preferring the watcher's own state and falling back to
+    /// the mirrored flag. Two sources because they fail differently: the flag is only as
+    /// current as the last event delivered, and the watcher does not exist until startup
+    /// finishes.
+    /// </summary>
+    private bool HoldKeyDown => (_keys?.IsHeld ?? false) || _holdKeyDown;
+
+    /// <summary>
+    /// The consistent HUD steps aside while the hold key is down.
+    ///
+    /// L4D2 hides its own survivor HUD and draws the scoreboard while Tab is held, and this
+    /// follows it: holding Tab gives the scoreboard panel, releasing gives the persistent
+    /// HUD back - if it was turned on at all. Without this the two draw over each other,
+    /// which is the one moment the roster is being read carefully.
+    /// </summary>
+    private bool ConsistentMode => _livePreviewConsistent
+        || (!LivePreview && _cfg.AlwaysShow && !HoldKeyDown);
 
     // Layout is derived from the game window, so it has to survive a resolution change at
     // runtime rather than being computed once at startup.
@@ -121,6 +148,13 @@ public partial class MainWindow : Window
         _reader.Updated += () => { _dirty = true; Render(); };
         _reader.Start();
 
+        // The ammunition channel runs four times faster than the roster and redraws nothing
+        // but the two weapon slots. Half a second of staleness is generous for a 20 Hz
+        // writer and keeps a brief hitch from dropping back to the coarse numbers.
+        _ammo = new AmmoReader(_reader.Path, TimeSpan.FromMilliseconds(50), 0.5);
+        _ammo.Updated += OnAmmoTick;
+        _ammo.Start();
+
         DebugLog.Write("state", _reader.Path == null
             ? "no state file located - is L4D2 installed where Steam says?"
             : $"watching {_reader.Path}");
@@ -134,7 +168,19 @@ public partial class MainWindow : Window
                                () => _gameForeground || _cfg.IgnoreForeground);
         // Both events are already marshalled onto this thread by the watcher, which keeps
         // the hook callback itself short enough to survive LowLevelHooksTimeout.
-        _keys.HeldChanged += _ => Render();
+        _keys.HeldChanged += held =>
+        {
+            _holdKeyDown = held;
+
+            // The whole presentation changes here - panel chrome, anchor, scale, and which
+            // of the three HUD elements are drawn - so the layout has to be recomputed
+            // rather than just redrawn. The fit scale is re-earned because the scoreboard
+            // panel and the consistent grid are different sizes.
+            _fitScale = 1.0;
+            _dirty = true;
+            ApplyLayout();
+            Render();
+        };
         _keys.ShortcutPressed += ToggleSettings;
         _keys.TogglePressed += ToggleConsistentHud;
         _keys.Start();
@@ -607,6 +653,11 @@ public partial class MainWindow : Window
         // remain readable and must not change size with either layout.
         MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = 1.0;
         ConsistentYouPanelScale.ScaleX = ConsistentYouPanelScale.ScaleY = scale;
+        // The weapon HUD carries the consistent HUD's scale times its own multiplier: it
+        // belongs to that presentation, but ammunition is read mid-fight and often wants
+        // to be a different size from the roster beside it.
+        double weaponScale = scale * WeaponPanelPolicy.ClampScale(_cfg.WeaponPanelScale);
+        WeaponPanelScale.ScaleX = WeaponPanelScale.ScaleY = weaponScale;
 
         // The badge and its notice have their own fixed corner: roster anchor settings must
         // not move them.
@@ -615,6 +666,7 @@ public partial class MainWindow : Window
 
         ApplyAnchor();
         ApplyYouLayout();
+        ApplyWeaponPanelLayout();
         UpdateGuides();
     }
 
@@ -697,6 +749,136 @@ public partial class MainWindow : Window
 
     private double EffectiveScale => PanelScale.ScaleX <= 0 ? 1.0 : PanelScale.ScaleX;
 
+    /// <summary>
+    /// Draws the local player's weapon slots, or hides the panel.
+    ///
+    /// Hidden rather than emptied when there is nothing to say: no local marker (a dedicated
+    /// server, or an exporter older than 1.2.0), no weapon fields (an exporter older than
+    /// 1.3.0), or genuinely empty hands. An empty bordered box in the corner of the screen
+    /// looks like a bug in a way that an absent one does not.
+    /// </summary>
+    /// <summary>
+    /// Redraws only the weapon slots, on the ammunition channel's own tick. The roster is
+    /// not touched: this fires four times per roster update, and rebuilding every survivor
+    /// card to move one number would be the expensive way to do it.
+    /// </summary>
+    private void OnAmmoTick()
+    {
+        if (_weaponSurvivor == null || WeaponPanel.Visibility != Visibility.Visible) return;
+
+        RenderWeaponPanel(_weaponSurvivor);
+    }
+
+    private Survivor? _weaponSurvivor;
+
+    private void RenderWeaponPanel(Survivor? survivor)
+    {
+        bool wanted = ConsistentMode && _cfg.ConsistentShowWeapons && survivor != null;
+
+        _weaponSurvivor = wanted ? survivor : null;
+
+        var slots = wanted
+            ? SurvivorCard.WeaponChip.SlotsFor(
+                WithLiveAmmo(survivor!),
+                WeaponPanelPolicy.IsHorizontal(_cfg.WeaponPanelOrientation))
+            : Array.Empty<SurvivorCard.WeaponChip>();
+
+        var items = wanted
+            ? SurvivorCard.ItemChip.SlotsFor(survivor!)
+            : Array.Empty<SurvivorCard.ItemChip>();
+
+        // Bare hands and empty pockets is the one case with nothing to say. Carrying only
+        // pills still draws the panel: the item row is what the cards used to show.
+        if (slots.Count == 0 && !items.Any(item => item.HasItem))
+        {
+            WeaponPanel.Visibility = Visibility.Collapsed;
+            WeaponSlots.ItemsSource = null;
+            WeaponItems.ItemsSource = null;
+            return;
+        }
+
+        WeaponSlots.ItemsPanel = SlotPanelTemplate(
+            WeaponPanelPolicy.IsHorizontal(_cfg.WeaponPanelOrientation));
+        WeaponSlots.ItemsSource = slots;
+        WeaponSlots.Visibility = slots.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        WeaponItems.ItemsSource = items;
+        WeaponItems.Margin = new Thickness(0, slots.Count > 0 ? 6 : 0, 0, 0);
+        WeaponPanel.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// The roster snapshot with its ammunition counts replaced by the fast channel's, when
+    /// that channel is live. Which weapons are being carried still comes from the roster:
+    /// only the numbers move fast enough to need their own transport.
+    ///
+    /// Falls through untouched when the channel is absent, stale, or older than the addon
+    /// that writes it, which is what makes this safe against an out-of-date exporter.
+    /// </summary>
+    private Survivor WithLiveAmmo(Survivor survivor)
+    {
+        if (_ammo == null || !_ammo.IsFresh) return survivor;
+
+        return new Survivor
+        {
+            Uid = survivor.Uid,
+            Name = survivor.Name,
+            Team = survivor.Team,
+            Character = survivor.Character,
+            IsLocal = survivor.IsLocal,
+            Cls = survivor.Cls,
+            Bot = survivor.Bot,
+            Hp = survivor.Hp,
+            MaxHp = survivor.MaxHp,
+            Temp = survivor.Temp,
+            State = survivor.State,
+            Revives = survivor.Revives,
+            BlackAndWhite = survivor.BlackAndWhite,
+            Kit = survivor.Kit,
+            Pill = survivor.Pill,
+            Throwable = survivor.Throwable,
+            Primary = survivor.Primary,
+            Secondary = survivor.Secondary,
+            Weapon = survivor.Weapon,
+            ActiveSlot = survivor.ActiveSlot,
+            PrimaryAmmoKind = _ammo.PrimaryAmmoKind,
+            PrimaryUpgradedLeft = _ammo.PrimaryUpgradedLeft,
+            PrimaryClip = _ammo.PrimaryClip,
+            PrimaryReserve = _ammo.PrimaryReserve,
+            SecondaryClip = _ammo.SecondaryClip
+        };
+    }
+
+    /// <summary>
+    /// The slot arrangement. Built once per orientation and reused: assigning a fresh
+    /// ItemsPanelTemplate throws away and rebuilds every container, and this runs on the
+    /// same 100 ms tick as everything else.
+    /// </summary>
+    private static ItemsPanelTemplate SlotPanelTemplate(bool horizontal)
+    {
+        if (horizontal)
+        {
+            return _horizontalSlots ??=
+                BuildSlotPanel(System.Windows.Controls.Orientation.Horizontal);
+        }
+
+        return _verticalSlots ??=
+            BuildSlotPanel(System.Windows.Controls.Orientation.Vertical);
+    }
+
+    private static ItemsPanelTemplate? _verticalSlots;
+    private static ItemsPanelTemplate? _horizontalSlots;
+
+    private static ItemsPanelTemplate BuildSlotPanel(
+        System.Windows.Controls.Orientation orientation)
+    {
+        var factory = new FrameworkElementFactory(typeof(StackPanel));
+        factory.SetValue(StackPanel.OrientationProperty, orientation);
+
+        var template = new ItemsPanelTemplate(factory);
+        template.Seal();
+        return template;
+    }
+
     private double ActivePanelOpacity() => ConsistentMode ? _cfg.ConsistentOpacity : _cfg.Opacity;
 
     private void ApplyPanelMode()
@@ -707,12 +889,15 @@ public partial class MainWindow : Window
         ScoreboardContent.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
         ConsistentContent.Visibility = consistent ? Visibility.Visible : Visibility.Collapsed;
         ConsistentYouPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+        WeaponPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
 
         if (!consistent)
         {
             _separatedYouVisible = false;
             ConsistentYouPanel.Visibility = Visibility.Collapsed;
             ConsistentYouCards.ItemsSource = null;
+            WeaponPanel.Visibility = Visibility.Collapsed;
+            WeaponSlots.ItemsSource = null;
         }
 
         if (consistent)
@@ -809,6 +994,39 @@ public partial class MainWindow : Window
             Math.Clamp(_cfg.ConsistentVerticalOffset, 0.0, 0.90) * _surfaceHeight);
     }
 
+    /// <summary>
+    /// The weapon HUD's own corner. It shares the consistent HUD's scale and opacity - it
+    /// is part of that presentation - but not its placement: the roster wants to be out of
+    /// the way, and this wants to be where ammunition is normally read.
+    /// </summary>
+    private void ApplyWeaponPanelLayout()
+    {
+        if (!ConsistentMode)
+        {
+            WeaponPanelScale.ScaleX = WeaponPanelScale.ScaleY = 1.0;
+            return;
+        }
+
+        bool left = WeaponPanelPolicy.IsLeft(_cfg.WeaponPanelCorner);
+        double inset = WeaponPanelPolicy.HorizontalInset * _surfaceWidth;
+
+        WeaponPanel.HorizontalAlignment = left
+            ? System.Windows.HorizontalAlignment.Left
+            : System.Windows.HorizontalAlignment.Right;
+        // The item row is narrower than a horizontal pair of weapon slots, so it takes the
+        // panel's own edge rather than floating in the middle of it.
+        WeaponItems.HorizontalAlignment = left
+            ? System.Windows.HorizontalAlignment.Left
+            : System.Windows.HorizontalAlignment.Right;
+        WeaponPanel.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+        WeaponPanel.Margin = new Thickness(
+            left ? inset : 0,
+            0,
+            left ? 0 : inset,
+            WeaponPanelPolicy.ClampVerticalOffset(_cfg.WeaponPanelVerticalOffset)
+                * _surfaceHeight);
+    }
+
     private double HorizontalOffset() => _cfg.OffsetsArePercent
         ? (ConsistentMode
             ? ConsistentHudPolicy.For(_cfg.ConsistentTemplate).HorizontalInset * _surfaceWidth
@@ -870,7 +1088,7 @@ public partial class MainWindow : Window
         // the hold key nor the foreground gate can be satisfied while it is open.
         if (LivePreview) return true;
 
-        bool wanted = _cfg.AlwaysShow || (_keys?.IsHeld ?? false);
+        bool wanted = _cfg.AlwaysShow || HoldKeyDown;
         bool infocus = _cfg.IgnoreForeground || _gameForeground;
 
         return wanted && infocus;
@@ -919,6 +1137,7 @@ public partial class MainWindow : Window
             : selectedRoster.Where(survivor => !ReferenceEquals(survivor, localSurvivor)).ToList();
 
         bool hasActiveRoster = !(_reader?.IsStale ?? true) && selectedRoster.Count > 0;
+        Survivor? weaponSurvivor = survivors.FirstOrDefault(survivor => survivor.IsLocal);
 
         // The panel draws a roster or it draws nothing. It used to carry the "no export"
         // explanation as well, which meant holding Tab at a main menu produced an alarm
@@ -934,6 +1153,8 @@ public partial class MainWindow : Window
             _separatedYouVisible = false;
             ConsistentYouPanel.Visibility = Visibility.Collapsed;
             ConsistentYouCards.ItemsSource = null;
+            WeaponPanel.Visibility = Visibility.Collapsed;
+            WeaponSlots.ItemsSource = null;
             _dirty = true;
         }
 
@@ -942,7 +1163,7 @@ public partial class MainWindow : Window
         DebugLog.Note("panel", "render", show
             ? "drawing"
             : !ShouldShow()
-                ? _cfg.AlwaysShow || (_keys?.IsHeld ?? false)
+                ? _cfg.AlwaysShow || HoldKeyDown
                     ? "hidden - L4D2 is not the foreground window"
                     : "hidden - hold key is not down"
                 : "hidden - nothing to draw for the current roster filter");
@@ -1002,6 +1223,8 @@ public partial class MainWindow : Window
             _fitScale = 1.0;
             ApplyLayout();
         }
+
+        RenderWeaponPanel(usingSampleCards ? SampleRoster.WeaponSurvivor() : weaponSurvivor);
 
         if (ConsistentMode)
         {
@@ -1307,6 +1530,7 @@ public partial class MainWindow : Window
         _settings?.Close();
         _keys?.Dispose();
         _reader?.Dispose();
+        _ammo?.Dispose();
         _geometry?.Stop();
 
         if (_tray != null)

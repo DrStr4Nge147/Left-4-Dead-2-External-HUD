@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using OverlayHud;
 using OverlayHud.Model;
 using OverlayHud.Services;
@@ -53,6 +54,19 @@ internal static class Program
         return RunDebugLogCheck();
     if (args.Length > 0 && string.Equals(args[0], "version-gate", StringComparison.OrdinalIgnoreCase))
         return RunVersionGateCheck();
+    if (args.Length > 0 && string.Equals(args[0], "weapons", StringComparison.OrdinalIgnoreCase))
+        return RunWeaponCheck();
+    if (args.Length > 0 && string.Equals(args[0], "ammo-channel", StringComparison.OrdinalIgnoreCase))
+        return RunAmmoChannelCheck();
+    if (args.Length > 0 && string.Equals(args[0], "shot-editor", StringComparison.OrdinalIgnoreCase))
+        return RunEditorShot(args.Length > 1 ? args[1] : "editor.png",
+                             args.Length > 2 ? int.Parse(args[2]) : 1,
+                             args.Length > 3 ? double.Parse(args[3]) : 0,
+                             args.Length > 4 ? double.Parse(args[4]) : 0,
+                             args.Length > 5 && string.Equals(args[5], "live",
+                                 StringComparison.OrdinalIgnoreCase));
+    if (args.Length > 0 && string.Equals(args[0], "shot", StringComparison.OrdinalIgnoreCase))
+        return RunShot(args.Length > 1 ? args[1] : "hud.png", args.Skip(2).ToArray());
 
     int count = args.Length > 0 ? int.Parse(args[0]) : 11;
     double width = args.Length > 1 ? double.Parse(args[1]) : 1920;
@@ -250,6 +264,832 @@ internal static class Program
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Renders the consistent HUD and the weapon HUD to a PNG at 1280x720, with sample
+    /// data and the shipped defaults.
+    ///
+    /// This is for looking at, not for asserting: template work is the one part of this app
+    /// where the only real check is a person seeing the result, and a rendered file beats
+    /// launching the game to judge a 4px margin.
+    ///
+    ///     dotnet run --project overlay-app/OverlayHud.LayoutChecks -- shot out.png
+    ///
+    /// Naming secondary weapon ids draws one panel per weapon instead of the roster, which
+    /// is how the slot art is judged across the range it has to hold:
+    ///
+    ///     ... -- shot out.png pistol katana chainsaw
+    /// </summary>
+    private static int RunShot(string outputPath, string[] secondaries)
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        const double width = 1280;
+        const double height = 720;
+        const double scale = 0.85;
+
+        var canvas = new Canvas
+        {
+            Width = width,
+            Height = height,
+            Background = new SolidColorBrush(Color.FromRgb(0x22, 0x26, 0x24))
+        };
+
+        var roster = new ItemsControl
+        {
+            ItemTemplate = (DataTemplate)app.Resources["ConsistentSurvivorTemplate"],
+            ItemsPanel = HorizontalPanel(),
+            ItemsSource = SampleRoster.Cards(4),
+            Tag = new Thickness(0, 0, 10, 0),
+            LayoutTransform = new ScaleTransform(scale, scale)
+        };
+        canvas.Children.Add(roster);
+
+        var slots = new List<SurvivorCard.WeaponChip>();
+        if (secondaries.Length == 1 && secondaries[0] == "upgraded")
+        {
+            // The same rifle three times, one per ammunition kind, so the marks beside the
+            // count can be compared against each other rather than one at a time.
+            for (int kind = 0; kind <= 2; kind++)
+            {
+                // An upgraded slot counts its own pool, so the number differs from the
+                // magazine on purpose - that is the thing being looked at.
+                slots.Add(SurvivorCard.WeaponChip.For("rifle_ak47", 30, 172, kind,
+                                                      upgradedLeft: kind == 0 ? 0 : 44));
+            }
+        }
+        else if (secondaries.Length == 0)
+        {
+            slots.AddRange(SurvivorCard.WeaponChip.SlotsFor(SampleRoster.WeaponSurvivor()));
+        }
+        else
+        {
+            // One slot per named weapon, all in the secondary role, so the box they share
+            // can be compared across a pistol, a katana and a chainsaw at once.
+            foreach (string id in secondaries)
+            {
+                var pair = SurvivorCard.WeaponChip.SlotsFor(new Survivor
+                {
+                    Primary = "",
+                    PrimaryClip = -1,
+                    PrimaryReserve = -1,
+                    Secondary = id,
+                    SecondaryClip = id.StartsWith("pistol") ? 15 : -1
+                });
+                slots.AddRange(pair);
+            }
+        }
+
+        // The panel is the weapon slots with the carried-item row under them, the way the
+        // app builds it - the roster cards no longer draw items, so a shot without the row
+        // would show a HUD that has lost them.
+        var weapons = new StackPanel { LayoutTransform = new ScaleTransform(scale, scale) };
+        weapons.Children.Add(new ItemsControl
+        {
+            ItemTemplate = (DataTemplate)app.Resources["WeaponSlotTemplate"],
+            ItemsPanel = VerticalPanel(),
+            ItemsSource = slots
+        });
+        weapons.Children.Add(new ItemsControl
+        {
+            ItemTemplate = (DataTemplate)app.Resources["WeaponItemTemplate"],
+            ItemsPanel = HorizontalPanel(),
+            ItemsSource = SurvivorCard.ItemChip.SlotsFor(SampleRoster.WeaponSurvivor()),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+            Margin = new Thickness(0, 6, 0, 0)
+        });
+        canvas.Children.Add(weapons);
+
+        canvas.Measure(new Size(width, height));
+        canvas.Arrange(new Rect(0, 0, width, height));
+        canvas.UpdateLayout();
+
+        Canvas.SetLeft(roster, (width - roster.DesiredSize.Width) / 2);
+        Canvas.SetTop(roster, height - height * 0.035 - roster.DesiredSize.Height);
+        Canvas.SetLeft(weapons, width - width * 0.02 - weapons.DesiredSize.Width);
+        Canvas.SetTop(weapons, height - height * 0.10 - weapons.DesiredSize.Height);
+        canvas.UpdateLayout();
+
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            (int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(canvas);
+
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using (var file = System.IO.File.Create(outputPath)) encoder.Save(file);
+
+        app.Shutdown();
+        Console.WriteLine($"wrote {System.IO.Path.GetFullPath(outputPath)}");
+        return 0;
+    }
+
+    private static ItemsPanelTemplate HorizontalPanel() =>
+        StackPanelTemplate(System.Windows.Controls.Orientation.Horizontal);
+
+    private static ItemsPanelTemplate VerticalPanel() =>
+        StackPanelTemplate(System.Windows.Controls.Orientation.Vertical);
+
+    private static ItemsPanelTemplate StackPanelTemplate(
+        System.Windows.Controls.Orientation orientation)
+    {
+        var factory = new FrameworkElementFactory(typeof(StackPanel));
+        factory.SetValue(StackPanel.OrientationProperty, orientation);
+
+        var template = new ItemsPanelTemplate(factory);
+        template.Seal();
+        return template;
+    }
+
+    /// <summary>
+    /// The 20 Hz ammunition channel: it has to be believed when it is live, ignored when it
+    /// is not, and never able to make the HUD show a number that was never written.
+    /// </summary>
+    private static int RunAmmoChannelCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                                               "OverlayHudAmmoCheck");
+        System.IO.Directory.CreateDirectory(folder);
+        string statePath = System.IO.Path.Combine(folder, "state.json");
+        string ammoPath = System.IO.Path.Combine(folder, "ammo.txt");
+        try { System.IO.File.Delete(ammoPath); } catch { }
+
+        bool pathBesideState = AmmoReader.Locate(statePath) == ammoPath;
+
+        var reader = new AmmoReader(statePath, TimeSpan.FromMilliseconds(10), 0.5);
+
+        // No file at all: an exporter older than 1.3.0. Nothing is claimed.
+        Invoke(reader, "Poll", flags);
+        bool absentIsNotFresh = !reader.IsFresh;
+
+        // First sighting is not an advance - a leftover file from the last session must not
+        // be believed until it moves.
+        System.IO.File.WriteAllText(ammoPath, "1 30 172 15");
+        Invoke(reader, "Poll", flags);
+        bool firstSightingIgnored = !reader.IsFresh;
+
+        Invoke(reader, "Poll", flags);
+        bool stillIgnoredWithoutAdvance = !reader.IsFresh;
+
+        System.IO.File.WriteAllText(ammoPath, "2 29 172 15");
+        Invoke(reader, "Poll", flags);
+        bool advanceAccepted = reader.IsFresh && reader.PrimaryClip == 29
+            && reader.PrimaryReserve == 172 && reader.SecondaryClip == 15;
+
+        // A torn read is a wrong answer, not a smaller one: the previous values stand.
+        System.IO.File.WriteAllText(ammoPath, "3 28 1");
+        Invoke(reader, "Poll", flags);
+        bool tornReadRejected = reader.PrimaryClip == 29 && reader.PrimaryReserve == 172;
+
+        // The exporter's own "could not read it" answer survives the trip as -1.
+        System.IO.File.WriteAllText(ammoPath, "4 -1 -1 -1");
+        Invoke(reader, "Poll", flags);
+        bool unreadablePreserved = reader.PrimaryClip == -1 && reader.SecondaryClip == -1;
+
+        // The ammunition kind rides this channel because it runs out by being fired. A
+        // four-field line predates it and leaves the mark at normal rather than failing.
+        System.IO.File.WriteAllText(ammoPath, "5 30 172 15 1 44");
+        Invoke(reader, "Poll", flags);
+        bool upgradeCarried = reader.PrimaryAmmoKind == 1 && reader.PrimaryClip == 30
+            && reader.PrimaryUpgradedLeft == 44;
+
+        System.IO.File.WriteAllText(ammoPath, "6 12 172 15 0 0");
+        Invoke(reader, "Poll", flags);
+        bool upgradeDepletes = reader.PrimaryAmmoKind == 0 && reader.PrimaryUpgradedLeft == 0;
+
+        System.IO.File.WriteAllText(ammoPath, "7 11 172 15");
+        Invoke(reader, "Poll", flags);
+        bool fourFieldsStillWork = reader.PrimaryAmmoKind == 0 && reader.PrimaryClip == 11
+            && reader.PrimaryUpgradedLeft == 0;
+
+        reader.Dispose();
+
+        // Stops being believed once it stops advancing, so a killed game cannot leave the
+        // counter frozen on its last magazine.
+        var stalling = new AmmoReader(statePath, TimeSpan.FromMilliseconds(10), 0.05);
+        System.IO.File.WriteAllText(ammoPath, "10 40 180 12");
+        Invoke(stalling, "Poll", flags);
+        System.IO.File.WriteAllText(ammoPath, "11 39 180 12");
+        Invoke(stalling, "Poll", flags);
+        bool freshBeforeStall = stalling.IsFresh;
+        System.Threading.Thread.Sleep(120);
+        Invoke(stalling, "Poll", flags);
+        bool goesStale = !stalling.IsFresh;
+        stalling.Dispose();
+
+        // The window swaps the roster's coarse numbers for the channel's, and leaves
+        // everything else about the survivor alone.
+        var window = new MainWindow();
+        var roster = new Survivor
+        {
+            Name = "You", Hp = 100, MaxHp = 100, IsLocal = true,
+            Primary = "rifle_ak47", PrimaryClip = 30, PrimaryReserve = 172,
+            Secondary = "pistol", SecondaryClip = 15
+        };
+        var live = new AmmoReader(statePath, TimeSpan.FromMilliseconds(10), 0.5);
+        System.IO.File.WriteAllText(ammoPath, "20 27 172 15");
+        Invoke(live, "Poll", flags);
+        System.IO.File.WriteAllText(ammoPath, "21 26 172 15");
+        Invoke(live, "Poll", flags);
+        typeof(MainWindow).GetField("_ammo", flags)!.SetValue(window, live);
+
+        var merged = (Survivor)Invoke(window, "WithLiveAmmo", flags, roster);
+        bool ammoReplaced = merged.PrimaryClip == 26 && merged.Primary == "rifle_ak47"
+            && merged.Name == "You" && merged.Hp == 100;
+
+        live.Dispose();
+
+        // With no channel the roster's own numbers must come through untouched.
+        typeof(MainWindow).GetField("_ammo", flags)!.SetValue(window, null);
+        var untouched = (Survivor)Invoke(window, "WithLiveAmmo", flags, roster);
+        bool fallbackIntact = untouched.PrimaryClip == 30 && untouched.PrimaryReserve == 172;
+
+        window.Close();
+        app.Shutdown();
+        try { System.IO.Directory.Delete(folder, true); } catch { }
+
+        bool passed = pathBesideState && absentIsNotFresh && firstSightingIgnored
+            && stillIgnoredWithoutAdvance && advanceAccepted && tornReadRejected
+            && unreadablePreserved && upgradeCarried && upgradeDepletes
+            && fourFieldsStillWork && freshBeforeStall && goesStale && ammoReplaced
+            && fallbackIntact;
+
+        Console.WriteLine(
+            $"path={pathBesideState} absent={absentIsNotFresh} " +
+            $"firstSighting={firstSightingIgnored} noAdvance={stillIgnoredWithoutAdvance} " +
+            $"advance={advanceAccepted} tornRejected={tornReadRejected} " +
+            $"unreadable={unreadablePreserved} fresh={freshBeforeStall} stale={goesStale} " +
+            $"replaced={ammoReplaced} fallback={fallbackIntact} " +
+            $"upgrade={upgradeCarried} upgradeDepletes={upgradeDepletes} " +
+            $"fourFields={fourFieldsStillWork}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: the ammo channel must be used only while it is live, and must never "
+              + "override the roster with a torn or leftover read");
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Renders the editor window to a PNG, at a given tab and window size.
+    ///
+    /// The editor is the one surface in this app a person actually looks at for minutes at
+    /// a time, and layout work on it cannot be judged from markup. Sizes matter too: the
+    /// cards reflow, so a change that looks right at 1360 can be wrong at the 960 minimum.
+    ///
+    ///     ... -- shot-editor out.png 1 1360 980
+    /// </summary>
+    private static int RunEditorShot(string outputPath, int tab, double width, double height,
+                                     bool livePreview = false)
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        var settings = new SettingsWindow(new AppConfig(), () => { })
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -32000,          // off-screen: shown so the visual tree is real, but
+            Top = -32000            // never in front of whoever is running this
+        };
+
+        // Zero means "whatever the editor opens itself at", which is the case worth being
+        // able to see: the startup size is a property of the window, not of this tool.
+        if (width > 0) settings.Width = width;
+        if (height > 0) settings.Height = height;
+
+        settings.Show();
+
+        if (settings.FindName("SettingsTabs") is TabControl tabs
+            && tab >= 0 && tab < tabs.Items.Count)
+        {
+            tabs.SelectedIndex = tab;
+        }
+
+        // Live preview draws on the real overlay, so the editor gives its preview row to the
+        // settings - which is the state most of this window is actually used in.
+        if (livePreview && settings.FindName("PreviewHost") is UIElement preview
+            && settings.FindName("PreviewRow") is RowDefinition row)
+        {
+            preview.Visibility = Visibility.Collapsed;
+            row.Height = new GridLength(0);
+        }
+
+        settings.UpdateLayout();
+
+        // The editor fades itself in on open, so a shot taken at Loaded catches it grey.
+        // Pump the dispatcher until the animation has finished with it.
+        for (int pass = 0; pass < 12; pass++)
+        {
+            settings.Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
+            System.Threading.Thread.Sleep(60);
+        }
+
+        settings.UpdateLayout();
+
+        var content = (FrameworkElement)settings.Content;
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            (int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(content);
+
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using (var file = System.IO.File.Create(outputPath)) encoder.Save(file);
+
+        settings.Close();
+        app.Shutdown();
+        Console.WriteLine($"wrote {System.IO.Path.GetFullPath(outputPath)} "
+                          + $"window {settings.Width:0}x{settings.Height:0}, "
+                          + $"content {content.ActualWidth:0}x{content.ActualHeight:0}, "
+                          + $"tab {tab}");
+        return 0;
+    }
+
+    private static int RunWeaponCheck()
+    {
+        var armed = new Survivor
+        {
+            Name = "Armed",
+            Hp = 100,
+            MaxHp = 100,
+            IsLocal = true,
+            Primary = "rifle_ak47",
+            PrimaryClip = 30,
+            PrimaryReserve = 172,
+            Secondary = "katana",
+            SecondaryClip = -1,
+            Throwable = "pipebomb",
+            Kit = "medkit",
+            Pill = "pills"
+        };
+
+        var app = new App();
+        app.InitializeComponent();
+
+        var slots = SurvivorCard.WeaponChip.SlotsFor(armed);
+
+        // Primary first, and only slots that hold something.
+        bool orderedSlots = slots.Count == 2
+            && slots[0].Id == "rifle_ak47"
+            && slots[1].Id == "katana";
+        bool emptySlotDropped = SurvivorCard.WeaponChip.SlotsFor(new Survivor
+        {
+            Primary = "pumpshotgun",
+            PrimaryClip = 8,
+            PrimaryReserve = 56
+        }).Count == 1;
+
+        // Ammunition. -1 means the exporter could not read it and must print nothing at
+        // all; melee has none; an empty magazine is still a real zero.
+        bool primaryAmmo = slots[0].ClipText == "30" && slots[0].ReserveText == "172";
+        bool meleeHasNoAmmo = !slots[1].HasAmmo && !slots[1].HasReserve;
+        bool unreadableIsBlank = !SurvivorCard.WeaponChip
+            .For("pumpshotgun", clip: -1, reserve: -1).HasAmmo;
+        bool clipWithoutReserve = SurvivorCard.WeaponChip.For("pistol", 15, -1) is
+            { ClipText: "15", HasReserve: false };
+        bool emptyMagazineStillPrints = SurvivorCard.WeaponChip.For("rifle", 0, 0) is
+            { ClipText: "0", ReserveText: "0" };
+
+        // An exporter older than 1.3.0 sends no weapon fields at all.
+        bool legacyExporter = SurvivorCard.WeaponChip
+            .SlotsFor(new Survivor { Name = "Legacy", Hp = 100, MaxHp = 100 }).Count == 0;
+
+        // Every weapon draws as something - the game's own icon where one was cut from the
+        // HUD atlas, a family silhouette otherwise - and a pistol is never allowed to draw
+        // as wide as a rifle, because that size relationship is half the information.
+        bool everyWeaponDraws = slots.All(slot => slot.HasIcon || slot.ShowsSilhouette);
+        // The riot shield is the one weapon the game ships no HUD icon for, so it is the
+        // standing proof that the silhouette fallback is still wired up.
+        bool silhouetteFallback = SurvivorCard.WeaponChip.For("riotshield", -1, -1)
+            is { HasIcon: false, ShowsSilhouette: true };
+        bool m60HasArt = SurvivorCard.WeaponChip.For("rifle_m60", 150, 0).HasIcon;
+        bool pistolSmallerThanRifle = SurvivorCard.WeaponChip.For("pistol", 15, -1).ArtWidth
+            < SurvivorCard.WeaponChip.For("rifle_ak47", 30, 172).ArtWidth;
+
+        // One pistol and two are different weapons to look at, so they are different art -
+        // the same icon for both would make the HUD say "pistol" and nothing more.
+        var single = SurvivorCard.WeaponChip.For("pistol", 15, -1);
+        var dual = SurvivorCard.WeaponChip.For("pistol_dual", 30, -1);
+        // Compared on the art, not the drawn width: both are small enough to land on the
+        // minimum width, so the drawn sizes tie and only the pictures differ. That the pair
+        // is the wider PICTURE is what proves the packed texture was split correctly - the
+        // single pistol and the pair ship inside one game texture, and shipping the whole
+        // thing as the pair drew two pistols and a spare.
+        bool pistolPair = single.HasIcon && dual.HasIcon
+            && single.Icon!.Width < dual.Icon!.Width
+            && single.ArtWidth <= dual.ArtWidth
+            && dual.Label == "Dual pistols";
+        bool named = slots[0].Label == "AK-47" && slots[1].Label == "Katana";
+
+        // An id from another addon still draws a shape and a readable name.
+        var unknown = SurvivorCard.WeaponChip.For("space_rifle", 10, 20);
+        bool unknownIsUsable = unknown.HasWeapon && unknown.Label == "Space rifle"
+            && unknown.ShowsSilhouette;
+
+        // Only the last slot may not carry a gap, and the gap follows the orientation.
+        var horizontal = SurvivorCard.WeaponChip.SlotsFor(armed, horizontal: true);
+        bool spacing = slots[0].SlotMargin.Bottom > 0 && slots[0].SlotMargin.Right == 0
+            && slots[1].SlotMargin.Bottom == 0
+            && horizontal[0].SlotMargin.Right > 0 && horizontal[0].SlotMargin.Bottom == 0;
+
+        bool slotRenders = WeaponSlotRenders(app, slots[0]);
+
+        // Whatever is in the secondary slot fills its box - a pistol and a machete alike -
+        // while the primary keeps the capped scale that makes the long guns comparable.
+        bool secondaryFilled = true;
+        foreach (string id in new[] { "pistol", "pistol_magnum", "katana", "chainsaw" })
+        {
+            var pair = SurvivorCard.WeaponChip.SlotsFor(new Survivor
+            {
+                Primary = "rifle_m60",
+                PrimaryClip = 150,
+                PrimaryReserve = 0,
+                Secondary = id,
+                SecondaryClip = 15
+            });
+
+            secondaryFilled &= double.IsPositiveInfinity(pair[1].ArtWidth)
+                && pair[0].ArtWidth
+                    == SurvivorCard.WeaponChip.For("rifle_m60", 150, 0).ArtWidth;
+        }
+
+        // The survivor cards gave the weapon row back to this panel; none of the three
+        // card templates may draw weapons any more.
+        var card = SurvivorCard.From(armed);
+        bool cardsHaveNoWeapons =
+            !CardDrawsWeapon(app, "SurvivorTemplate", card, slots[0])
+            && !CardDrawsWeapon(app, "ConsistentSurvivorTemplate", card, slots[0])
+            && !CardDrawsWeapon(app, "ConsistentMinimalistTemplate", card, slots[0]);
+
+        // Items moved the other way at the same time: the weapon HUD draws the player's
+        // throwable, kit, and pills, and the consistent cards draw none of them. Empty
+        // slots are kept, so the row is always three.
+        var carried = SurvivorCard.ItemChip.SlotsFor(new Survivor
+        {
+            Throwable = "molotov",
+            Kit = "defib"
+        });
+        bool itemRow = carried.Count == 3
+            && carried[0].Label == "Molotov" && carried[1].Label == "Defibrillator"
+            && !carried[2].HasItem
+            && carried[0].SlotMargin.Right > 0 && carried[2].SlotMargin.Right == 0;
+
+        // Only the player's own card gives its items to the weapon HUD. Everyone else -
+        // teammates, Finale Soldiers followers - keeps them on their card, since nothing
+        // else on screen says what they are carrying.
+        var otherCard = SurvivorCard.From(new Survivor
+        {
+            Name = "Follower", Hp = 100, MaxHp = 100,
+            Throwable = "pipebomb", Kit = "medkit", Pill = "pills"
+        });
+        bool onlyLocalGivesUpItems =
+            card.IsLocal && card.ConsistentItemSlots.Count == 0
+            && !otherCard.IsLocal && otherCard.ConsistentItemSlots.Count == 3
+            // Both views keep the full list; the Tab scoreboard binds that one, because the
+            // weapon HUD is hidden while Tab is held.
+            && card.ItemSlots.Count == 3
+            && !CardDrawsAnyArt(app, "ConsistentSurvivorTemplate", card)
+            && !CardDrawsAnyArt(app, "ConsistentMinimalistTemplate", card)
+            && CardDrawsAnyArt(app, "ConsistentSurvivorTemplate", otherCard)
+            && CardDrawsAnyArt(app, "ConsistentMinimalistTemplate", otherCard)
+            && CardDrawsAnyArt(app, "SurvivorTemplate", card);
+
+        // The held slot is marked, and only ever one of them. The exporter reports a place
+        // rather than a weapon id, so a melee weapon and a pistol pair mark correctly too.
+        var holding = SurvivorCard.WeaponChip.SlotsFor(new Survivor
+        {
+            Primary = "rifle_ak47", PrimaryClip = 30, PrimaryReserve = 172,
+            Secondary = "katana", SecondaryClip = -1,
+            ActiveSlot = ActiveSlots.Secondary
+        });
+        var heldItems = SurvivorCard.ItemChip.SlotsFor(new Survivor
+        {
+            Throwable = "molotov", Kit = "medkit", Pill = "pills",
+            ActiveSlot = ActiveSlots.Pills
+        });
+        bool heldMarked = !holding[0].IsActive && holding[1].IsActive
+            && heldItems[2].IsActive && !heldItems[0].IsActive && !heldItems[1].IsActive;
+
+        // An exporter older than 1.3.0 sends no token: nothing is highlighted rather than
+        // the first slot by accident. An empty slot is never marked either.
+        bool nothingHeldByDefault = SurvivorCard.WeaponChip.SlotsFor(armed)
+                .All(chip => !chip.IsActive)
+            && SurvivorCard.ItemChip.SlotsFor(new Survivor { ActiveSlot = ActiveSlots.Kit })
+                .All(item => !item.IsActive);
+
+        bool heldSlotDraws = SlotIsHighlighted(app, "WeaponSlotTemplate", holding[1])
+            && !SlotIsHighlighted(app, "WeaponSlotTemplate", holding[0])
+            && SlotIsHighlighted(app, "WeaponItemTemplate", heldItems[2])
+            && !SlotIsHighlighted(app, "WeaponItemTemplate", heldItems[0]);
+
+        // The ammunition mark beside the count: a cartridge normally, a flame or a burst
+        // while an upgrade is loaded, and back to the cartridge when it runs out.
+        var normalRounds = SurvivorCard.WeaponChip.For("rifle_ak47", 30, 172);
+        var incendiary = SurvivorCard.WeaponChip.For("rifle_ak47", 30, 172, 1, 44);
+        var explosive = SurvivorCard.WeaponChip.For("rifle_ak47", 30, 172, 2, 44);
+        var depleted = SurvivorCard.WeaponChip.For("rifle_ak47", 12, 172, 0);
+
+        // While an upgrade is loaded the reserve line is not drawn: the rounds behind the
+        // magazine are ordinary ones, so a number under an upgraded count would be a lie
+        // about how many of THESE are left. It returns with the plain cartridge.
+        bool upgradeHidesReserve = normalRounds.HasReserve && normalRounds.ReserveText == "172"
+            && !incendiary.HasReserve && !explosive.HasReserve
+            && depleted.HasReserve;
+
+        // The count while an upgrade holds is the upgrade's own pool, so a reload - which
+        // puts the magazine back to full - cannot put the number back up.
+        var reloaded = SurvivorCard.WeaponChip.For("rifle_ak47", 50, 172, 1, 31);
+        bool upgradeCountsItsOwnPool = incendiary.ClipText == "44"
+            && explosive.ClipText == "44"
+            && reloaded.ClipText == "31"
+            && depleted.ClipText == "12";
+
+        // The secondary slot draws no ammunition mark: nothing upgrades a pistol, and a
+        // cartridge beside every pistol count is noise.
+        var pistolSlot = SurvivorCard.WeaponChip.SlotsFor(new Survivor
+        {
+            Primary = "rifle_ak47", PrimaryClip = 30, PrimaryReserve = 172,
+            Secondary = "pistol", SecondaryClip = 15
+        });
+        bool secondaryHasNoMark = pistolSlot[0].HasAmmoGlyph && !pistolSlot[1].HasAmmoGlyph
+            && pistolSlot[1].ClipText == "15";
+
+        bool ammoMarks = normalRounds.HasAmmoGlyph && incendiary.HasAmmoGlyph
+            && explosive.HasAmmoGlyph
+            && !ReferenceEquals(normalRounds.AmmoGlyph, incendiary.AmmoGlyph)
+            && !ReferenceEquals(incendiary.AmmoGlyph, explosive.AmmoGlyph)
+            && ReferenceEquals(depleted.AmmoGlyph, normalRounds.AmmoGlyph)
+            && !Equals(incendiary.AmmoGlyphBrush, normalRounds.AmmoGlyphBrush)
+            && !Equals(explosive.AmmoGlyphBrush, incendiary.AmmoGlyphBrush);
+
+        // An unreadable magazine draws no count, so it must draw no mark either - a lone
+        // cartridge beside nothing would read as an ammunition type with no rounds.
+        bool noCountNoMark = !SurvivorCard.WeaponChip.For("katana", -1, -1).HasAmmoGlyph;
+
+        bool ammoMarkDraws = SlotDrawsAmmoMark(app, incendiary)
+            && SlotDrawsAmmoMark(app, normalRounds);
+
+        // Placement: two corners, two arrangements, and a slider that runs the full height.
+        bool placement = WeaponPanelPolicy.IsLeft("lower-left")
+            && !WeaponPanelPolicy.IsLeft("lower-right")
+            && !WeaponPanelPolicy.IsLeft("nonsense")            // defaults to the right
+            && WeaponPanelPolicy.IsHorizontal("horizontal")
+            && !WeaponPanelPolicy.IsHorizontal("vertical")
+            && WeaponPanelPolicy.ClampVerticalOffset(-1) == 0
+            && WeaponPanelPolicy.ClampVerticalOffset(5)
+                == WeaponPanelPolicy.MaximumVerticalOffset;
+
+        bool live = WeaponPanelPlacementCheck(out string liveDetail);
+
+        app.Shutdown();
+
+        bool passed = orderedSlots && emptySlotDropped && primaryAmmo && meleeHasNoAmmo
+            && unreadableIsBlank && clipWithoutReserve && emptyMagazineStillPrints
+            && legacyExporter && everyWeaponDraws && silhouetteFallback && m60HasArt
+            && pistolSmallerThanRifle && pistolPair && secondaryFilled && named
+            && unknownIsUsable && spacing && slotRenders && cardsHaveNoWeapons && placement
+            && itemRow && onlyLocalGivesUpItems && heldMarked && nothingHeldByDefault
+            && heldSlotDraws && ammoMarks && noCountNoMark && ammoMarkDraws
+            && upgradeHidesReserve && upgradeCountsItsOwnPool && secondaryHasNoMark && live;
+
+        Console.WriteLine(
+            $"order={orderedSlots} emptyDropped={emptySlotDropped} ammo={primaryAmmo} " +
+            $"meleeBlank={meleeHasNoAmmo} unreadableBlank={unreadableIsBlank} " +
+            $"clipOnly={clipWithoutReserve} zeroPrints={emptyMagazineStillPrints} " +
+            $"legacyExporter={legacyExporter} everyWeaponDraws={everyWeaponDraws} " +
+            $"silhouetteFallback={silhouetteFallback} m60Art={m60HasArt} " +
+            $"pistolSmaller={pistolSmallerThanRifle} pistolPair={pistolPair} names={named} " +
+            $"unknownId={unknownIsUsable} secondaryFilled={secondaryFilled} " +
+            $"spacing={spacing} slotRenders={slotRenders} " +
+            $"cardsClean={cardsHaveNoWeapons} itemRow={itemRow} " +
+            $"onlyLocalDropsItems={onlyLocalGivesUpItems} heldMarked={heldMarked} " +
+            $"noTokenNoHighlight={nothingHeldByDefault} heldDraws={heldSlotDraws} " +
+            $"ammoMarks={ammoMarks} noCountNoMark={noCountNoMark} " +
+            $"ammoMarkDraws={ammoMarkDraws} upgradeHidesReserve={upgradeHidesReserve} " +
+            $"upgradePool={upgradeCountsItsOwnPool} secondaryNoMark={secondaryHasNoMark} " +
+            $"placement={placement} {liveDetail}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: the weapon HUD must draw the local player's slots in the configured "
+              + "corner, with ammo only when the exporter could read it");
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Drives the real window: the panel has to appear for the local survivor, move between
+    /// corners, follow its height slider, honour its own setting, and stay out of the
+    /// scoreboard view entirely.
+    /// </summary>
+    private static bool WeaponPanelPlacementCheck(out string detail)
+    {
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.GameProcess = "OverlayHudWeaponCheckNoSuchGame";
+        config.IgnoreForeground = true;
+        config.ConsistentShowWeapons = true;
+        config.WeaponPanelCorner = WeaponPanelPolicy.LowerRight;
+        config.WeaponPanelOrientation = WeaponPanelPolicy.Vertical;
+        config.WeaponPanelVerticalOffset = 0.10;
+
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+
+        var panel = (Border)GetField(window, "WeaponPanel", flags);
+        var slots = (ItemsControl)GetField(window, "WeaponSlots", flags);
+        var items = (ItemsControl)GetField(window, "WeaponItems", flags);
+        var survivor = SampleRoster.WeaponSurvivor();
+
+        // Consistent mode is what the panel belongs to.
+        typeof(MainWindow).GetField("_livePreviewConsistent", flags)?.SetValue(window, true);
+        typeof(MainWindow).GetField("_livePreview", flags)?.SetValue(window, true);
+
+        Invoke(window, "RenderWeaponPanel", flags, survivor);
+        Invoke(window, "ApplyLayout", flags);
+        bool drawn = panel.Visibility == Visibility.Visible
+            && slots.ItemsSource is IEnumerable source
+            && source.Cast<object>().Count() == 2
+            && items.ItemsSource is IEnumerable carried
+            && carried.Cast<object>().Count() == 3;
+
+        // Empty hands but a kit in the pocket still has something to say.
+        Invoke(window, "RenderWeaponPanel", flags, new Survivor { IsLocal = true, Kit = "medkit" });
+        bool itemsWithoutWeapons = panel.Visibility == Visibility.Visible
+            && slots.Visibility == Visibility.Collapsed;
+
+        // Nothing carried at all is the one case that hides the panel.
+        Invoke(window, "RenderWeaponPanel", flags, new Survivor { IsLocal = true });
+        bool emptyHidesPanel = panel.Visibility == Visibility.Collapsed;
+
+        Invoke(window, "RenderWeaponPanel", flags, survivor);
+        bool rightCorner = panel.HorizontalAlignment == System.Windows.HorizontalAlignment.Right
+            && Math.Abs(panel.Margin.Right - 1920 * WeaponPanelPolicy.HorizontalInset) < 0.01
+            && Math.Abs(panel.Margin.Bottom - 108) < 0.01;
+
+        config.WeaponPanelCorner = WeaponPanelPolicy.LowerLeft;
+        config.WeaponPanelVerticalOffset = 0.50;
+        Invoke(window, "ApplyLayout", flags);
+        bool leftCorner = panel.HorizontalAlignment == System.Windows.HorizontalAlignment.Left
+            && Math.Abs(panel.Margin.Left - 1920 * WeaponPanelPolicy.HorizontalInset) < 0.01
+            && Math.Abs(panel.Margin.Bottom - 540) < 0.01;
+
+        // Turned off, and with no local survivor, the panel is hidden rather than empty.
+        config.ConsistentShowWeapons = false;
+        Invoke(window, "RenderWeaponPanel", flags, survivor);
+        bool respectsSetting = panel.Visibility == Visibility.Collapsed;
+
+        config.ConsistentShowWeapons = true;
+        Invoke(window, "RenderWeaponPanel", flags, new object?[] { null }[0]!);
+        bool hiddenWithoutLocal = panel.Visibility == Visibility.Collapsed;
+
+        // Scoreboard mode never draws it.
+        typeof(MainWindow).GetField("_livePreviewConsistent", flags)?.SetValue(window, false);
+        Invoke(window, "RenderWeaponPanel", flags, survivor);
+        bool scoreboardClean = panel.Visibility == Visibility.Collapsed;
+
+        window.Close();
+
+        detail = $"drawn={drawn} rightCorner={rightCorner} leftCorner={leftCorner} "
+               + $"setting={respectsSetting} noLocal={hiddenWithoutLocal} "
+               + $"itemsAlone={itemsWithoutWeapons} emptyHidden={emptyHidesPanel} "
+               + $"scoreboardClean={scoreboardClean}";
+        return drawn && rightCorner && leftCorner && respectsSetting && hiddenWithoutLocal
+            && itemsWithoutWeapons && emptyHidesPanel && scoreboardClean;
+    }
+
+    /// <summary>Whether a weapon slot rendered its ammunition mark, filled as configured.</summary>
+    private static bool SlotDrawsAmmoMark(App app, SurvivorCard.WeaponChip chip)
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = chip,
+            ContentTemplate = (DataTemplate)app.Resources["WeaponSlotTemplate"]
+        };
+        presenter.ApplyTemplate();
+        presenter.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        presenter.Arrange(new Rect(presenter.DesiredSize));
+        presenter.UpdateLayout();
+
+        return FindVisualChildren<System.Windows.Shapes.Path>(presenter).Any(
+            path => path.Visibility == Visibility.Visible
+                    && ReferenceEquals(path.Data, chip.AmmoGlyph)
+                    && Equals(path.Fill, chip.AmmoGlyphBrush));
+    }
+
+    /// <summary>
+    /// Whether a slot drew itself in the held colours. The highlight lives on the frame, so
+    /// this reads the border rather than looking for a green pixel.
+    /// </summary>
+    private static bool SlotIsHighlighted(App app, string templateKey, object chip)
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = chip,
+            ContentTemplate = (DataTemplate)app.Resources[templateKey]
+        };
+        presenter.ApplyTemplate();
+        presenter.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        presenter.Arrange(new Rect(presenter.DesiredSize));
+        presenter.UpdateLayout();
+
+        var held = (SolidColorBrush)app.Resources["HeldSlotBorderBrush"];
+        return FindVisualChildren<Border>(presenter).Any(
+            border => border.BorderBrush is SolidColorBrush brush
+                      && brush.Color == held.Color);
+    }
+
+    /// <summary>
+    /// Whether a card template draws any icon at all. Items are the only art a card has
+    /// ever carried, so this is how "the consistent cards no longer draw items" is checked
+    /// without the check knowing which slot lived where.
+    /// </summary>
+    private static bool CardDrawsAnyArt(App app, string templateKey, SurvivorCard card)
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = card,
+            ContentTemplate = (DataTemplate)app.Resources[templateKey]
+        };
+        presenter.ApplyTemplate();
+        presenter.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        presenter.Arrange(new Rect(presenter.DesiredSize));
+        presenter.UpdateLayout();
+
+        return FindVisualChildren<Image>(presenter).Any(
+            image => image.Visibility == Visibility.Visible && image.Source != null);
+    }
+
+    /// <summary>Measures one weapon slot and confirms it drew its ammunition.</summary>
+    private static bool WeaponSlotRenders(App app, SurvivorCard.WeaponChip chip)
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = chip,
+            ContentTemplate = (DataTemplate)app.Resources["WeaponSlotTemplate"]
+        };
+        presenter.ApplyTemplate();
+        presenter.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        presenter.Arrange(new Rect(presenter.DesiredSize));
+        presenter.UpdateLayout();
+
+        bool sized = presenter.DesiredSize.Width > 0 && presenter.DesiredSize.Height > 0;
+        var texts = FindVisualChildren<TextBlock>(presenter)
+            .Where(block => block.Visibility == Visibility.Visible)
+            .Select(block => block.Text)
+            .ToList();
+        // Either way of drawing the weapon counts; which one is used depends on whether an
+        // icon was cut for that weapon, and the slot must draw something regardless.
+        bool shape = FindVisualChildren<System.Windows.Shapes.Path>(presenter)
+                .Any(path => path.Visibility == Visibility.Visible && path.Data != null)
+            || FindVisualChildren<Image>(presenter)
+                .Any(image => image.Visibility == Visibility.Visible && image.Source != null);
+
+        return sized && shape && texts.Contains(chip.ClipText)
+            && texts.Contains(chip.ReserveText);
+    }
+
+    /// <summary>True when <paramref name="node"/> sits anywhere under <paramref name="root"/>.</summary>
+    private static bool IsDescendantOf(DependencyObject node, DependencyObject root)
+    {
+        for (DependencyObject? at = node; at != null; at = VisualTreeHelper.GetParent(at))
+        {
+            if (ReferenceEquals(at, root)) return true;
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match) yield return match;
+
+            foreach (T nested in FindVisualChildren<T>(child)) yield return nested;
+        }
+    }
+
+    /// <summary>True when a survivor card template draws anything from a weapon slot.</summary>
+    private static bool CardDrawsWeapon(App app, string templateKey, SurvivorCard card,
+                                        SurvivorCard.WeaponChip chip)
+    {
+        var presenter = new ContentPresenter
+        {
+            Content = card,
+            ContentTemplate = (DataTemplate)app.Resources[templateKey]
+        };
+        presenter.ApplyTemplate();
+        presenter.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        presenter.Arrange(new Rect(presenter.DesiredSize));
+        presenter.UpdateLayout();
+
+        return FindVisualChildren<TextBlock>(presenter).Any(
+            block => block.Visibility == Visibility.Visible
+                     && (block.Text == chip.ClipText || block.Text == chip.ShortText));
     }
 
     private static int RunItemOrderCheck()
@@ -480,16 +1320,230 @@ internal static class Program
                     ConsistentHudPolicy.MinimalistDesign
                 });
 
+        // Asserted on readability, not on a hex: these headings were once dark grey on a
+        // dark card, and pinning the exact colour only meant the check had to be edited
+        // every time the editor was re-themed. What matters is that they stay bright
+        // against the card they sit on.
+        // Live preview folds the simulated canvas away, and the window must not grow to
+        // fit the settings list when it does. It used to shrink-wrap its content, which was
+        // fine while that list was capped at 300px and became a full-height window the
+        // moment the list was allowed to fill the space instead.
+        var sizing = new SettingsWindow(new AppConfig { PreviewMode = "live" }, () => { });
+        double designedHeight = sizing.Height;
+        double designedWidth = sizing.Width;
+        Invoke(sizing, "ApplyPreviewMode", BindingFlags.Instance | BindingFlags.NonPublic);
+        bool livePreviewKeepsWindowSize = sizing.SizeToContent == SizeToContent.Manual
+            && sizing.Height <= designedHeight + 0.5
+            && sizing.Width <= designedWidth + 0.5
+            && sizing.Height <= SystemParameters.WorkArea.Height;
+        sizing.Close();
+
+        // Opening a tab must lay it out correctly the first time. The card grids on a tab
+        // are built when that tab is first shown, so a fit that only runs at startup - or
+        // only on resize - leaves the second tab on the markup's column count until the
+        // window is dragged.
+        var tabbed = new SettingsWindow(new AppConfig { PreviewMode = "live" }, () => { })
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -32000,
+            Top = -32000
+        };
+        tabbed.Show();
+        tabbed.UpdateLayout();
+        tabbed.Dispatcher.Invoke(() => { }, DispatcherPriority.Loaded);
+        tabbed.UpdateLayout();
+
+        // Asserted BEFORE touching the selection: every other check here selects a tab
+        // first, which is exactly how an editor that opens with no tab selected - and so
+        // draws nothing at all - got past all of them.
+        bool opensOnAFilledTab =
+            tabbed.FindName("SettingsTabs") is TabControl firstOpen
+            && firstOpen.SelectedIndex == 0
+            && tabbed.FindName("TabStrip") is ListBox firstStrip
+            && firstStrip.SelectedIndex == 0
+            && FindVisualChildren<System.Windows.Controls.Primitives.UniformGrid>(
+                   (DependencyObject)tabbed.FindName("ControlScroller")!).Any();
+
+        if (tabbed.FindName("SettingsTabs") is TabControl openedTabs) openedTabs.SelectedIndex = 1;
+        tabbed.UpdateLayout();
+        tabbed.Dispatcher.Invoke(() => { }, DispatcherPriority.Loaded);
+        tabbed.UpdateLayout();
+
+        // The tab strip has to stay put while the settings scroll: it is how you get from
+        // one tab to the other, and a strip that scrolls away means scrolling back up
+        // before you can switch.
+        bool tabsAreSticky = false;
+        if (tabbed.FindName("TabStrip") is ListBox strip
+            && tabbed.FindName("ControlScroller") is ScrollViewer scroller)
+        {
+            // Asserted by scrolling, not by inspecting the tree: what matters is that the
+            // strip does not move, and "is not inside the ScrollViewer" is only one of the
+            // ways that can stop being true.
+            Point before = strip.TranslatePoint(new Point(0, 0), tabbed);
+            scroller.ScrollToEnd();
+            tabbed.UpdateLayout();
+            tabbed.Dispatcher.Invoke(() => { }, DispatcherPriority.Loaded);
+            Point after = strip.TranslatePoint(new Point(0, 0), tabbed);
+
+            tabsAreSticky = scroller.ScrollableHeight > 1        // it really did scroll
+                && scroller.VerticalOffset > 1
+                && Math.Abs(after.Y - before.Y) < 0.5
+                && !IsDescendantOf(strip, scroller)
+                && strip.Items.Count == 2
+                && strip.SelectedIndex == 1;                     // follows the TabControl
+
+            scroller.ScrollToTop();
+        }
+
+        int expectedColumnsForWidth = 2;   // the 920px default sits in the two-column band
+        var openedGrids = FindVisualChildren<System.Windows.Controls.Primitives.UniformGrid>(
+            (DependencyObject)tabbed.FindName("ControlScroller")!).ToList();
+        bool newTabLaysOutImmediately = openedGrids.Count > 0
+            && openedGrids.All(grid => grid.Columns == expectedColumnsForWidth);
+        tabbed.Close();
+
+        // Measured at the narrowest the editor can be, because that is where a row of
+        // Auto-width buttons beside a star-width field collapses the field to nothing. The
+        // hotkey has to stay readable without resizing the window to find it.
+        var narrow = new SettingsWindow(new AppConfig { PreviewMode = "live" }, () => { })
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -32000,
+            Top = -32000
+        };
+        narrow.Width = narrow.MinWidth;
+        narrow.Show();
+        if (narrow.FindName("SettingsTabs") is TabControl narrowTabs) narrowTabs.SelectedIndex = 1;
+        narrow.UpdateLayout();
+        var hotkey = narrow.FindName("ConsistentHotkeyBox") as TextBox;
+        bool hotkeyFieldReadable = hotkey is { ActualWidth: >= 70, ActualHeight: >= 20 };
+
+        // ...and still beside its buttons rather than stacked above them, which is the
+        // other way this card can be "fixed" and is not what it should look like.
+        bool hotkeyRowIntact = false;
+        if (hotkey != null && VisualTreeHelper.GetParent(hotkey) is Grid hotkeyRow)
+        {
+            var buttons = hotkeyRow.Children.OfType<Button>().ToList();
+            hotkeyRowIntact = buttons.Count == 2
+                && buttons.All(button => Math.Abs(
+                       button.TranslatePoint(new Point(0, 0), hotkeyRow).Y
+                       - hotkey.TranslatePoint(new Point(0, 0), hotkeyRow).Y) < 6)
+                && buttons.All(button => button.ActualWidth >= 50);
+        }
+
+        narrow.Close();
+
+        // Every slider carries its own reset, and each one has to restore that slider's
+        // documented default and nothing else. Driven through the button's Click, not by
+        // calling the handler directly, so a button wired to the wrong slider fails here.
+        var resettable = new (string Slider, double Expected)[]
+        {
+            ("ScaleSlider", 1.0),
+            ("OpacitySlider", 0.92),
+            ("OffsetXSlider", 0.02),
+            ("OffsetYSlider", 0.59),
+            ("BottomReserveSlider", 0.0),
+            ("MaxColumnsSlider", 2.0),
+            ("PreviewCountSlider", 6.0),
+            ("ConsistentScaleSlider", 0.65),        // Basic is the default design
+            ("ConsistentOpacitySlider", 0.90),
+            ("ConsistentVerticalSlider", 0.03),
+            ("ConsistentHorizontalSpacingSlider", 10.0),
+            ("ConsistentVerticalSpacingSlider", 0.0),
+            ("WeaponVerticalSlider", 0.10),
+        };
+
+        var resetHost = new SettingsWindow(new AppConfig(), () => { })
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -32000,
+            Top = -32000
+        };
+        resetHost.Show();
+        resetHost.UpdateLayout();
+
+        // A TabControl only keeps the selected tab's visual tree, so the reset buttons on
+        // the other tab do not exist to be found. Collected per tab, with the tab actually
+        // showing - which is also how a person reaches them.
+        Dictionary<string, System.Windows.Controls.Button> ButtonsOnTab(int index)
+        {
+            if (resetHost.FindName("SettingsTabs") is TabControl host) host.SelectedIndex = index;
+            resetHost.UpdateLayout();
+            resetHost.Dispatcher.Invoke(() => { }, DispatcherPriority.Loaded);
+            resetHost.UpdateLayout();
+
+            return FindVisualChildren<System.Windows.Controls.Button>(resetHost)
+                .Where(button => button.Tag is string)
+                .GroupBy(button => (string)button.Tag!)
+                .ToDictionary(group => group.Key, group => group.First());
+        }
+
+        bool everySliderResets = true;
+        string firstResetFailure = "";
+        var resetButtons = ButtonsOnTab(0);
+
+        foreach (var (name, expected) in resettable)
+        {
+            // The consistent-HUD sliders live on the second tab; switch once, when the
+            // first of them comes up.
+            if (name.StartsWith("Consistent") || name.StartsWith("Weapon"))
+            {
+                if (!resetButtons.ContainsKey(name)) resetButtons = ButtonsOnTab(1);
+            }
+
+            if (resetHost.FindName(name) is not Slider slider
+                || !resetButtons.TryGetValue(name, out var button))
+            {
+                everySliderResets = false;
+                firstResetFailure = firstResetFailure.Length > 0 ? firstResetFailure : name;
+                continue;
+            }
+
+            // Moved somewhere it certainly is not by default, then reset.
+            slider.Value = Math.Abs(slider.Maximum - expected) > Math.Abs(slider.Minimum - expected)
+                ? slider.Maximum
+                : slider.Minimum;
+
+            button.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives
+                .ButtonBase.ClickEvent));
+
+            if (Math.Abs(slider.Value - expected) > 0.0001)
+            {
+                everySliderResets = false;
+                if (firstResetFailure.Length == 0)
+                    firstResetFailure = $"{name}={slider.Value:0.###} want {expected:0.###}";
+            }
+        }
+
+        // The consistent-HUD sliders follow the selected design, so resetting HUD size under
+        // Minimalist must give Minimalist's 1.00x rather than Basic's 0.65x.
+        resetButtons = ButtonsOnTab(1);
+        if (resetHost.FindName("ConsistentDesignCombo") is ComboBox resetDesignCombo
+            && resetHost.FindName("ConsistentScaleSlider") is Slider designScale
+            && resetButtons.TryGetValue("ConsistentScaleSlider", out var designReset))
+        {
+            resetDesignCombo.SelectedIndex = 1;   // Minimalist
+            designScale.Value = designScale.Minimum;
+            designReset.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives
+                .ButtonBase.ClickEvent));
+
+            if (Math.Abs(designScale.Value - 1.00) > 0.0001)
+            {
+                everySliderResets = false;
+                if (firstResetFailure.Length == 0)
+                    firstResetFailure = $"minimalist scale={designScale.Value:0.###}";
+            }
+        }
+
+        resetHost.Close();
+
         bool sectionHeadingsReadable =
-            settings.FindName("PreviewSectionHeading") is TextBlock previewHeading
-            && previewHeading.Foreground is SolidColorBrush previewBrush
-            && previewBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5)
-            && settings.FindName("WhoToShowSectionHeading") is TextBlock whoHeading
-            && whoHeading.Foreground is SolidColorBrush whoBrush
-            && whoBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5)
-            && settings.FindName("UiSizeSectionHeading") is TextBlock uiSizeHeading
-            && uiSizeHeading.Foreground is SolidColorBrush uiSizeBrush
-            && uiSizeBrush.Color == Color.FromRgb(0xF0, 0xF2, 0xF5);
+            new[] { "PreviewSectionHeading", "WhoToShowSectionHeading", "UiSizeSectionHeading" }
+                .All(name => settings.FindName(name) is TextBlock heading
+                             && heading.Foreground is SolidColorBrush brush
+                             && Brightness(brush.Color) > 200
+                             && settings.FindResource("Card") is SolidColorBrush card
+                             && Brightness(brush.Color) - Brightness(card.Color) > 120);
 
         // First run opens on the live preview: the real panel over the real game is what
         // the editor is for, and the simulated canvas is the fallback for a closed game.
@@ -616,7 +1670,10 @@ internal static class Program
         bool resetKeepsBehaviorOptions =
             ((AppConfig)GetField(settings, "_draft", flags)).AlwaysShow;
 
-        bool passed = enlargementRemoved && sidebarRemoved && policyRetained
+        bool passed = everySliderResets && livePreviewKeepsWindowSize && opensOnAFilledTab
+            && newTabLaysOutImmediately && tabsAreSticky
+            && hotkeyFieldReadable && hotkeyRowIntact
+            && enlargementRemoved && sidebarRemoved && policyRetained
             && previewLimitIs27 && userScaleRangeIsUseful && slidersJumpToClick
             && resetRestoresSix && obviousScrollBar && tabAndScoreboardOptions
             && separateConsistentTab && templateNames && sectionHeadingsReadable
@@ -652,6 +1709,11 @@ internal static class Program
             $"basicDesignDefaultsRestore={basicDesignDefaultsRestore} " +
             $"resetRestoresThemeDefaults={resetRestoresThemeDefaults} " +
             $"sectionHeadingsReadable={sectionHeadingsReadable} " +
+            $"livePreviewKeepsWindowSize={livePreviewKeepsWindowSize} " +
+            $"hotkeyFieldReadable={hotkeyFieldReadable} hotkeyRow={hotkeyRowIntact} " +
+            $"sliderResets={everySliderResets}{(firstResetFailure.Length > 0 ? $"({firstResetFailure})" : "")} " +
+            $"opensFilled={opensOnAFilledTab} newTabLaysOut={newTabLaysOutImmediately} " +
+            $"stickyTabs={tabsAreSticky} " +
             $"resetKeepsBehaviorOptions={resetKeepsBehaviorOptions} " +
             $"previewChoiceRemembered={previewChoiceRemembered} " +
             $"livePreviewIsDefault={livePreviewIsDefault} " +
@@ -971,6 +2033,64 @@ internal static class Program
         noOpReader.Dispose();
         try { System.IO.File.Delete(noOpStatePath); } catch { }
 
+        // Holding the hold key hands the screen to the scoreboard, exactly as L4D2 hides its
+        // own survivor HUD while Tab is down; releasing gives the persistent HUD back, but
+        // only if it was turned on. Driven through the mirrored hold flag rather than a real
+        // keyboard hook, which cannot be raised from a test.
+        var holdWindow = new MainWindow { Width = 1920, Height = 1080 };
+        var holdConfig = (AppConfig)GetField(holdWindow, "_cfg", flags);
+        holdConfig.GameProcess = "OverlayHudHoldCheckNoSuchGame";
+        holdConfig.IgnoreForeground = true;
+        holdConfig.AlwaysShow = true;                 // consistent HUD toggled on
+        holdConfig.ConsistentShowWeapons = true;
+        holdConfig.ConsistentSeparateYou = true;
+        Invoke(holdWindow, "SetSurface", flags, 1920.0, 1080.0);
+
+        var holdField = typeof(MainWindow).GetField("_holdKeyDown", flags)!;
+        var scoreboardContent = (UIElement)GetField(holdWindow, "ScoreboardContent", flags);
+        var consistentContent = (UIElement)GetField(holdWindow, "ConsistentContent", flags);
+        var holdWeapons = (Border)GetField(holdWindow, "WeaponPanel", flags);
+        var holdYou = (Border)GetField(holdWindow, "ConsistentYouPanel", flags);
+
+        holdField.SetValue(holdWindow, false);
+        Invoke(holdWindow, "ApplyLayout", flags);
+        Invoke(holdWindow, "RenderWeaponPanel", flags, SampleRoster.WeaponSurvivor());
+        bool consistentWhenReleased = consistentContent.Visibility == Visibility.Visible
+            && scoreboardContent.Visibility == Visibility.Collapsed
+            && holdWeapons.Visibility == Visibility.Visible;
+
+        holdField.SetValue(holdWindow, true);
+        Invoke(holdWindow, "ApplyLayout", flags);
+        Invoke(holdWindow, "RenderWeaponPanel", flags, SampleRoster.WeaponSurvivor());
+        bool scoreboardWhileHeld = scoreboardContent.Visibility == Visibility.Visible
+            && consistentContent.Visibility == Visibility.Collapsed
+            && holdWeapons.Visibility == Visibility.Collapsed
+            && holdYou.Visibility == Visibility.Collapsed;
+
+        holdField.SetValue(holdWindow, false);
+        Invoke(holdWindow, "ApplyLayout", flags);
+        Invoke(holdWindow, "RenderWeaponPanel", flags, SampleRoster.WeaponSurvivor());
+        bool consistentComesBack = consistentContent.Visibility == Visibility.Visible
+            && holdWeapons.Visibility == Visibility.Visible;
+
+        // With the persistent HUD switched off, holding still gives the scoreboard and
+        // releasing gives nothing - the hold key must not turn the consistent HUD on.
+        holdConfig.AlwaysShow = false;
+        holdField.SetValue(holdWindow, true);
+        Invoke(holdWindow, "ApplyLayout", flags);
+        bool heldWithoutToggle = scoreboardContent.Visibility == Visibility.Visible
+            && consistentContent.Visibility == Visibility.Collapsed;
+
+        holdField.SetValue(holdWindow, false);
+        Invoke(holdWindow, "ApplyLayout", flags);
+        Invoke(holdWindow, "Render", flags);
+        bool nothingWithoutToggle = !(bool)Invoke(holdWindow, "ShouldShow", flags);
+
+        holdWindow.Close();
+
+        bool holdSwapsPresentation = consistentWhenReleased && scoreboardWhileHeld
+            && consistentComesBack && heldWithoutToggle && nothingWithoutToggle;
+
         var toggle = new KeyboardChordState(0x09, 0x2D, 0x76);
         var toggleDown = toggle.Process(0x76, true, false, false, true);
         var toggleRepeat = toggle.Process(0x76, true, false, false, true);
@@ -982,7 +2102,7 @@ internal static class Program
             && toggleUp.Consume && !toggleUp.TriggerToggle
             && !disabled.Consume && !disabled.TriggerToggle;
 
-        bool passed = spacingApplied && bottomCenterTemplate && usesHudRenderer
+        bool passed = holdSwapsPresentation && spacingApplied && bottomCenterTemplate && usesHudRenderer
             && minimalistRenderer && minimalistTempHealth && minimalistFiveBars
             && themeRenderer && separateYouRenderer
             && separateGroupGap
@@ -1018,7 +2138,10 @@ internal static class Program
             $"adaptiveGrid={adaptiveGrid} " +
             $"separateAdaptiveGrid={separateAdaptiveGrid} " +
             $"youPersistsAfterNoOpRender={youPersistsAfterNoOpRender} " +
-            $"toggleState={hotkeyState}");
+            $"toggleState={hotkeyState} holdSwapsPresentation={holdSwapsPresentation} " +
+            $"(released={consistentWhenReleased} held={scoreboardWhileHeld} " +
+            $"back={consistentComesBack} heldOff={heldWithoutToggle} " +
+            $"idleOff={nothingWithoutToggle})");
         Console.WriteLine(passed
             ? "PASS"
             : "FAIL: consistent HUD renderer, templates, or toggle state machine changed");

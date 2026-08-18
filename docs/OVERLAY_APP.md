@@ -7,6 +7,7 @@ process — no injection, no memory reading, no DirectX hooking.
 
 **Current verification:** the v1.2.0 app and format-v1 addon VPK were live-tested in L4D2 on
 2026-08-15, including the Consistent HUD health-number, black-and-white, and Minimalist options.
+The v1.3.0 weapon and ammunition row has not been live-tested yet.
 
 ## Running it
 
@@ -130,15 +131,79 @@ it does not hold the game's scoreboard.
 
 Use **HUD design** to choose the card appearance independently of the placement template:
 
-- **Basic** keeps the existing full survivor card with the name, health bar, health value, and
-  item slots in one row.
-- **Minimalist** puts the name and item icons before the health value above a compact segmented
-  health strip. Temporary health keeps the grunge brush texture; items have no bounding boxes and
-  use only a black outline. The item column remains fixed-width, so long names are clipped with an
-  ellipsis and the icons remain visible. The strip uses five vertically compressed segments.
+- **Basic** keeps the full survivor card with the name, health bar, and health value in one row.
+- **Minimalist** puts the name before the health value above a compact segmented health strip.
+  Temporary health keeps the grunge brush texture. Long names are clipped with an ellipsis. The
+  strip uses five vertically compressed segments.
+
+Both Consistent HUD designs keep the item column for everyone except you. Your own three slots
+are drawn by the weapon HUD instead, the way vanilla keeps them beside your ammunition, so they
+are not shown twice; teammates and Finale Soldiers followers still carry theirs on their cards,
+and the Scoreboard tab shows the whole team's including your own.
   **Show health numbers** can hide the numeric value, and **Black & white theme** switches health,
   state, and follower colors to grayscale. These options apply only to the Consistent HUD,
   including its simulated preview and separate You card; the Scoreboard tab is unchanged.
+
+**Holding the scoreboard key puts the Consistent HUD away.** L4D2 hides its own survivor
+HUD while Tab is held and draws the scoreboard; the overlay follows, swapping to the
+scoreboard panel for as long as the key is down and restoring the persistent HUD — weapon
+panel and separated You card included — when it is released. With the Consistent HUD turned
+off, holding behaves as it always did.
+
+### Weapon HUD
+
+**Show your weapons, ammo, and items** draws a separate panel with your own primary weapon,
+its magazine and reserve count, your pistol, Magnum, chainsaw, or melee weapon beneath it,
+and a row of three item slots under those: throwable, kit, and pills, the way vanilla keeps
+them. It follows the listen-server host's survivor — your weapons and your pockets, not the
+roster's — and is never drawn by the Scoreboard tab.
+
+A single cartridge sits beside the primary's magazine count, the way vanilla marks the
+ammunition you are firing, with the reserve count under it. The secondary slot carries no
+mark: nothing upgrades a pistol. Deploy an incendiary or explosive pack and the
+cartridge becomes a flame or a burst in that upgrade's colour and the reserve line goes
+away: what is behind the magazine is ordinary ammunition, so a number under an upgraded
+count would be a lie about how many of those are left. The count itself becomes the upgrade's own pool rather than the magazine, so reloading
+does not put it back up - the magazine refills, but the number of upgraded rounds left does
+not change. All of it returns to normal when the upgraded rounds are gone - upgraded ammunition lives only
+in the magazine, so it runs out by being fired and the cartridge comes back on the same
+round. An exporter that cannot read the upgrade props draws the plain cartridge, since the
+count itself is still true.
+
+Whatever is in your hands is outlined in green - the weapon slot you are firing, or the item
+slot you have raised. Only one is ever marked, and an empty slot never is. The mark follows
+the roster export at 5 Hz, so it lands about a fifth of a second after the switch; the
+ammunition numbers keep their own 20 Hz channel and remain immediate.
+
+The item row keeps all three places whether or not they are filled, so an empty slot reads
+as "nothing there" rather than shifting the others along. The panel hides only when you are
+carrying nothing at all; bare hands with pills in your pocket still draws the row. Because
+the Consistent HUD cards no longer draw items, turning this setting off leaves your items
+unshown until Tab is held.
+
+It has its own placement, independent of the roster: **corner** picks Lower Right or Lower
+Left, **arrangement** stacks the slots vertically or sets them side by side, and **height**
+runs the full screen height, from sitting on the bottom edge to up near the top. **Weapon
+HUD size** scales it on its own, from half to double, on top of the Consistent HUD's size;
+opacity comes from the Consistent HUD settings, so the two panels stay visually related.
+
+Weapons draw with L4D2's own HUD icons, kept in the proportions the game gives them, so a
+Magnum is visibly smaller than an M60. The secondary slot is the exception: everything that
+lives there is small, so its art is scaled up to fill the box rather than left as a smudge
+beside the primary. All 33 weapons the game ships an icon for have one.
+The riot shield, which has none, and anything another addon adds fall back to a drawn
+silhouette for their family, so no slot is ever empty. Replacing or adding art is a matter of dropping a PNG named for the weapon
+id into `workshop assets/weapon-icons/` and rebuilding; see that folder's README.
+
+Ammunition counts down round by round: the addon writes a small dedicated file at 20 Hz
+carrying only your own magazine and reserve, and the app reads it at the same rate. If that
+file is missing, stale, or left over from a previous session, the panel falls back to the
+roster's 5 Hz numbers — still correct, just moving in steps of two or three while firing.
+
+Ammunition needs exporter v1.3.0 or newer. An older addon sends no weapon fields at all and
+the panel stays hidden. A value the exporter could not read prints nothing rather than `0`,
+so blank ammo means "no reading", not "empty magazine" — the exporter logs which read route
+answered at load, in `console.log`.
 
 ## Reading the panel
 
@@ -154,6 +219,9 @@ Use **HUD design** to choose the card appearance independently of the placement 
 | Middle slot: white medkit / lightning / ammo box | Medkit, defibrillator, explosive ammo, incendiary ammo |
 | Right slot: white bottle / syringe | Pills, adrenaline |
 | Dim empty box | Nothing carried in that slot |
+
+Item slots are on every card except your own in the Consistent HUD, on every card in the Tab
+scoreboard, and on the weapon HUD's own row for your three.
 
 A roster is only ever drawn from a live export. When the addon stops writing — a menu, a
 lobby, a load, a paused game — the panel draws nothing at all rather than the last roster it
@@ -241,6 +309,11 @@ Sits next to the exe. Edit and restart the app.
 | `consistentDesign` | `basic` | Consistent HUD card design: `basic` or `minimalist` |
 | `consistentShowHealthNumbers` | `true` | Show numeric health values in the Consistent HUD |
 | `consistentMonochrome` | `false` Basic / `true` Minimalist | Use grayscale colors in the Consistent HUD |
+| `consistentShowWeapons` | `true` | Draw the weapon HUD - your own primary/secondary slots, their ammunition, and your throwable/kit/pills |
+| `weaponPanelCorner` | `lower-right` | Which bottom corner the weapon HUD sits in: `lower-right` or `lower-left` |
+| `weaponPanelOrientation` | `vertical` | Weapon slot arrangement: `vertical` or `horizontal` |
+| `weaponPanelScale` | `1.0` | Weapon HUD size, as a multiplier on `consistentScale`; the slider runs `0.50`-`2.00` |
+| `weaponPanelVerticalOffset` | `0.10` | Fraction of the window height kept below the weapon HUD; the slider runs to `0.92` |
 | `consistentVerticalOffset` | `0.03` | Bottom inset for the consistent HUD; higher values move it upward |
 | `consistentHorizontalSpacing` | `10.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
 | `consistentVerticalSpacing` | `0.0` | Extra vertical card gap in layout pixels; negative values overlap cards |

@@ -19,7 +19,7 @@
     <Copyright>DrStr4nge</Copyright>
     <Description>External customized survivor HUD for Left 4 Dead 2</Description>
     <!-- Read at runtime for the menu/lobby badge. Keep this as the app version source. -->
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Regenerate with tools/Build-AppIcon.ps1; the file is committed. -->
     <ApplicationIcon>Assets\OverlayHud.ico</ApplicationIcon>
@@ -35,6 +35,12 @@
     </None>
     <EmbeddedResource Include="..\..\workshop assets\item-icons\*.png">
       <LogicalName>OverlayHud.Assets.ItemIcons.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <!-- Optional. Each file is named for the exporter's weapon id (rifle_ak47.png), and a
+         slot with no file falls back to its short text label - see SurvivorCard.WeaponChip.
+         The glob matching nothing is a valid, empty item group. -->
+    <EmbeddedResource Include="..\..\workshop assets\weapon-icons\*.png">
+      <LogicalName>OverlayHud.Assets.WeaponIcons.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
     <!-- Same icon the executable carries, so the tray and the editor cannot drift from it. -->
     <EmbeddedResource Include="Assets\OverlayHud.ico">

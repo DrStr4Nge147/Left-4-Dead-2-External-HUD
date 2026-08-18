@@ -1,5 +1,171 @@
 # Dev log
 
+## 2026-08-18 - v1.3.0: weapon slots, and what to do when the engine will not answer
+
+Classified weapons by classname, in two tables beside the existing item tables, rather than
+by position in `m_hMyWeapons`. That array is compacted, so the index a weapon sits at says
+nothing about which slot it occupies - the same reason the kit/pill/throwable scan already
+worked this way. A weapon in neither table exports as an empty slot instead of being
+guessed at: "has a magazine" would also describe a deployable or a script prop.
+
+Melee needed a second step. Every melee weapon is `weapon_melee`, so the useful identity is
+`m_strMapSetScriptName` - `katana`, `fireaxe`, `frying_pan`. When that read fails the
+exporter still reports a usable generic `melee` rather than an empty secondary slot.
+
+Probed the ammunition routes once per script load and logged the answer, following
+`DetectBotMode`. `Clip1()` is tried first as the semantic accessor, with `m_iClip1` behind
+it; reserve ammunition comes from the player's `m_iAmmo` indexed by the weapon's
+`m_iPrimaryAmmoType`, because the weapon itself only carries its magazine. None of these
+routes is verified on this build yet - which is exactly why every one of them is a probe
+with a logged failure and a `-1` fallback, and not a bare read. A silently missing ammo
+route would have looked identical to a survivor permanently out of bullets.
+
+Kept `-1` distinct from `0` all the way through the transport and into the card. The app
+prints nothing for `-1`, because a full rifle showing `0 / 0` is a worse failure than a
+rifle showing no numbers.
+
+Made the weapon icon set optional rather than required. The nine item icons ship with the
+app and a missing one is a build error; weapon art arrives one PNG at a time, so a slot
+with no icon draws a short text label instead and switches to the icon by itself once the
+file lands in `workshop assets/weapon-icons/`. The embedded-resource loader was split for
+this: item art still throws on a miss, weapon art returns null.
+
+Gave ammunition its own transport rather than speeding up the roster. Five exports a
+second cannot count an Uzi's magazine down - it empties at about twelve rounds a second, so
+the number arrived in jumps. Raising `INTERVAL` to match would have quadrupled the cost of
+the whole export, for every survivor and every field, to fix one number belonging to one
+player. `ammo.txt` is fifteen bytes written at 20 Hz from three property reads on one
+entity, and the roster tick is untouched.
+
+Kept weapon identity on the slow channel deliberately. Which gun is being held changes
+rarely and nobody can see a fifth of a second of lag on an icon; the rounds change
+constantly and everybody can see the counter stutter. Splitting them that way is what keeps
+the fast file tiny.
+
+Stopped exporting weapons for anyone but the host at the same time. Only their weapon HUD
+is drawn, so classifying every bot's rifle and reading its magazine was work whose result
+nothing displayed - and at 20 Hz it would have been repeated four times a second per bot.
+Items stayed per-survivor: those really do appear on every card.
+
+The channel's own check caught a bug worth keeping the lesson from: a leftover `ammo.txt`
+from the previous session was believed on its first sighting, because a file that has been
+read once looks exactly like one being written. It has to be seen to ADVANCE before it
+counts - the same rule `StateReader` already applies to `state.json`, arrived at the same
+way and for the same reason.
+
+Built the weapon row into the survivor cards first, and took it back out. On a card it
+was a fourth column competing with the health bar for the same glance, and it repeated for
+every survivor something only your own ammunition count actually answers. It is now a
+separate root-level panel following the listen-server host, placed like the Separate You
+card: its own corner, its own height, independent of the roster template and its spacing.
+The cards are back to exactly their v1.2.0 layout, and the check asserts that none of the
+three card templates draws a weapon.
+
+Gave it its own size multiplier for the same reason it got its own corner. It inherits the
+Consistent HUD's scale, so it tracks resolution and the roster's tuning, but a HUD size that
+suits four survivor cards is rarely the size you want a number you read mid-fight to be. The
+setting is a multiplier on that scale rather than an absolute one: the roster's size stays
+the reference point, and 1.00x still means "same as everything else".
+
+Then took the item slots off the player's own consistent card and gave them to this panel.
+Only theirs: the first cut removed the column from every card, which was wrong the moment it
+was on screen - a teammate's card is the only thing that says what that teammate is carrying,
+and the weapon HUD answers for one person. So the roster keeps items for everyone else, the
+player's own card drops the three the panel now draws larger, and nothing is said twice. The
+scoreboard cards kept the whole team's, the player included: the weapon HUD is hidden while
+Tab is held, so removing them there would have meant nobody's items were visible at all.
+
+Kept all three item places whether or not they are filled, which is the one place this copies
+vanilla rather than the cards. A row that reflows as items are used means the eye has to read
+the icons; a row with fixed places means position alone answers "do I have pills", which is
+the whole point of a HUD you do not look at directly.
+
+The panel's hide rule had to change with it. It hid when there were no weapon slots, which
+was right when weapons were all it drew and wrong the moment it carried items - unarmed with
+a kit in your pocket has something to say. Now it hides only for genuinely empty hands and
+empty pockets.
+
+Read the loaded ammunition kind from two properties together, because either alone is
+wrong. `m_upgradeBitVec` says which upgrade the weapon has been given and stays set once
+given - it never returns to normal, so a HUD driven by it alone would show a flame over
+plain rounds for the rest of the map. `m_nUpgradedPrimaryAmmoLoaded` is the count that
+actually runs out. So the count decides whether anything is marked and the bit vector only
+decides which mark, and the whole thing returns to a plain cartridge by being fired.
+
+Had the upgrade bits one place too high on the first pass, and only the game could say so.
+The first build read incendiary at `1 << 1` and explosive at `1 << 2`, which in a live round
+gave a plain cartridge for incendiary and a flame for explosive. Both symptoms together fix
+the layout: incendiary is `1 << 0` and explosive `1 << 1`. Worth writing down because there
+is no way to see it from outside the game, and because one observation would have been
+ambiguous where two pinned it.
+
+Showed the upgrade's own pool rather than the magazine while one is loaded, which the first
+build got wrong in a way only playing it reveals: reload with incendiary up and the count
+jumped back to 30, because the count was `m_iClip1` and that is exactly what a reload does.
+The magazine is the wrong number to show for an upgrade - it answers "how many before I
+reload" when the question is "how much fire is left". `m_nUpgradedPrimaryAmmoLoaded` counts
+down across reloads and hits zero at the moment the slot goes back to ordinary rounds, so
+it is both the honest number and the one that makes the mark's disappearance make sense.
+
+Put that kind on the 20 Hz channel rather than the roster, which is the opposite of where
+weapon identity went and for the same reason. Identity changes on a keypress; this changes
+on the trigger, alongside the counter it sits beside, and a mark that outlives the last
+upgraded round by a fifth of a second is a mark on the wrong bullet. The field is appended,
+so a four-field line from an older writer still reads and simply means "normal".
+
+Marked the held slot from the exporter rather than working it out in the app. The obvious
+version compares the active weapon's classname against the exported slot ids, and it is
+wrong twice over: a pair of pistols is still `weapon_pistol`, and every melee weapon is
+`weapon_melee`, so the two cases the HUD most wants to mark are the two the comparison
+cannot separate. The exporter is already walking `m_hMyWeapons` with `GetActiveWeapon()` in
+reach, so it compares entity indices there and exports a place - `primary`, `secondary`,
+`throwable`, `kit`, `pills` - and the app lights that box. An id it does not recognise, a
+gas can included, exports nothing and marks nothing, which is the honest answer.
+
+The mark rides the 5 Hz roster rather than the 20 Hz ammunition channel. Switching weapons
+is a keypress, not a stream, and a fifth of a second on a border is not the same as a fifth
+of a second on a counter that has to follow the trigger.
+
+Deliberately not filtered by `rosterFilter`. The roster filter answers "which survivors do
+I want listed"; the weapon HUD is the player's own HUD, and blanking their ammunition
+because they set the filter to Followers Only would be a bug wearing a setting's clothes.
+
+Drew the weapons as geometry first, one silhouette per family in a shared 64x24 box. Two
+shapes had to be redrawn after rendering them: a long triangular tip made both melee
+families read as arrows, and the "unknown weapon" crate drew solid because a Path with a
+fill and no stroke ignores line segments - it is a hollow box now, which EvenOdd gives for
+free.
+
+Then replaced them with the game's own art. Getting anything out took two throwaway
+readers, because the shipped `vpk.exe x` wrote correctly-sized files full of zeroes on this
+install: a VPK directory walker, and a VTF decoder that finds the largest mip and hands it
+to Pillow wrapped in a DDS header.
+
+Cut the first set out of `materials/vgui/hud/iconsheet.vtf` and its two siblings, which
+meant segmenting the atlases and identifying 29 shapes by eye - and getting the SCAR and
+the SG552 the wrong way round, which the author caught. The right source turned up while
+looking for an M60: the update pak carries one texture per weapon, named for the weapon -
+`materials/vgui/hud/icon_rifle_m60.vtf`, `icon_chainsaw.vtf`, `icon_tonfa.vtf`. Switched
+the whole set to those. It covers 33 weapons instead of 29, it is the art the game itself
+draws, and the filenames settle which rifle is which instead of leaving it to judgement.
+
+Flattened every icon to white through its alpha, which the game's textures are not - the
+frying pan is grey and would have read as disabled next to the other slots.
+
+Kept one icon from the atlas after all: the single pistol. The game's `icon_pistol.vtf` is
+the PAIR, and there is no separate texture for one, so a lone pistol was drawing as two.
+The atlas carries both, so the single came from there and the pair from the update pak. The
+exporter tells them apart with `m_isDualWielding`, and falls back to the magazine size when
+that read fails - over 15 rounds is a pair. The fallback is one-way and known to be: a pair
+firing down to its last rounds reports as a single pistol until it reloads.
+
+Scaled them by one shared factor rather than per weapon. The game already draws them in
+proportion to each other - a Magnum is 63 pixels wide where an M60 is 256 - so a single
+factor carries that relationship onto the HUD, with a floor so the smallest do not become
+smudges and a ceiling set by what the slot holds beside its ammunition column. The drawn
+silhouettes stay as the fallback for the riot shield, which has no HUD icon, and for ids
+from other addons; the text label remains the last resort behind both.
+
 ## 2026-08-15 - v1.2.0: the scoreboard and persistent HUD are different jobs
 
 Replaced the old `alwaysShow` behavior, which kept the scoreboard-shaped panel persistent.

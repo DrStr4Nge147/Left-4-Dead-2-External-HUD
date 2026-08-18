@@ -6,6 +6,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="WeaponIcons.xaml" />
                 <ResourceDictionary Source="HudResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

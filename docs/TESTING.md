@@ -1,17 +1,110 @@
-# Testing — exporter v1.2.0 + overlay app v1.2.0
+# Testing — exporter v1.3.0 + overlay app v1.3.0
 
 The exporter and the v1.2.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-15,
 including the Consistent HUD presentation options. This checklist remains the repeatable
 regression procedure for future builds: whether the overlay appears over the game, follows
 Tab, and stays out of the way.
 
+**v1.3.0 has not been live-tested.** Its weapon and ammunition reads are new engine routes,
+and the section below is what has to pass before the release is called done.
+
+## Scoreboard hold vs the Consistent HUD (v1.3.0)
+
+1. With the Consistent HUD on (F7), hold Tab. The persistent HUD — roster, You card, and
+   weapon panel — must disappear and the scoreboard panel take its place, alongside L4D2's
+   own scoreboard.
+2. Release Tab. The Consistent HUD must come straight back, in the same position and at the
+   same size as before.
+3. Turn the Consistent HUD off and repeat: holding Tab still shows the scoreboard panel,
+   releasing shows nothing at all.
+4. Hold and release quickly several times and confirm neither panel is left behind and the
+   layout does not drift.
+
+## Weapon HUD (v1.3.0)
+
+1. Confirm `console.log` carries one line for each read route shortly after the first
+   survivor is seen:
+
+   ```text
+   [OVLHUD] clip read: Clip1()
+   [OVLHUD] reserve ammo read: m_iAmmo[m_iPrimaryAmmoType]
+   ```
+
+   Either clip line is fine — `Clip1()` or `m_iClip1`. A `no route available` line means
+   that value stays `-1` for the session and no ammunition will ever draw.
+2. Confirm `ems\overlay_hudmmo.txt` exists once a round is running, and that its first
+   number changes several times a second. That is the 20 Hz ammunition channel.
+3. Fire a full magazine from an Uzi or an M60 and watch the counter: it should count down
+   round by round rather than jumping in twos. Delete `ammo.txt` mid-round and confirm the
+   counter keeps working — coarser — and recovers on its own when the file returns.
+4. Turn the Consistent HUD on (F7 by default) with **Show your weapons and ammo** checked.
+   Confirm the weapon panel appears in the lower right with your primary weapon, the
+   magazine large and the reserve under it, and your pistol below that. Fire and reload:
+   both numbers must track the real in-game ammo counter exactly.
+5. Confirm the silhouettes are distinguishable at a glance and correctly sized against each
+   other — a pistol clearly smaller than a rifle, a sniper the longest.
+6. Pick up a Magnum, then a chainsaw, then a melee weapon. The secondary slot must follow
+   each one, and a melee weapon must draw its own icon rather than a plain box. A plain box
+   for every melee means the `melee id read` route failed; check `console.log`.
+7. Start with one pistol and confirm the slot draws a single pistol, then pick up a second
+   and confirm it changes to the pair. If `console.log` carries
+   `dual pistol read: m_isDualWielding unavailable`, the exporter is guessing from the
+   magazine instead — in that case a pair below 16 rounds will show as a single pistol,
+   which is expected, and worth reporting.
+8. Drop the primary entirely and confirm its slot disappears while the secondary stays,
+   with the panel still sitting in its corner rather than shifting.
+9. Switch **Weapon HUD corner** to Lower Left and confirm the panel moves without disturbing
+   the roster or the Separate You card. Set the roster to the lower-left template as well
+   and confirm the two do not overlap in a way you cannot live with.
+10. Switch **Weapon slot arrangement** to Horizontal and confirm the slots sit side by side
+   with one gap between them and none trailing after the last.
+11. Drag **Weapon HUD height** from 0% to the top of its range and confirm the panel travels
+   the full height of the screen and stays fully on screen at both ends.
+12. Uncheck **Show your weapons, ammo, and items**, Save & Apply, and confirm the panel
+   disappears entirely — no empty box, no reserved space.
+13. Confirm the Tab scoreboard never shows the weapon panel, with the setting either way,
+    and that the survivor cards themselves show no weapons in either HUD design.
+14. Confirm the panel fades with the Consistent HUD's opacity slider, and that changing
+    **HUD size** moves it too.
+15. Drag **Weapon HUD size** across its range and confirm the panel grows and shrinks on
+    its own, with the roster and the Separate You card untouched, and that it stays in its
+    corner at both ends. Reset returns it to 1.00x.
+16. Confirm the item row under the weapons follows what you carry: pick up and throw a
+    Molotov, use a medkit, take pills. Each slot must fill and empty on its own, and the
+    three places must stay put — an emptied slot draws a dim box rather than closing up.
+17. Confirm your own Consistent HUD card draws no items, in both Basic and Minimalist, while
+    every other survivor's card still shows theirs, and that the Tab scoreboard shows the
+    whole team's including your own.
+18. Drop everything, empty-handed, and confirm the panel hides. Pick up pills alone and
+    confirm it comes back with the item row and no weapon slots above it.
+19. Switch between primary, secondary, throwable, kit, and pills and confirm the green
+    outline follows your hands, one slot at a time, and clears when you put everything
+    away. With a pistol pair and with a melee weapon, confirm the secondary slot marks
+    correctly rather than the primary.
+20. Confirm `console.log` carries `[OVLHUD] ammo upgrade read: m_upgradeBitVec +
+    m_nUpgradedPrimaryAmmoLoaded` once a round is running. A `no route available` line
+    means every magazine will read as normal rounds for the session.
+21. Deploy an incendiary pack and confirm the mark beside the magazine becomes an orange
+    flame and the reserve count under it disappears. Confirm the number is the upgraded
+    rounds left rather than the magazine: reload mid-upgrade and it must not jump back up,
+    it must keep counting down from where it was. Fire the upgraded rounds off and confirm the grey cartridge and the reserve
+    count both return on the round they run out - not a magazine later. Repeat with an
+    explosive pack and confirm the yellow burst.
+22. With an older exporter VPK installed (v1.2.0), confirm the panel stays hidden and
+    nothing breaks — the version badge is expected to report the mismatch.
+
 ## Setup
 
 1. **Close L4D2 first.** Addon VPKs are mounted at startup; swapping one while the game runs
    does not load the new script and silently unloads the old one. Every "the overlay stopped
    working" report so far has been this.
-2. Remove any older `overlay_hud_export_*.vpk` from `left4dead2\addons\`.
-3. Copy `compiled vpks\overlay_hud_export_v1.2.0.vpk` into:
+2. Repack the addon if any script changed, then remove any older
+   `overlay_hud_export_*.vpk` from `left4dead2\addons\`:
+
+   ```text
+   powershell -ExecutionPolicy Bypass -File tools\Build-AddonVpk.ps1
+   ```
+3. Copy `compiled vpks\overlay_hud_export_v1.3.0.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -24,7 +117,7 @@ Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.2.0 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 1.3.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -52,8 +145,11 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
   edge aligns with, rather than protrudes from, the simulated dark sidebar.
 - With six preview survivors, confirm all nine item types appear as crisp, flat white
   silhouettes on black slots—no letter abbreviations, gradients, or colored tint.
-- Confirm every card orders its slots like vanilla L4D2: throwable on the left, kit/ammo
-  in the middle, pills/adrenaline on the right.
+- Confirm the ammunition mark is on the primary slot only, never beside a pistol or melee
+  count.
+- Confirm every slot row orders like vanilla L4D2 - throwable on the left, kit/ammo in the
+  middle, pills/adrenaline on the right - on the Scoreboard cards, on the other survivors'
+  Consistent HUD cards, and on the weapon HUD's own row.
 - Move each UI control and confirm the preview updates immediately.
 - Confirm **UI size** stops at 1.00× and still allows shrinking to 0.60×.
 - Confirm **Vertical start** defaults to 59% and that the preview panel's right edge meets
@@ -159,7 +255,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.2.0` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v1.3.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

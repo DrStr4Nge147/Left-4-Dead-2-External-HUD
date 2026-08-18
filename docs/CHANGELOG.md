@@ -2,6 +2,74 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v1.3.0 - 2026-08-18: your weapons and ammunition, as their own HUD
+
+Health belongs to the roster; ammunition belongs where you are already looking. The weapon
+slots are their own panel rather than another column on a survivor card.
+
+- Adds a **weapon HUD**: your own primary weapon with its magazine and reserve ammunition,
+  and your pistol, Magnum, chainsaw, or melee weapon beneath it. It follows the
+  listen-server host's survivor, so it is your weapons, not the roster's.
+- Uses L4D2's own HUD weapon icons for all 33 weapons the game ships one for - every gun
+  and every melee weapon. They keep the proportions the game gives them, so a Magnum reads
+  as smaller than an M60 at a glance.
+- Draws one pistol or two, matching what is actually being carried, rather than the same
+  icon for both.
+- Falls back to a drawn silhouette for the riot shield, which has no HUD icon of its own,
+  and for anything another addon adds, so no slot is ever empty.
+- Moves your own carried items onto the weapon HUD, where vanilla keeps them: throwable,
+  kit, and pills as a three-slot row under your weapons, all three places held whether or
+  not they are filled. Your Consistent HUD card drops its item column, since the same three
+  slots would otherwise be drawn twice; every other survivor keeps theirs, and the Tab
+  scoreboard shows the whole team's, the weapon HUD being hidden while Tab is held.
+- Outlines the slot you are actually holding in green, weapons and items alike, the way
+  vanilla marks the weapon in your hands. The exporter reports which slot is held rather
+  than which weapon, because a pistol pair and a melee weapon cannot be told from their
+  neighbours by name.
+- Marks what kind of rounds are loaded beside the magazine count: a cartridge normally, a
+  flame for incendiary and a burst for explosive, each in its own colour. Deploy an upgrade
+  pack and the mark changes; fire the upgraded rounds off and it changes back on the round
+  they run out. The kind rides the 20 Hz ammunition channel for exactly that reason.
+- Counts the upgrade's own pool while one is loaded, not the magazine, so reloading no
+  longer puts the number back to full: what is shown is how many upgraded rounds are left,
+  down to the one that ends it.
+- Hides the reserve count while an upgrade is loaded, and through reloads, since the rounds
+  behind the magazine are ordinary ones. It returns with the plain cartridge.
+- Draws the ammunition mark on the primary slot only. Nothing upgrades a pistol, and a
+  cartridge beside every secondary count was noise.
+- Draws the weapon HUD for an unarmed survivor who is still carrying something. Only bare
+  hands and empty pockets hide it.
+- Adds a **WEAPON HUD** section to the Consistent HUD editor tab: **Show your weapons and
+  items** (on by default), a **corner** choice of Lower Right or Lower Left, a **vertical or
+  horizontal** slot arrangement, a **height** slider running the full screen height, and a
+  **size** slider that scales the panel on its own, from half size to double, on top of the
+  Consistent HUD's size. The panel keeps the Consistent HUD's opacity; the Scoreboard tab
+  never shows it.
+- Counts ammunition down round by round. The addon writes a second, tiny transport file
+  at 20 Hz carrying just your own magazine and reserve, so the counter follows the trigger
+  instead of jumping in twos and threes at the roster's 5 Hz. The roster export is
+  unchanged, so the cost does not scale with the number of survivors.
+- Distinguishes "no ammunition reading available" from "empty magazine". A value the
+  exporter could not read prints nothing at all rather than a confident `0`.
+- Holding the scoreboard key now hides the Consistent HUD and shows the scoreboard panel
+  instead, the way L4D2 hides its own survivor HUD while Tab is held. Releasing brings the
+  Consistent HUD back if it was turned on; if it was not, holding still gives the scoreboard
+  and releasing still gives nothing.
+- Reworks the editor: settings fill the window instead of a fixed 300px list, cards are
+  grouped into labelled sections and reflow with the window width, the tab strip stays put
+  while the settings scroll, and every slider gets its own reset button. Opens at 920x788,
+  clamped to the screen it opens on.
+- Leaves the rest of the survivor cards alone. Health and state read exactly as they did in
+  v1.2.0 in both HUD designs.
+- Advances the exporter addon and desktop overlay together to v1.3.0. The exporter adds the
+  optional `pri`, `priclip`, `priammo`, `sec`, and `secclip` transport fields for the host
+  player, with `sec` distinguishing `pistol` from `pistol_dual`, plus the 20 Hz
+  `ammo.txt` channel; older state
+  files remain readable and simply leave the weapon HUD hidden.
+
+**Not yet live-tested in L4D2.** The weapon and ammunition reads are new engine routes;
+`docs/TESTING.md` carries the checklist that has to pass before this is called done.
+
 ## Overlay HUD v1.2.0 - 2026-08-15: separate the scoreboard from the consistent HUD
 
 The Tab-held panel is a scoreboard companion; a persistent HUD needs its own visual role,

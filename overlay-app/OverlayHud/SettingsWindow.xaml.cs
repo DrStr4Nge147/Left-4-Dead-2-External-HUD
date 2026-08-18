@@ -37,6 +37,8 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
 
+        FitToScreen();
+
         _live = config;
         _draft = config.Clone();
         _apply = apply;
@@ -74,7 +76,18 @@ public partial class SettingsWindow : Window
 
         // Says out loud what the scrollbar implies, and disappears once everything fits.
         ControlScroller.ScrollChanged += (_, _) => RefreshScrollHint();
-        ControlScroller.SizeChanged += (_, _) => RefreshScrollHint();
+        ControlScroller.SizeChanged += (_, _) =>
+        {
+            RefreshScrollHint();
+            // Also on Loaded: at construction the scroller has no width yet, so the first pass
+        // measures zero and leaves the cards on the markup's default column count. That is
+        // the "it only lays out properly after I resize the window" bug - the first real
+        // measurement was arriving from the user's own resize.
+        Loaded += (_, _) => RefreshCardColumns();
+        SizeChanged += (_, _) => RefreshCardColumns();
+        RefreshCardColumns();
+        };
+        RefreshCardColumns();
         RefreshScrollHint();
 
         LoadControls();
@@ -83,6 +96,77 @@ public partial class SettingsWindow : Window
         UpdateGameStatus();
         UpdateVersionBanner();
         _gameStatusTimer.Start();
+    }
+
+    /// <summary>
+    /// Cards reflow to the width available. Three across is right for the default window;
+    /// narrower than that and the labels wrap into unreadable columns, wider and the rows
+    /// stretch into long thin strips with the value floating an inch from its slider.
+    /// </summary>
+    /// <summary>
+    /// Sizes the editor against the screen it is opening on, rather than trusting the
+    /// designed size to fit.
+    ///
+    /// A fixed size is only ever right for one display. At 150% or 200% scaling the same
+    /// numbers are half the usable desktop, and a window taller than the work area opens
+    /// with its Save button under the taskbar - which is exactly where it is needed.
+    /// The designed size is treated as a maximum, never a minimum.
+    /// </summary>
+    private void FitToScreen()
+    {
+        var area = SystemParameters.WorkArea;
+        if (area.Width <= 0 || area.Height <= 0) return;
+
+        // Never taller than the work area, whatever the window is later resized to.
+        MaxHeight = area.Height;
+        MaxWidth = area.Width;
+
+        double width = Math.Min(Width, area.Width * 0.74);
+        double height = Math.Min(Height, area.Height * 0.80);
+
+        // A small screen wins over the minimums too: a window that cannot fit is worse
+        // than one that has to scroll a little more.
+        MinWidth = Math.Min(MinWidth, width);
+        MinHeight = Math.Min(MinHeight, height);
+
+        Width = width;
+        Height = height;
+    }
+
+    private void RefreshCardColumns()
+    {
+        double width = ControlScroller.ActualWidth;
+        if (width <= 0) return;
+
+        int columns = width switch
+        {
+            < 760 => 1,
+            < 1080 => 2,
+            < 1560 => 3,
+            _ => 4
+        };
+
+        foreach (var grid in FindCardGrids(ControlScroller))
+        {
+            if (grid.Columns != columns) grid.Columns = columns;
+        }
+    }
+
+    private static IEnumerable<System.Windows.Controls.Primitives.UniformGrid> FindCardGrids(
+        DependencyObject parent)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+            if (child is System.Windows.Controls.Primitives.UniformGrid grid)
+            {
+                yield return grid;
+                continue;   // card grids do not nest
+            }
+
+            foreach (var nested in FindCardGrids(child)) yield return nested;
+        }
     }
 
     private void RefreshScrollHint()
@@ -202,6 +286,13 @@ public partial class SettingsWindow : Window
         ConsistentSeparateYouCheckBox.IsChecked = _draft.ConsistentSeparateYou;
         ConsistentShowHealthNumbersCheckBox.IsChecked = _draft.ConsistentShowHealthNumbers;
         ConsistentMonochromeCheckBox.IsChecked = _draft.ConsistentMonochrome;
+        ConsistentShowWeaponsCheckBox.IsChecked = _draft.ConsistentShowWeapons;
+        WeaponVerticalSlider.Value = WeaponPanelPolicy.ClampVerticalOffset(
+            _draft.WeaponPanelVerticalOffset);
+        WeaponScaleSlider.Value = WeaponPanelPolicy.ClampScale(_draft.WeaponPanelScale);
+        SelectByTag(WeaponCornerCombo, WeaponPanelPolicy.ParseCorner(_draft.WeaponPanelCorner));
+        SelectByTag(WeaponOrientationCombo,
+                    WeaponPanelPolicy.ParseOrientation(_draft.WeaponPanelOrientation));
         ConsistentHotkeyBox.Text = HotkeyDisplay.Name(_draft.ConsistentKey);
         SelectConsistentTemplate(_draft.ConsistentTemplate);
         SelectConsistentDesign(_draft.ConsistentDesign);
@@ -244,9 +335,44 @@ public partial class SettingsWindow : Window
 
     private bool IsConsistentTab => SettingsTabs.SelectedIndex == 1;
 
+    /// <summary>
+    /// The visible strip drives the TabControl, which remains the one place the selected
+    /// tab actually lives. A negative index is the ListBox rebuilding its containers, and
+    /// must never be forwarded: it would leave the editor with no tab selected at all.
+    /// </summary>
+    private void OnTabStripChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.Source != TabStrip) return;
+
+        if (TabStrip.SelectedIndex < 0)
+        {
+            TabStrip.SelectedIndex = SettingsTabs?.SelectedIndex ?? 0;
+            return;
+        }
+
+        if (SettingsTabs != null && SettingsTabs.SelectedIndex != TabStrip.SelectedIndex)
+        {
+            SettingsTabs.SelectedIndex = TabStrip.SelectedIndex;
+        }
+    }
+
     private void OnSettingsTabChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!_ready || e.Source != SettingsTabs) return;
+
+        if (TabStrip != null && TabStrip.SelectedIndex != SettingsTabs.SelectedIndex)
+        {
+            TabStrip.SelectedIndex = SettingsTabs.SelectedIndex;
+        }
+
+        // A TabControl builds a tab's contents the first time that tab is shown, so the
+        // card grids on the tab being opened have never been measured and are still on the
+        // column count written in the markup. Re-run the fit once they exist - at Loaded
+        // priority, because right now they do not.
+        //
+        // This is why the second tab opened three-across and only corrected itself when the
+        // window was resized: the resize was the first event that reached the new grids.
+        Dispatcher.BeginInvoke(new Action(RefreshCardColumns), DispatcherPriority.Loaded);
 
         RefreshScrollHint();
         RefreshPreview();
@@ -291,7 +417,13 @@ public partial class SettingsWindow : Window
                 _windowedBounds = new Rect(Left, Top, Width, Height);
                 PreviewHost.Visibility = Visibility.Collapsed;
                 PreviewRow.Height = new GridLength(0);
-                SizeToContent = SizeToContent.Height;
+
+                // Deliberately NOT SizeToContent.Height. That made sense while the settings
+                // list was capped at 300px and the window could shrink-wrap what was left;
+                // now the list fills the space the preview gave up, so asking the window to
+                // fit its content means asking it to be as tall as every card in both tabs
+                // - which is the whole screen. The list scrolls; the window stays put.
+                SizeToContent = SizeToContent.Manual;
                 DockClearOfPanel();
             }
 
@@ -303,7 +435,7 @@ public partial class SettingsWindow : Window
         {
             SizeToContent = SizeToContent.Manual;
             PreviewHost.Visibility = Visibility.Visible;
-            PreviewRow.Height = new GridLength(1, GridUnitType.Star);
+            PreviewRow.Height = new GridLength(3, GridUnitType.Star);
             Left = _windowedBounds.Left;
             Top = _windowedBounds.Top;
             Width = _windowedBounds.Width;
@@ -322,7 +454,10 @@ public partial class SettingsWindow : Window
     {
         var work = SystemParameters.WorkArea;
 
-        Width = Math.Min(Width, Math.Max(MinWidth, work.Width * 0.45));
+        // Half the work area is the budget: enough to keep the editor clear of the panel
+        // it is adjusting, without shrinking a window that already fits inside that.
+        Width = Math.Min(Width, Math.Max(MinWidth, work.Width * 0.50));
+        Height = Math.Min(Height, work.Height - 48);
         Left = Math.Max(work.Left, work.Right - Width - 24);
         Top = work.Top + 24;
     }
@@ -399,6 +534,88 @@ public partial class SettingsWindow : Window
             .FirstOrDefault(item => string.Equals(item.Tag as string, wanted,
                                                    StringComparison.OrdinalIgnoreCase))
             ?? ConsistentTemplateCombo.Items[0];
+    }
+
+    /// <summary>Selects the item whose Tag matches, falling back to the first.</summary>
+    private static void SelectByTag(System.Windows.Controls.ComboBox combo, string wanted)
+    {
+        combo.SelectedItem = combo.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag as string, wanted,
+                                                   StringComparison.OrdinalIgnoreCase))
+            ?? combo.Items[0];
+    }
+
+    /// <summary>
+    /// The simulated weapon panel. It uses the same corner, orientation, and height the
+    /// live overlay would, at the consistent HUD's scale times the weapon panel's own
+    /// size multiplier, so the editor is showing the real relationship between the two
+    /// panels rather than a decorative stand-in.
+    /// </summary>
+    private void RefreshWeaponPreview(double scale)
+    {
+        if (_draft.ConsistentShowWeapons != true)
+        {
+            PreviewWeaponPanel.Visibility = Visibility.Collapsed;
+            PreviewWeaponSlots.ItemsSource = null;
+            PreviewWeaponItems.ItemsSource = null;
+            return;
+        }
+
+        bool horizontal = WeaponPanelPolicy.IsHorizontal(_draft.WeaponPanelOrientation);
+        var sample = SampleRoster.WeaponSurvivor();
+        var slots = SurvivorCard.WeaponChip.SlotsFor(sample, horizontal);
+
+        PreviewWeaponSlots.ItemsPanel = WeaponSlotPanel(horizontal);
+        PreviewWeaponSlots.ItemsSource = slots;
+        PreviewWeaponItems.ItemsSource = SurvivorCard.ItemChip.SlotsFor(sample);
+        PreviewWeaponItems.HorizontalAlignment =
+            WeaponPanelPolicy.IsLeft(_draft.WeaponPanelCorner)
+                ? System.Windows.HorizontalAlignment.Left
+                : System.Windows.HorizontalAlignment.Right;
+        PreviewWeaponPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
+
+        // Same relationship the live overlay uses: the consistent HUD's scale times the
+        // weapon panel's own multiplier.
+        scale *= WeaponPanelPolicy.ClampScale(_draft.WeaponPanelScale);
+        PreviewWeaponPanelScale.ScaleX = PreviewWeaponPanelScale.ScaleY = scale;
+
+        Size natural = LayoutMeasurement.NaturalSize(PreviewWeaponPanel);
+        double width = natural.Width * scale;
+        double height = natural.Height * scale;
+        double insetX = PreviewWidth * WeaponPanelPolicy.HorizontalInset;
+        double insetY = PreviewHeight
+            * WeaponPanelPolicy.ClampVerticalOffset(_draft.WeaponPanelVerticalOffset);
+
+        Canvas.SetLeft(PreviewWeaponPanel,
+                       WeaponPanelPolicy.IsLeft(_draft.WeaponPanelCorner)
+                           ? insetX
+                           : PreviewWidth - insetX - width);
+        Canvas.SetTop(PreviewWeaponPanel, PreviewHeight - insetY - height);
+        PreviewWeaponPanel.Visibility = Visibility.Visible;
+    }
+
+    private static ItemsPanelTemplate WeaponSlotPanel(bool horizontal)
+    {
+        var factory = new FrameworkElementFactory(typeof(StackPanel));
+        factory.SetValue(StackPanel.OrientationProperty,
+                         horizontal
+                             ? System.Windows.Controls.Orientation.Horizontal
+                             : System.Windows.Controls.Orientation.Vertical);
+
+        var template = new ItemsPanelTemplate(factory);
+        template.Seal();
+        return template;
+    }
+
+    private void OnWeaponPanelChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || (e.Source != WeaponCornerCombo && e.Source != WeaponOrientationCombo))
+            return;
+
+        ReadControls();
+        RefreshPreview();
+        SaveStatus.Text = "Unsaved changes";
     }
 
     private void SelectConsistentDesign(string? value)
@@ -529,6 +746,14 @@ public partial class SettingsWindow : Window
         _draft.ConsistentShowHealthNumbers =
             ConsistentShowHealthNumbersCheckBox.IsChecked == true;
         _draft.ConsistentMonochrome = ConsistentMonochromeCheckBox.IsChecked == true;
+        _draft.ConsistentShowWeapons = ConsistentShowWeaponsCheckBox.IsChecked == true;
+        _draft.WeaponPanelVerticalOffset = WeaponVerticalSlider.Value;
+        _draft.WeaponPanelScale = WeaponScaleSlider.Value;
+        if (WeaponCornerCombo.SelectedItem is ComboBoxItem corner)
+            _draft.WeaponPanelCorner = WeaponPanelPolicy.ParseCorner(corner.Tag as string);
+        if (WeaponOrientationCombo.SelectedItem is ComboBoxItem orientation)
+            _draft.WeaponPanelOrientation =
+                WeaponPanelPolicy.ParseOrientation(orientation.Tag as string);
         _draft.OffsetUnits = "percent";
         _draft.OffsetX = OffsetXSlider.Value;
         _draft.OffsetY = OffsetYSlider.Value;
@@ -553,6 +778,8 @@ public partial class SettingsWindow : Window
         ConsistentVerticalValue.Text = $"{ConsistentVerticalSlider.Value:P1} from bottom";
         ConsistentHorizontalSpacingValue.Text = $"{ConsistentHorizontalSpacingSlider.Value:0} px";
         ConsistentVerticalSpacingValue.Text = $"{ConsistentVerticalSpacingSlider.Value:0} px";
+        WeaponVerticalValue.Text = $"{WeaponVerticalSlider.Value:P1} from bottom";
+        WeaponScaleValue.Text = $"{WeaponScaleSlider.Value:0.00}x";
         OffsetXValue.Text = $"{OffsetXSlider.Value:P1}";
         OffsetYValue.Text = $"{OffsetYSlider.Value:P0}";
         BottomReserveValue.Text = $"{BottomReserveSlider.Value:P0}";
@@ -598,6 +825,8 @@ public partial class SettingsWindow : Window
         PreviewBottomReserve.Visibility = consistent ? Visibility.Collapsed : Visibility.Visible;
         PreviewYouPanel.Visibility = Visibility.Collapsed;
         PreviewConsistentYouCards.ItemsSource = null;
+        PreviewWeaponPanel.Visibility = Visibility.Collapsed;
+        PreviewWeaponSlots.ItemsSource = null;
 
         if (consistent)
         {
@@ -693,6 +922,8 @@ public partial class SettingsWindow : Window
                 Canvas.SetTop(PreviewYouPanel, PreviewHeight - insetY - youRenderedHeight);
                 PreviewYouPanel.Visibility = Visibility.Visible;
             }
+
+            RefreshWeaponPreview(hudBaseScale * hudFit);
             return;
         }
 
@@ -774,6 +1005,50 @@ public partial class SettingsWindow : Window
         }
 
         return columns;
+    }
+
+    /// <summary>
+    /// Puts one slider back to the value a fresh install would have, leaving every other
+    /// setting alone. The consistent-HUD sliders answer to the selected HUD design, because
+    /// that is where their defaults come from - resetting HUD size under Minimalist has to
+    /// give Minimalist's 1.00x, not Basic's 0.65x.
+    /// </summary>
+    private void OnResetSliderClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: string name }) return;
+        if (FindName(name) is not Slider slider) return;
+
+        var fresh = new AppConfig();
+        var design = ConsistentHudPolicy.DefaultsFor(
+            ConsistentDesignCombo.SelectedItem is ComboBoxItem item
+                ? item.Tag as string
+                : _draft.ConsistentDesign);
+
+        double? value = name switch
+        {
+            "ScaleSlider" => fresh.Scale,
+            "OpacitySlider" => fresh.Opacity,
+            "OffsetXSlider" => fresh.OffsetX,
+            "OffsetYSlider" => fresh.OffsetY,
+            "BottomReserveSlider" => fresh.BottomReserve,
+            "MaxColumnsSlider" => fresh.MaxColumns,
+            "PreviewCountSlider" => 6,   // same stand-in roster Reset UI restores
+            "ConsistentScaleSlider" => design.Scale,
+            "ConsistentOpacitySlider" => design.Opacity,
+            "ConsistentVerticalSlider" => design.VerticalPosition,
+            "ConsistentHorizontalSpacingSlider" => design.HorizontalSpacing,
+            "ConsistentVerticalSpacingSlider" => design.VerticalSpacing,
+            "WeaponVerticalSlider" => fresh.WeaponPanelVerticalOffset,
+            "WeaponScaleSlider" => fresh.WeaponPanelScale,
+            _ => null
+        };
+
+        if (value == null) return;
+
+        // Clamped for the same reason the loader clamps: a default that falls outside a
+        // slider's range would silently land on the nearest end instead of erroring, and
+        // this is the one place that would go unnoticed.
+        slider.Value = Math.Clamp(value.Value, slider.Minimum, slider.Maximum);
     }
 
     private void OnResetClick(object sender, RoutedEventArgs e)

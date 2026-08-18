@@ -2,29 +2,541 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Left 4 Dead 2 Customized Overlay HUD - External"
-        Width="1360" Height="980"
-        MinWidth="960" MinHeight="720"
+        Width="920" Height="788"
+        MinWidth="860" MinHeight="560"
         WindowStartupLocation="CenterScreen"
-        Background="#111419"
+        Background="#0E1116"
         Foreground="#F0F2F5"
         Topmost="True">
     <Window.Resources>
+        <!-- One palette, named once. Every colour below is drawn from it, so the editor can
+             be re-themed by editing this block rather than hunting hex codes through 800
+             lines of markup. -->
+        <SolidColorBrush x:Key="Page" Color="#0E1116" />
+        <SolidColorBrush x:Key="Surface" Color="#161A21" />
+        <SolidColorBrush x:Key="Card" Color="#1B2028" />
+        <SolidColorBrush x:Key="CardHover" Color="#202632" />
+        <SolidColorBrush x:Key="Line" Color="#2A313C" />
+        <SolidColorBrush x:Key="Accent" Color="#6AA9FF" />
+        <SolidColorBrush x:Key="AccentDim" Color="#2C4A7A" />
+        <SolidColorBrush x:Key="Text" Color="#E9EDF3" />
+        <SolidColorBrush x:Key="TextMuted" Color="#93A0B0" />
+        <SolidColorBrush x:Key="Warn" Color="#F1B85B" />
+
         <Style TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="Foreground" Value="#F0F2F5" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
         </Style>
+
+        <!-- A control card. Lifts on hover so the pointer has something to land on, which
+             also makes the three-column grid read as separate settings rather than one
+             wall of text. -->
         <Style x:Key="ControlCard" TargetType="Border">
-            <Setter Property="Background" Value="#20252D" />
-            <Setter Property="BorderBrush" Value="#343B46" />
+            <Setter Property="Background" Value="{StaticResource Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Line}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="12,9" />
-            <Setter Property="Margin" Value="5" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Margin" Value="6" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource CardHover}" />
+                    <Setter Property="BorderBrush" Value="#3A4552" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="18,8" />
-            <Setter Property="Margin" Value="6,0,0,0" />
-            <Setter Property="MinWidth" Value="92" />
+
+        <!-- Section label above a group of cards. -->
+        <Style x:Key="SectionHeading" TargetType="TextBlock">
+            <Setter Property="Margin" Value="8,16,0,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource Accent}" />
+        </Style>
+
+        <!-- Buttons: one accented primary, the rest quiet outlines. The stock WPF chrome is
+             a grey bevel that looks like a different application on this background. -->
+        <Style x:Key="GhostButton" TargetType="Button">
+            <Setter Property="Padding" Value="18,9" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="6"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource Line}"
+                                BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#232A34" />
+                                <Setter TargetName="Chrome" Property="BorderBrush"
+                                        Value="#3F4A58" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#1A2029" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+            <Setter Property="Foreground" Value="#08121F" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="6"
+                                Background="{StaticResource Accent}"
+                                BorderThickness="0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#8FBEFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#5793E4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button" BasedOn="{StaticResource GhostButton}" />
+
+        <!-- Tabs as an underlined strip. The stock TabItem draws a raised folder tab, which
+             on a dark page reads as a disabled button. -->
+        <!-- Per-slider reset. Small, quiet, and right at the value it undoes - the
+             alternative is Reset UI, which throws away every other slider as well. -->
+        <Style x:Key="SliderReset" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ToolTip" Value="Reset to default" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="11"
+                                Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="1">
+                            <Grid Width="13" Height="13">
+                                <Path x:Name="Arc" Stretch="Uniform"
+                                      Data="M 13.4,8 A 5.4,5.4 0 1 1 8,2.6"
+                                      Stroke="{StaticResource TextMuted}"
+                                      StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round" />
+                                <Path x:Name="Head" Stretch="Uniform"
+                                      HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Width="6" Height="6"
+                                      Data="M 0,0 L 0,5.6 L 4.4,2.8 Z"
+                                      Fill="{StaticResource TextMuted}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#232B36" />
+                                <Setter TargetName="Arc" Property="Stroke"
+                                        Value="{StaticResource Accent}" />
+                                <Setter TargetName="Head" Property="Fill"
+                                        Value="{StaticResource Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#1A212A" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The visible tab strip. It is a ListBox rather than the TabControl's own
+             header panel because the strip has to sit OUTSIDE the scrolling area to stay
+             put, and a TabControl draws its headers inside itself. The TabControl below
+             still owns which tab is selected; this only reflects and sets it. -->
+        <Style x:Key="TabStripItem" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Chrome" Background="Transparent" Padding="16,10">
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </Border>
+                            <Rectangle x:Name="Underline" Height="2"
+                                       Fill="{StaticResource Accent}"
+                                       VerticalAlignment="Bottom" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter TargetName="Underline" Property="Visibility"
+                                        Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#161C24" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid>
+                            <Border x:Name="Chrome" Background="Transparent"
+                                    Padding="16,10">
+                                <ContentPresenter ContentSource="Header"
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                            <Rectangle x:Name="Underline" Height="2" Fill="{StaticResource Accent}"
+                                       VerticalAlignment="Bottom" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter TargetName="Underline" Property="Visibility"
+                                        Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#161C24" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <!-- Content only. The headers are the sticky strip above the
+                             scroller; drawing them here as well would put a second set
+                             inside the scrolling area.
+
+                             PART_SelectedContentHost is not decoration: TabControl looks
+                             that name up when the template is applied and only then feeds
+                             it the selected tab. Without it the presenter stays empty and
+                             the editor opens as a blank panel. -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- The header panel is kept, at zero height. It is the
+                                 TabControl's items host: without one in the template no tab
+                                 containers are ever generated, SelectedContent stays null,
+                                 and the editor opens as an empty panel. It draws nothing -
+                                 the visible headers are the sticky strip above the
+                                 scroller - but it has to exist and be measured. -->
+                            <TabPanel Grid.Row="0" IsItemsHost="True"
+                                      Height="0" Opacity="0" IsHitTestVisible="False" />
+
+                            <ContentPresenter Grid.Row="1"
+                                              x:Name="PART_SelectedContentHost"
+                                              ContentSource="SelectedContent" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sliders. The stock thumb is a small grey tab with a pointed end; this is a
+             round handle on a thin track, with the travelled part in the accent colour so a
+             value can be read at a glance without looking at the number. -->
+        <Style TargetType="Slider">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <Border Height="4" CornerRadius="2" Background="#242B35"
+                                    VerticalAlignment="Center" />
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge"
+                                                  Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2"
+                                                        Background="{StaticResource Accent}"
+                                                        VerticalAlignment="Center" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb x:Name="SliderThumb">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Grid>
+                                                    <Ellipse x:Name="Halo" Width="22" Height="22"
+                                                             Fill="#336AA9FF" Opacity="0" />
+                                                    <Ellipse Width="14" Height="14"
+                                                             Fill="{StaticResource Text}" />
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Halo"
+                                                                Property="Opacity" Value="1" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="Halo"
+                                                                Property="Opacity" Value="1" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge"
+                                                  Focusable="False" Opacity="0" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Check boxes and radios: the stock ones are 13px system chrome and vanish on a
+             dark card. Same shapes, drawn at a size a pointer can hit. -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border x:Name="Box" Width="17" Height="17" CornerRadius="4"
+                                    Background="#141922" BorderBrush="#3C4653"
+                                    BorderThickness="1" VerticalAlignment="Center">
+                                <Path x:Name="Tick" Stretch="Uniform" Margin="3"
+                                      Data="M0,5 L4,9 L11,0"
+                                      Stroke="#08121F" StrokeThickness="2.2"
+                                      StrokeEndLineCap="Round" StrokeStartLineCap="Round"
+                                      Visibility="Collapsed" />
+                            </Border>
+                            <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background"
+                                        Value="{StaticResource Accent}" />
+                                <Setter TargetName="Box" Property="BorderBrush"
+                                        Value="{StaticResource Accent}" />
+                                <Setter TargetName="Tick" Property="Visibility"
+                                        Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush"
+                                        Value="{StaticResource Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Grid Width="17" Height="17" VerticalAlignment="Center">
+                                <Ellipse x:Name="Ring" Fill="#141922" Stroke="#3C4653"
+                                         StrokeThickness="1" />
+                                <Ellipse x:Name="Dot" Width="7" Height="7"
+                                         Fill="{StaticResource Accent}" Visibility="Collapsed" />
+                            </Grid>
+                            <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke"
+                                        Value="{StaticResource Accent}" />
+                                <Setter TargetName="Dot" Property="Visibility"
+                                        Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke"
+                                        Value="{StaticResource Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Combo boxes and text fields. The stock templates are white Win32 chrome, which
+             on this page reads as a browser control someone pasted in. -->
+        <Style x:Key="ComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Chrome" Background="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#243040" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="#2B3B52" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ComboItem}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle" Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen,
+                                                      RelativeSource={RelativeSource TemplatedParent},
+                                                      Mode=TwoWay}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Chrome" CornerRadius="6"
+                                                Background="#141922"
+                                                BorderBrush="#3C4653" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1" Margin="0,0,12,0"
+                                                      Data="M0,0 L5,5 L10,0"
+                                                      Stroke="{StaticResource TextMuted}"
+                                                      StrokeThickness="1.6"
+                                                      VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Chrome"
+                                                        Property="BorderBrush"
+                                                        Value="{StaticResource Accent}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <ContentPresenter Margin="12,0,34,0"
+                                              VerticalAlignment="Center"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
+
+                            <Popup x:Name="PART_Popup" AllowsTransparency="True"
+                                   Placement="Bottom" Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   PopupAnimation="Fade">
+                                <Border Margin="0,4,0,0" CornerRadius="6"
+                                        Background="#161C25" BorderBrush="#3C4653"
+                                        BorderThickness="1"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer>
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="CaretBrush" Value="{StaticResource Accent}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Chrome" CornerRadius="6" Background="#141922"
+                                BorderBrush="#3C4653" BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush"
+                                        Value="#4C596A" />
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush"
+                                        Value="{StaticResource Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- The stock WPF scrollbar is a thin grey sliver on this dark background and reads
@@ -69,8 +581,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition x:Name="PreviewRow" Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="PreviewRow" Height="3*" />
+            <RowDefinition Height="4*" MinHeight="220" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -112,20 +624,22 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
-            <Border Grid.Column="1" Margin="0,0,8,0" Background="#26303A"
-                    CornerRadius="12" Padding="12,6" VerticalAlignment="Center">
+            <Border Grid.Column="1" Margin="0,0,8,0" Background="{StaticResource Card}"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1"
+                    CornerRadius="14" Padding="14,7" VerticalAlignment="Center">
                 <TextBlock x:Name="GameStatusText" Text="L4D2: CHECKING"
                            Foreground="#F1B85B" FontWeight="SemiBold" />
             </Border>
-            <Border Grid.Column="2" Background="#26303A" CornerRadius="12"
-                    Padding="12,6" VerticalAlignment="Center">
+            <Border Grid.Column="2" Background="{StaticResource Card}"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1"
+                    CornerRadius="14" Padding="14,7" VerticalAlignment="Center">
                 <TextBlock x:Name="VersionText" Foreground="#BFD9F2" FontWeight="SemiBold" />
             </Border>
         </Grid>
 
-        <Border x:Name="PreviewHost" Grid.Row="1" Margin="22,0,22,12" Padding="10"
-                Background="#090B0E" BorderBrush="#343B46" BorderThickness="1"
-                CornerRadius="8">
+        <Border x:Name="PreviewHost" Grid.Row="1" Margin="22,0,22,14" Padding="12"
+                Background="#080A0E" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                CornerRadius="10">
             <Viewbox Stretch="Uniform">
                 <Canvas x:Name="PreviewSurface" Width="720" Height="405"
                         Background="#171B20" ClipToBounds="True">
@@ -229,6 +743,36 @@
                                       Tag="{x:Null}"
                                       ItemTemplateSelector="{StaticResource ConsistentHudTemplateSelector}" />
                     </Border>
+
+                    <Border x:Name="PreviewWeaponPanel"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            Visibility="Collapsed">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="PreviewWeaponPanelScale" ScaleX="1" ScaleY="1" />
+                        </Border.LayoutTransform>
+                        <StackPanel>
+                            <ItemsControl x:Name="PreviewWeaponSlots"
+                                          ItemTemplate="{StaticResource WeaponSlotTemplate}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Vertical" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <ItemsControl x:Name="PreviewWeaponItems"
+                                          Margin="0,6,0,0"
+                                          ItemTemplate="{StaticResource WeaponItemTemplate}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
                 </Canvas>
             </Viewbox>
         </Border>
@@ -239,11 +783,39 @@
              invisible. Capped height, so the controls scroll instead of squeezing the
              preview; the bar is always present rather than Auto; and the fade at the bottom
              edge says there is more under it. -->
-        <Border x:Name="ControlWell" Grid.Row="2" Margin="22,0,22,12" Padding="6"
-                Background="#090B0E" BorderBrush="#343B46" BorderThickness="1"
-                CornerRadius="8">
+        <Border x:Name="ControlWell" Grid.Row="2" Margin="22,0,22,14" Padding="8"
+                Background="#080A0E" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                CornerRadius="10">
         <Grid>
-        <ScrollViewer x:Name="ControlScroller" MaxHeight="300"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1"
+                    Margin="0,0,0,2">
+                <!-- Synchronised in code rather than by a two-way binding to the
+                     TabControl. As a binding, the ListBox generates its containers after
+                     the binding attaches, its selection resets to -1 in the process, and
+                     TwoWay pushes that -1 back into the TabControl - which then has no
+                     selected tab and draws an empty window. -->
+                <ListBox x:Name="TabStrip"
+                         Background="Transparent" BorderThickness="0"
+                         Margin="4,0,0,0"
+                         SelectedIndex="0"
+                         ItemContainerStyle="{StaticResource TabStripItem}"
+                         SelectionChanged="OnTabStripChanged">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBoxItem>Scoreboard</ListBoxItem>
+                    <ListBoxItem>Consistent HUD</ListBoxItem>
+                </ListBox>
+            </Border>
+
+        <ScrollViewer x:Name="ControlScroller" Grid.Row="1"
                       VerticalScrollBarVisibility="Visible"
                       PanningMode="VerticalOnly">
             <ScrollViewer.Resources>
@@ -256,425 +828,623 @@
                         Foreground="#F0F2F5"
                         VerticalContentAlignment="Top">
             <TabItem Header="Scoreboard">
-            <UniformGrid Columns="3">
-                <UniformGrid.Resources>
-                    <!-- A final child normally fills a DockPanel even when Dock.Right is
-                         set, placing the value directly on top of/against its label. -->
-                    <Style TargetType="{x:Type DockPanel}">
-                        <Setter Property="LastChildFill" Value="False" />
-                    </Style>
-                </UniformGrid.Resources>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <TextBlock x:Name="PreviewSectionHeading"
-                                   Text="Preview" FontWeight="SemiBold" />
-                        <RadioButton x:Name="SimulatedPreviewRadio" GroupName="PreviewMode"
-                                     Margin="0,6,0,0" Foreground="#F0F2F5"
-                                     Click="OnPreviewModeChanged">
-                            <TextBlock Text="Simulated, in this window" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <RadioButton x:Name="LivePreviewRadio" GroupName="PreviewMode"
-                                     Margin="0,4,0,0" Foreground="#F0F2F5"
-                                     Click="OnPreviewModeChanged">
-                            <TextBlock Text="Live, on the real overlay" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <CheckBox x:Name="ShowScoreboardCheckBox"
-                                  IsChecked="True"
-                                  Margin="0,8,0,0"
-                                  Foreground="#F0F2F5"
-                                  Click="OnPreviewModeChanged">
-                            <TextBlock Text="Hold the game's scoreboard open" Foreground="#F0F2F5" />
-                        </CheckBox>
-                        <TextBlock x:Name="PreviewModeNote"
-                                   Text="Live draws the actual panel over the game window. Holding the scoreboard brings L4D2 forward and keeps its real scoreboard on screen while the game is in front, so the panel is seen against the genuine article. Click back here and it releases; the region is marked out instead."
-                                   Margin="22,6,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <TextBlock x:Name="WhoToShowSectionHeading"
-                                   Text="Who to show" FontWeight="SemiBold" />
-                        <RadioButton x:Name="RosterAllRadio" GroupName="RosterFilter"
-                                     Margin="0,6,0,0" Foreground="#F0F2F5"
-                                     Click="OnOptionChanged">
-                            <TextBlock Text="All survivors" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <RadioButton x:Name="RosterExtrasRadio" GroupName="RosterFilter"
-                                     Margin="0,4,0,0" Foreground="#F0F2F5"
-                                     Click="OnOptionChanged">
-                            <TextBlock Text="Extra survivors" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <!-- Same GroupName, so all four stay mutually exclusive. The rule
-                             below is only a divider: the two options under it mean nothing
-                             without Finale Soldiers installed. -->
-                        <Border x:Name="RosterSectionRule"
-                                Height="1" Background="#343B46" Margin="0,10,0,0" />
-                        <TextBlock x:Name="RosterSectionHeading"
-                                   Text="FOR FINALE SOLDIERS MOD"
-                                   Margin="0,6,0,0"
-                                   FontSize="10" FontWeight="SemiBold"
-                                   Foreground="#8EC5FF" />
-                        <RadioButton x:Name="RosterSoldiersRadio" GroupName="RosterFilter"
-                                     Margin="0,6,0,0" Foreground="#F0F2F5"
-                                     Click="OnOptionChanged">
-                            <TextBlock Text="Mortal soldiers + followers" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <RadioButton x:Name="RosterFollowersRadio" GroupName="RosterFilter"
-                                     Margin="0,4,0,0" Foreground="#F0F2F5"
-                                     Click="OnOptionChanged">
-                            <TextBlock Text="Followers only" Foreground="#F0F2F5" />
-                        </RadioButton>
-                        <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the four."
-                                   Margin="22,6,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock x:Name="UiSizeSectionHeading"
-                                       Text="UI size" FontWeight="SemiBold" />
-                            <TextBlock x:Name="ScaleValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="ScaleSlider" Minimum="0.60" Maximum="1.00"
-                                TickFrequency="0.05" IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Panel opacity" FontWeight="SemiBold" />
-                            <TextBlock x:Name="OpacityValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="OpacitySlider" Minimum="0.20" Maximum="1.00"
-                                TickFrequency="0.05" IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Horizontal inset" FontWeight="SemiBold" />
-                            <TextBlock x:Name="OffsetXValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="OffsetXSlider" Minimum="0.00" Maximum="0.10"
-                                TickFrequency="0.005" IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Vertical start" FontWeight="SemiBold" />
-                            <TextBlock x:Name="OffsetYValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="OffsetYSlider" Minimum="0.35" Maximum="0.80"
-                                TickFrequency="0.01" IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Optional bottom clearance" FontWeight="SemiBold" />
-                            <TextBlock x:Name="BottomReserveValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="BottomReserveSlider" Minimum="0" Maximum="0.25"
-                                TickFrequency="0.01" IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Maximum columns" FontWeight="SemiBold" />
-                            <TextBlock x:Name="MaxColumnsValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="MaxColumnsSlider" Minimum="1" Maximum="2"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock Text="Preview roster size" FontWeight="SemiBold" />
-                            <TextBlock x:Name="PreviewCountValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
-                        </DockPanel>
-                        <Slider x:Name="PreviewCountSlider" Minimum="1" Maximum="27"
-                                Value="6" TickFrequency="1" IsSnapToTickEnabled="True"
-                                IsMoveToPointEnabled="True"
-                                ValueChanged="OnSettingChanged" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <CheckBox x:Name="ShowStatusBadgeCheckBox"
-                                  FontWeight="SemiBold"
-                                  Foreground="#F0F2F5"
-                                  Click="OnOptionChanged">
-                            <TextBlock Text="Show status badge"
-                                       Foreground="#F0F2F5"
-                                       FontWeight="SemiBold" />
-                        </CheckBox>
-                        <TextBlock Text="The top-right name and version, shown while L4D2 is focused and nothing is exporting. It means the addon is not writing — useful during setup, noise afterwards."
-                                   Margin="22,4,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <CheckBox x:Name="DebugCheckBox"
-                                  FontWeight="SemiBold"
-                                  Foreground="#F0F2F5"
-                                  Click="OnDebugChanged">
-                            <TextBlock Text="Debug console"
-                                       Foreground="#F0F2F5"
-                                       FontWeight="SemiBold" />
-                        </CheckBox>
-                        <TextBlock Text="Opens a window showing what the app is reading, whether the addon is exporting, and every problem it hits. Turn it on if something is not appearing; it saves a log you can attach to a report."
-                                   Margin="22,4,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ControlCard}">
-                    <StackPanel>
-                        <CheckBox x:Name="ExitWhenGameClosesCheckBox"
-                                  FontWeight="SemiBold"
-                                  Foreground="#F0F2F5"
-                                  Click="OnOptionChanged">
-                            <TextBlock Text="Exit when L4D2 closes"
-                                       Foreground="#F0F2F5"
-                                       FontWeight="SemiBold" />
-                        </CheckBox>
-                        <TextBlock Text="Turn off to keep the overlay app running for the next game session."
-                                   Margin="22,4,0,0" TextWrapping="Wrap"
-                                   Foreground="#AAB2BE" FontSize="11" />
-                    </StackPanel>
-                </Border>
-            </UniformGrid>
+                <StackPanel x:Name="ScoreboardSections" Margin="2,0,2,12">
+                    <TextBlock Text="PREVIEW" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <TextBlock x:Name="PreviewSectionHeading"
+                                                           Text="Preview" FontWeight="SemiBold" />
+                                                <RadioButton x:Name="SimulatedPreviewRadio" GroupName="PreviewMode"
+                                                             Margin="0,6,0,0" Foreground="#F0F2F5"
+                                                             Click="OnPreviewModeChanged">
+                                                    <TextBlock Text="Simulated, in this window" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <RadioButton x:Name="LivePreviewRadio" GroupName="PreviewMode"
+                                                             Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                             Click="OnPreviewModeChanged">
+                                                    <TextBlock Text="Live, on the real overlay" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <CheckBox x:Name="ShowScoreboardCheckBox"
+                                                          IsChecked="True"
+                                                          Margin="0,8,0,0"
+                                                          Foreground="#F0F2F5"
+                                                          Click="OnPreviewModeChanged">
+                                                    <TextBlock Text="Hold the game's scoreboard open" Foreground="#F0F2F5" />
+                                                </CheckBox>
+                                                <TextBlock x:Name="PreviewModeNote"
+                                                           Text="Live draws the actual panel over the game window. Holding the scoreboard brings L4D2 forward and keeps its real scoreboard on screen while the game is in front, so the panel is seen against the genuine article. Click back here and it releases; the region is marked out instead."
+                                                           Margin="22,6,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Preview roster size" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="PreviewCountSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="PreviewCountValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="PreviewCountSlider" Minimum="1" Maximum="27"
+                                                        Value="6" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                        IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                    </UniformGrid>
+                    <TextBlock Text="WHO TO SHOW" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <TextBlock x:Name="WhoToShowSectionHeading"
+                                                           Text="Who to show" FontWeight="SemiBold" />
+                                                <RadioButton x:Name="RosterAllRadio" GroupName="RosterFilter"
+                                                             Margin="0,6,0,0" Foreground="#F0F2F5"
+                                                             Click="OnOptionChanged">
+                                                    <TextBlock Text="All survivors" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <RadioButton x:Name="RosterExtrasRadio" GroupName="RosterFilter"
+                                                             Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                             Click="OnOptionChanged">
+                                                    <TextBlock Text="Extra survivors" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <!-- Same GroupName, so all four stay mutually exclusive. The rule
+                                                     below is only a divider: the two options under it mean nothing
+                                                     without Finale Soldiers installed. -->
+                                                <Border x:Name="RosterSectionRule"
+                                                        Height="1" Background="#343B46" Margin="0,10,0,0" />
+                                                <TextBlock x:Name="RosterSectionHeading"
+                                                           Text="FOR FINALE SOLDIERS MOD"
+                                                           Margin="0,6,0,0"
+                                                           FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="#8EC5FF" />
+                                                <RadioButton x:Name="RosterSoldiersRadio" GroupName="RosterFilter"
+                                                             Margin="0,6,0,0" Foreground="#F0F2F5"
+                                                             Click="OnOptionChanged">
+                                                    <TextBlock Text="Mortal soldiers + followers" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <RadioButton x:Name="RosterFollowersRadio" GroupName="RosterFilter"
+                                                             Margin="0,4,0,0" Foreground="#F0F2F5"
+                                                             Click="OnOptionChanged">
+                                                    <TextBlock Text="Followers only" Foreground="#F0F2F5" />
+                                                </RadioButton>
+                                                <TextBlock Text="Immortal team-4 holdout soldiers are never shown, in any of the four."
+                                                           Margin="22,6,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                    </UniformGrid>
+                    <TextBlock Text="SIZE AND OPACITY" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock x:Name="UiSizeSectionHeading"
+                                                               Text="UI size" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ScaleSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ScaleValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="ScaleSlider" Minimum="0.60" Maximum="1.00"
+                                                        TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Panel opacity" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="OpacitySlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="OpacityValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="OpacitySlider" Minimum="0.20" Maximum="1.00"
+                                                        TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                    </UniformGrid>
+                    <TextBlock Text="PLACEMENT" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Horizontal inset" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="OffsetXSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="OffsetXValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="OffsetXSlider" Minimum="0.00" Maximum="0.10"
+                                                        TickFrequency="0.005" IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Vertical start" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="OffsetYSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="OffsetYValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="OffsetYSlider" Minimum="0.35" Maximum="0.80"
+                                                        TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Optional bottom clearance" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="BottomReserveSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="BottomReserveValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="BottomReserveSlider" Minimum="0" Maximum="0.25"
+                                                        TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Maximum columns" FontWeight="SemiBold" />
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="MaxColumnsSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="MaxColumnsValue" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                </DockPanel>
+                                                <Slider x:Name="MaxColumnsSlider" Minimum="1" Maximum="2"
+                                                        TickFrequency="1" IsSnapToTickEnabled="True"
+                                                        IsMoveToPointEnabled="True"
+                                                        ValueChanged="OnSettingChanged" />
+                                            </StackPanel>
+                                        </Border>
+                    </UniformGrid>
+                    <TextBlock Text="APP BEHAVIOUR" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <CheckBox x:Name="ShowStatusBadgeCheckBox"
+                                                          FontWeight="SemiBold"
+                                                          Foreground="#F0F2F5"
+                                                          Click="OnOptionChanged">
+                                                    <TextBlock Text="Show status badge"
+                                                               Foreground="#F0F2F5"
+                                                               FontWeight="SemiBold" />
+                                                </CheckBox>
+                                                <TextBlock Text="The top-right name and version, shown while L4D2 is focused and nothing is exporting. It means the addon is not writing — useful during setup, noise afterwards."
+                                                           Margin="22,4,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <CheckBox x:Name="DebugCheckBox"
+                                                          FontWeight="SemiBold"
+                                                          Foreground="#F0F2F5"
+                                                          Click="OnDebugChanged">
+                                                    <TextBlock Text="Debug console"
+                                                               Foreground="#F0F2F5"
+                                                               FontWeight="SemiBold" />
+                                                </CheckBox>
+                                                <TextBlock Text="Opens a window showing what the app is reading, whether the addon is exporting, and every problem it hits. Turn it on if something is not appearing; it saves a log you can attach to a report."
+                                                           Margin="22,4,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                            <StackPanel>
+                                                <CheckBox x:Name="ExitWhenGameClosesCheckBox"
+                                                          FontWeight="SemiBold"
+                                                          Foreground="#F0F2F5"
+                                                          Click="OnOptionChanged">
+                                                    <TextBlock Text="Exit when L4D2 closes"
+                                                               Foreground="#F0F2F5"
+                                                               FontWeight="SemiBold" />
+                                                </CheckBox>
+                                                <TextBlock Text="Turn off to keep the overlay app running for the next game session."
+                                                           Margin="22,4,0,0" TextWrapping="Wrap"
+                                                           Foreground="#AAB2BE" FontSize="11" />
+                                            </StackPanel>
+                                        </Border>
+                    </UniformGrid>
+                </StackPanel>
             </TabItem>
 
             <TabItem Header="Consistent HUD">
-                <UniformGrid Columns="2">
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <CheckBox x:Name="AlwaysShowCheckBox"
-                                      FontWeight="SemiBold"
-                                      Foreground="#F0F2F5"
-                                      Click="OnOptionChanged">
-                                <TextBlock Text="Show HUD consistently"
-                                           Foreground="#F0F2F5"
-                                           FontWeight="SemiBold" />
-                            </CheckBox>
-                            <TextBlock Text="Keeps our survivor HUD visible while L4D2 is focused, like a vanilla HUD. It uses four cards across, up to three rows, and does not open the game's scoreboard."
-                                       Margin="22,4,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <CheckBox x:Name="ConsistentSeparateYouCheckBox"
-                                      FontWeight="SemiBold"
-                                      Foreground="#F0F2F5"
-                                      Click="OnOptionChanged">
-                                <TextBlock Text="Separate You"
-                                           Foreground="#F0F2F5"
-                                           FontWeight="SemiBold" />
-                            </CheckBox>
-                            <TextBlock Text="Moves your current survivor card to the lower right. The rest keeps the selected template; horizontal and vertical spacing apply only to that roster, not to your card."
-                                       Margin="22,4,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <TextBlock Text="Toggle hotkey" FontWeight="SemiBold" />
-                            <Grid Margin="0,7,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="ConsistentHotkeyBox"
-                                         Grid.Column="0"
-                                         IsReadOnly="True"
-                                         VerticalContentAlignment="Center"
-                                         PreviewKeyDown="OnConsistentHotkeyPreviewKeyDown" />
-                                <Button Grid.Column="1" Content="Set key"
-                                        Click="OnConsistentHotkeySetClick" />
-                                <Button Grid.Column="2" Content="Clear"
-                                        Click="OnConsistentHotkeyClearClick" />
-                            </Grid>
-                            <TextBlock Text="Press Set key, then press one key. The toggle is active only while the game is in front; it is consumed so L4D2 does not also receive it."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <TextBlock Text="HUD template" FontWeight="SemiBold" />
-                            <ComboBox x:Name="ConsistentTemplateCombo"
-                                      Margin="0,7,0,0"
-                                      SelectionChanged="OnConsistentTemplateChanged">
-                                <ComboBoxItem Tag="vanilla-bottom-center">Bottom - Horizontal Grid</ComboBoxItem>
-                                <ComboBoxItem Tag="vanilla-vertical">Lower Left Vertical Grid</ComboBoxItem>
-                                <ComboBoxItem Tag="lower-right-vertical">Lower Right Vertical Grid</ComboBoxItem>
-                            </ComboBox>
-                            <TextBlock Text="Horizontal grids fill four columns across and up to three rows; larger rosters add columns. Vertical grids keep one card per row."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <TextBlock Text="HUD design" FontWeight="SemiBold" />
-                            <ComboBox x:Name="ConsistentDesignCombo"
-                                      Margin="0,7,0,0"
-                                      SelectionChanged="OnConsistentDesignChanged">
-                                <ComboBoxItem Tag="basic">Basic</ComboBoxItem>
-                                <ComboBoxItem Tag="minimalist">Minimalist</ComboBoxItem>
-                            </ComboBox>
-                            <TextBlock Text="Basic keeps the full card. Minimalist puts the name and items above a compact five-segment health strip; long names trim so item slots stay visible."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <CheckBox x:Name="ConsistentShowHealthNumbersCheckBox"
-                                      FontWeight="SemiBold"
-                                      Foreground="#F0F2F5"
-                                      Click="OnOptionChanged">
-                                <TextBlock Text="Show health numbers"
-                                           Foreground="#F0F2F5"
-                                           FontWeight="SemiBold" />
-                            </CheckBox>
-                            <TextBlock Text="Show or hide the numeric health value in the Consistent HUD. The Scoreboard tab is unchanged."
-                                       Margin="22,4,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <CheckBox x:Name="ConsistentMonochromeCheckBox"
-                                      FontWeight="SemiBold"
-                                      Foreground="#F0F2F5"
-                                      Click="OnOptionChanged">
-                                <TextBlock Text="Black &amp; white theme"
-                                           Foreground="#F0F2F5"
-                                           FontWeight="SemiBold" />
-                            </CheckBox>
-                            <TextBlock Text="Use grayscale health bars and state colors for the Consistent HUD. The Scoreboard tab is unchanged."
-                                       Margin="22,4,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="HUD size" FontWeight="SemiBold" />
-                                <TextBlock x:Name="ConsistentScaleValue" DockPanel.Dock="Right"
-                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
-                            </DockPanel>
-                            <Slider x:Name="ConsistentScaleSlider" Minimum="0.60" Maximum="1.00"
-                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
-                                    ValueChanged="OnSettingChanged" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="HUD opacity" FontWeight="SemiBold" />
-                                <TextBlock x:Name="ConsistentOpacityValue" DockPanel.Dock="Right"
-                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
-                            </DockPanel>
-                            <Slider x:Name="ConsistentOpacitySlider" Minimum="0.20" Maximum="1.00"
-                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
-                                    ValueChanged="OnSettingChanged" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="Vertical position" FontWeight="SemiBold" />
-                                <TextBlock x:Name="ConsistentVerticalValue" DockPanel.Dock="Right"
-                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
-                            </DockPanel>
-                            <Slider x:Name="ConsistentVerticalSlider" Minimum="0.00" Maximum="0.90"
-                                    TickFrequency="0.05" IsMoveToPointEnabled="True"
-                                    ValueChanged="OnSettingChanged" />
-                            <TextBlock Text="0% is the bottom edge; higher values move the HUD upward."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="Horizontal spacing" FontWeight="SemiBold" />
-                                <TextBlock x:Name="ConsistentHorizontalSpacingValue" DockPanel.Dock="Right"
-                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
-                            </DockPanel>
-                            <Slider x:Name="ConsistentHorizontalSpacingSlider"
-                                    Minimum="-100" Maximum="100" TickFrequency="10"
-                                    IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
-                            <TextBlock Text="Negative values pull cards together and can overlap them."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <DockPanel>
-                                <TextBlock Text="Vertical spacing" FontWeight="SemiBold" />
-                                <TextBlock x:Name="ConsistentVerticalSpacingValue" DockPanel.Dock="Right"
-                                           Margin="12,0,0,0" Foreground="#8EC5FF" />
-                            </DockPanel>
-                            <Slider x:Name="ConsistentVerticalSpacingSlider"
-                                    Minimum="-20" Maximum="40" TickFrequency="5"
-                                    IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
-                            <TextBlock Text="Negative values pull rows and cards together and can overlap them."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource ControlCard}">
-                        <StackPanel>
-                            <TextBlock Text="Shared roster" FontWeight="SemiBold" />
-                            <TextBlock Text="The consistent HUD uses the same Who to show selection from the Scoreboard tab, including All survivors and Extra survivors. Change that filter there."
-                                       Margin="0,5,0,0" TextWrapping="Wrap"
-                                       Foreground="#AAB2BE" FontSize="11" />
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
+                <StackPanel x:Name="ConsistentSections" Margin="2,0,2,12">
+                    <TextBlock Text="SHOWING IT" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <CheckBox x:Name="AlwaysShowCheckBox"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#F0F2F5"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Show HUD consistently"
+                                                                   Foreground="#F0F2F5"
+                                                                   FontWeight="SemiBold" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="Keeps our survivor HUD visible while L4D2 is focused, like a vanilla HUD. It uses four cards across, up to three rows, and does not open the game's scoreboard."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="Toggle hotkey" FontWeight="SemiBold" />
+                                                    <!-- One row: field, then its two
+                                                         buttons. The field is the star
+                                                         column and the buttons are Auto, so
+                                                         the field is what gives up width
+                                                         first - it needs a floor of its own,
+                                                         or at two columns it collapses to a
+                                                         sliver and only reappears when the
+                                                         window is dragged wider. The buttons
+                                                         are compact here for the same
+                                                         reason: the default 96px minimum
+                                                         leaves nothing for the field on a
+                                                         narrow card. -->
+                                                    <Grid Margin="0,7,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"
+                                                                              MinWidth="72" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBox x:Name="ConsistentHotkeyBox"
+                                                                 Grid.Column="0"
+                                                                 IsReadOnly="True"
+                                                                 HorizontalContentAlignment="Center"
+                                                                 VerticalContentAlignment="Center"
+                                                                 PreviewKeyDown="OnConsistentHotkeyPreviewKeyDown" />
+                                                        <Button Grid.Column="1" Content="Set key"
+                                                                MinWidth="66" Padding="12,8"
+                                                                Click="OnConsistentHotkeySetClick" />
+                                                        <Button Grid.Column="2" Content="Clear"
+                                                                MinWidth="58" Padding="12,8"
+                                                                Click="OnConsistentHotkeyClearClick" />
+                                                    </Grid>
+                                                    <TextBlock Text="Press Set key, then press one key. The toggle is active only while the game is in front; it is consumed so L4D2 does not also receive it."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                    </UniformGrid>
+                    <TextBlock Text="LAYOUT" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="HUD template" FontWeight="SemiBold" />
+                                                    <ComboBox x:Name="ConsistentTemplateCombo"
+                                                              Margin="0,7,0,0"
+                                                              SelectionChanged="OnConsistentTemplateChanged">
+                                                        <ComboBoxItem Tag="vanilla-bottom-center">Bottom - Horizontal Grid</ComboBoxItem>
+                                                        <ComboBoxItem Tag="vanilla-vertical">Lower Left Vertical Grid</ComboBoxItem>
+                                                        <ComboBoxItem Tag="lower-right-vertical">Lower Right Vertical Grid</ComboBoxItem>
+                                                    </ComboBox>
+                                                    <TextBlock Text="Horizontal grids fill four columns across and up to three rows; larger rosters add columns. Vertical grids keep one card per row."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="HUD design" FontWeight="SemiBold" />
+                                                    <ComboBox x:Name="ConsistentDesignCombo"
+                                                              Margin="0,7,0,0"
+                                                              SelectionChanged="OnConsistentDesignChanged">
+                                                        <ComboBoxItem Tag="basic">Basic</ComboBoxItem>
+                                                        <ComboBoxItem Tag="minimalist">Minimalist</ComboBoxItem>
+                                                    </ComboBox>
+                                                    <TextBlock Text="Basic keeps the full card. Minimalist puts the name and items above a compact five-segment health strip; long names trim so item slots stay visible."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="Shared roster" FontWeight="SemiBold" />
+                                                    <TextBlock Text="The consistent HUD uses the same Who to show selection from the Scoreboard tab, including All survivors and Extra survivors. Change that filter there."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                    </UniformGrid>
+                    <TextBlock Text="APPEARANCE" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <CheckBox x:Name="ConsistentShowHealthNumbersCheckBox"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#F0F2F5"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Show health numbers"
+                                                                   Foreground="#F0F2F5"
+                                                                   FontWeight="SemiBold" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="Show or hide the numeric health value in the Consistent HUD. The Scoreboard tab is unchanged."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <CheckBox x:Name="ConsistentMonochromeCheckBox"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#F0F2F5"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Black &amp; white theme"
+                                                                   Foreground="#F0F2F5"
+                                                                   FontWeight="SemiBold" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="Use grayscale health bars and state colors for the Consistent HUD. The Scoreboard tab is unchanged."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="HUD size" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ConsistentScaleSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ConsistentScaleValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="ConsistentScaleSlider" Minimum="0.60" Maximum="1.00"
+                                                            TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                            ValueChanged="OnSettingChanged" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="HUD opacity" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ConsistentOpacitySlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ConsistentOpacityValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="ConsistentOpacitySlider" Minimum="0.20" Maximum="1.00"
+                                                            TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                            ValueChanged="OnSettingChanged" />
+                                                </StackPanel>
+                                            </Border>
+                    </UniformGrid>
+                    <TextBlock Text="PLACEMENT" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <CheckBox x:Name="ConsistentSeparateYouCheckBox"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#F0F2F5"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Separate You"
+                                                                   Foreground="#F0F2F5"
+                                                                   FontWeight="SemiBold" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="Moves your current survivor card to the lower right. The rest keeps the selected template; horizontal and vertical spacing apply only to that roster, not to your card."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="Vertical position" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ConsistentVerticalSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ConsistentVerticalValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="ConsistentVerticalSlider" Minimum="0.00" Maximum="0.90"
+                                                            TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                            ValueChanged="OnSettingChanged" />
+                                                    <TextBlock Text="0% is the bottom edge; higher values move the HUD upward."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="Horizontal spacing" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ConsistentHorizontalSpacingSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ConsistentHorizontalSpacingValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="ConsistentHorizontalSpacingSlider"
+                                                            Minimum="-100" Maximum="100" TickFrequency="10"
+                                                            IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
+                                                    <TextBlock Text="Negative values pull cards together and can overlap them."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="Vertical spacing" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="ConsistentVerticalSpacingSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="ConsistentVerticalSpacingValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="ConsistentVerticalSpacingSlider"
+                                                            Minimum="-20" Maximum="40" TickFrequency="5"
+                                                            IsMoveToPointEnabled="True" ValueChanged="OnSettingChanged" />
+                                                    <TextBlock Text="Negative values pull rows and cards together and can overlap them."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                    </UniformGrid>
+                    <TextBlock Text="WEAPON HUD" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <!-- A final child normally fills a DockPanel even when Dock.Right
+                                 is set, placing the value on top of its own label. -->
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <CheckBox x:Name="ConsistentShowWeaponsCheckBox"
+                                                              FontWeight="SemiBold"
+                                                              Foreground="#F0F2F5"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Show your weapons, ammo, and items"
+                                                                   Foreground="#F0F2F5"
+                                                                   FontWeight="SemiBold" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="A separate panel showing your own primary weapon with its magazine and reserve ammo, your pistol, chainsaw, or melee weapon below it, and your throwable, kit, and pills beneath those. The Consistent HUD cards no longer draw items, so turning this off leaves them unshown until Tab. Needs exporter 1.3.0 or newer; older addons send no weapon data. The Scoreboard tab never shows it."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="Weapon HUD corner" FontWeight="SemiBold" />
+                                                    <ComboBox x:Name="WeaponCornerCombo"
+                                                              Margin="0,7,0,0"
+                                                              SelectionChanged="OnWeaponPanelChanged">
+                                                        <ComboBoxItem Tag="lower-right">Lower Right</ComboBoxItem>
+                                                        <ComboBoxItem Tag="lower-left">Lower Left</ComboBoxItem>
+                                                    </ComboBox>
+                                                    <TextBlock Text="Which bottom corner the weapon panel sits in, independently of where the survivor roster is placed."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="Weapon slot arrangement" FontWeight="SemiBold" />
+                                                    <ComboBox x:Name="WeaponOrientationCombo"
+                                                              Margin="0,7,0,0"
+                                                              SelectionChanged="OnWeaponPanelChanged">
+                                                        <ComboBoxItem Tag="vertical">Vertical - stacked</ComboBoxItem>
+                                                        <ComboBoxItem Tag="horizontal">Horizontal - side by side</ComboBoxItem>
+                                                    </ComboBox>
+                                                    <TextBlock Text="Stack the primary above the secondary, or set them beside each other."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="Weapon HUD size" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="WeaponScaleSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="WeaponScaleValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="WeaponScaleSlider" Minimum="0.50" Maximum="2.00"
+                                                            TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                                            ValueChanged="OnSettingChanged" />
+                                                    <TextBlock Text="Sizes the weapon panel on its own, on top of the HUD size setting. 1.00x matches the rest of the Consistent HUD."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="Weapon HUD height" FontWeight="SemiBold" />
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                                            Tag="WeaponVerticalSlider" Click="OnResetSliderClick" />
+                                                            <TextBlock x:Name="WeaponVerticalValue" DockPanel.Dock="Right"
+                                                                   Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                                    </DockPanel>
+                                                    <Slider x:Name="WeaponVerticalSlider" Minimum="0" Maximum="0.92"
+                                                            TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                                            ValueChanged="OnSettingChanged" />
+                                                    <TextBlock Text="Runs the full height of the screen: zero sits on the bottom edge, and the top of the range puts the panel near the top of the view."
+                                                               Margin="0,5,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
+                    </UniformGrid>
+                </StackPanel>
             </TabItem>
             </TabControl>
         </ScrollViewer>
 
             <!-- Right margin clears the scrollbar so the thumb is never dimmed. -->
-            <Rectangle x:Name="ScrollFade" Height="28" Margin="0,0,18,0"
+            <Rectangle x:Name="ScrollFade" Grid.Row="1" Height="28" Margin="0,0,18,0"
                        VerticalAlignment="Bottom" IsHitTestVisible="False"
                        Visibility="Collapsed">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#00090B0E" Offset="0" />
-                        <GradientStop Color="#F0090B0E" Offset="1" />
+                        <GradientStop Color="#00080A0E" Offset="0" />
+                        <GradientStop Color="#F0080A0E" Offset="1" />
                     </LinearGradientBrush>
                 </Rectangle.Fill>
             </Rectangle>
@@ -697,7 +1467,7 @@
                 <Button Content="Reset UI" Click="OnResetClick" />
                 <Button Content="Cancel" Click="OnCancelClick" />
                 <Button Content="Save &amp; Apply" Click="OnSaveClick"
-                        FontWeight="SemiBold" IsDefault="True" />
+                        Style="{StaticResource PrimaryButton}" IsDefault="True" />
             </StackPanel>
         </Grid>
     </Grid>

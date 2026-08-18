@@ -196,5 +196,43 @@
                           Tag="{x:Null}"
                           ItemTemplateSelector="{StaticResource ConsistentHudTemplateSelector}" />
         </Border>
+
+        <!-- The weapon HUD: the local player's own slots. Root-level and independently
+             anchored, like the You card, because it answers a different question from the
+             roster and belongs wherever the player's eye already is. -->
+        <Border x:Name="WeaponPanel"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Padding="0"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="0"
+                Visibility="Collapsed">
+            <Border.LayoutTransform>
+                <ScaleTransform x:Name="WeaponPanelScale" ScaleX="1" ScaleY="1" />
+            </Border.LayoutTransform>
+            <StackPanel>
+                <ItemsControl x:Name="WeaponSlots"
+                              ItemTemplate="{StaticResource WeaponSlotTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel x:Name="WeaponSlotsPanel" Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- Throwable, kit, pills - the player's own, under their weapons, where
+                     vanilla keeps them. The roster cards no longer draw items. -->
+                <ItemsControl x:Name="WeaponItems"
+                              Margin="0,6,0,0"
+                              ItemTemplate="{StaticResource WeaponItemTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

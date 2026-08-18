@@ -2,7 +2,7 @@
 
 [h2][b]Download the application:[/b] [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Left 4 Dead 2 Customized Overlay HUD - External (GitHub releases)[/url][/h2]
 
-This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be v1.2.0.
+This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be v1.3.0.
 
 [list]
 [*][b]Standalone[/b] includes the required .NET components.
@@ -13,7 +13,7 @@ This Workshop item is the exporter half. It writes live survivor state to a file
 
 An external survivor HUD for oversized rosters. It shows every mortal survivor in the session, not only the four slots available in the built-in HUD. It is designed for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] and other mods that spawn more than four survivors.
 
-Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, incapacitated / hanging / dying / dead state, and carried items.
+Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, and incapacitated / hanging / dying / dead state. Cards show each survivor's carried items, except your own: your throwable, kit, and pills sit with your weapons and ammunition instead, where vanilla keeps them. The Tab scoreboard shows the whole team's, including yours.
 
 The [b]Scoreboard[/b] view appears while [b]Tab[/b] is held. The [b]Consistent HUD[/b] view can stay visible during play and does not open the game's scoreboard. The application watches Tab without changing key binds.
 
@@ -41,7 +41,7 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 [*][b]Scoreboard tab:[/b] controls the Tab-held panel beside the vanilla scoreboard, including position, size, opacity, columns, and guide lines.
 [*][b]Consistent HUD tab:[/b] keeps a separate HUD visible during play and has its own size, opacity, vertical position, spacing, health-number, and theme controls.
 [*][b]Templates:[/b] [b]Bottom - Horizontal Grid[/b] is the default; [b]Lower Left Vertical Grid[/b] and [b]Lower Right Vertical Grid[/b] place cards in vertical groups. The horizontal layout uses four cards across and up to three rows, adding columns for larger rosters.
-[*][b]Designs:[/b] [b]Basic[/b] uses full cards. [b]Minimalist[/b] puts the name and icon-only items before the health value above a compact five-segment health strip, keeps temporary-health grunge, and clips long names without hiding items.
+[*][b]Designs:[/b] [b]Basic[/b] uses full cards. [b]Minimalist[/b] puts the name before the health value above a compact five-segment health strip, keeps temporary-health grunge, and clips long names.
 [*][b]Separate You:[/b] moves the current survivor into an independent card. The bottom grid places the roster left and You right; the lower-right vertical grid places the roster right and You left. A visible group gap prevents overlap.
 [*][b]Flexible presentation:[/b] health numbers can be hidden, the Consistent HUD can use a black-and-white theme, and horizontal / vertical spacing may be negative for intentional overlap. The top-right status badge stays fixed at 1.0x while the HUD is resized.
 [*][b]Preview:[/b] use the live roster over L4D2 or a simulated roster when the game is closed. The editor can also ask the addon to hold the game's scoreboard open while positioning the external panel.

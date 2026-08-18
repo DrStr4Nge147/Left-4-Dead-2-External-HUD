@@ -70,6 +70,39 @@ public sealed class AppConfig
     public bool ConsistentMonochrome { get; set; }
 
     /// <summary>
+    /// Draw the weapon HUD: the local player's own primary and secondary slots with their
+    /// ammunition, as a separate panel beside the consistent HUD. Never shown by the
+    /// scoreboard view. Needs exporter 1.3.0 or newer; an older addon sends no weapon
+    /// fields and the panel stays hidden regardless of this setting.
+    /// </summary>
+    [JsonPropertyName("consistentShowWeapons")]
+    public bool ConsistentShowWeapons { get; set; } = true;
+
+    /// <summary>Which bottom corner the weapon HUD sits in: "lower-left" or "lower-right".</summary>
+    [JsonPropertyName("weaponPanelCorner")]
+    public string WeaponPanelCorner { get; set; } = "lower-right";
+
+    /// <summary>
+    /// Size of the weapon HUD, as a multiplier on top of the consistent HUD's own scale.
+    /// Separate from consistentScale because ammunition is read at a glance mid-fight and
+    /// often wants to be larger than the roster it sits beside.
+    /// </summary>
+    [JsonPropertyName("weaponPanelScale")]
+    public double WeaponPanelScale { get; set; } = 1.0;
+
+    /// <summary>Slot arrangement: "vertical" stacks them, "horizontal" sets them side by side.</summary>
+    [JsonPropertyName("weaponPanelOrientation")]
+    public string WeaponPanelOrientation { get; set; } = "vertical";
+
+    /// <summary>
+    /// Fraction of the window height kept below the weapon HUD. Zero puts it on the bottom
+    /// edge; the slider runs the full height so it can also sit level with the crosshair or
+    /// up near the top.
+    /// </summary>
+    [JsonPropertyName("weaponPanelVerticalOffset")]
+    public double WeaponPanelVerticalOffset { get; set; } = 0.10;
+
+    /// <summary>
     /// Fraction of the game window kept below the consistent HUD. Zero touches the bottom
     /// edge; higher values move the HUD upward. This is independent of the scoreboard offset.
     /// </summary>
@@ -197,6 +230,11 @@ public sealed class AppConfig
         ConsistentDesign = source.ConsistentDesign;
         ConsistentShowHealthNumbers = source.ConsistentShowHealthNumbers;
         ConsistentMonochrome = source.ConsistentMonochrome;
+        ConsistentShowWeapons = source.ConsistentShowWeapons;
+        WeaponPanelCorner = source.WeaponPanelCorner;
+        WeaponPanelOrientation = source.WeaponPanelOrientation;
+        WeaponPanelScale = source.WeaponPanelScale;
+        WeaponPanelVerticalOffset = source.WeaponPanelVerticalOffset;
         ConsistentVerticalOffset = source.ConsistentVerticalOffset;
         ConsistentHorizontalSpacing = source.ConsistentHorizontalSpacing;
         ConsistentVerticalSpacing = source.ConsistentVerticalSpacing;

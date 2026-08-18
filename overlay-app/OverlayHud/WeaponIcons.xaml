@@ -1,0 +1,122 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Weapon silhouettes, drawn as geometry rather than shipped as bitmaps.
+         Every path is authored in the same 0..64 x 0..24 box and stretched uniformly by the
+         slot template, so a pistol and a sniper rifle keep their real size relationship
+         instead of each filling its slot.
+
+         One shape per weapon FAMILY, not per weapon: at the size these draw over gameplay
+         an AK and an SG552 are the same silhouette, and pretending otherwise would be
+         detail nobody can see. SurvivorCard.WeaponChip maps ids onto these keys. -->
+
+    <!-- Assault rifle: long barrel, receiver, curved magazine, shoulder stock. -->
+    <PathGeometry x:Key="WeaponIcon.rifle"
+                  Figures="M2,10 L24,10 L24,13 L2,13 Z
+                           M24,8 L46,8 L46,15 L24,15 Z
+                           M29,15 L37,15 L35,23 L27,23 Z
+                           M39,15 L45,15 L44,21 L38,21 Z
+                           M46,9 L58,9 L62,13 L62,15 L46,15 Z" />
+
+    <!-- Submachine gun: short barrel, boxy receiver, straight magazine. -->
+    <PathGeometry x:Key="WeaponIcon.smg"
+                  Figures="M8,10 L22,10 L22,13 L8,13 Z
+                           M22,7 L44,7 L44,16 L22,16 Z
+                           M28,16 L34,16 L34,23 L28,23 Z
+                           M37,16 L43,16 L42,22 L36,22 Z
+                           M44,9 L56,9 L56,14 L44,14 Z" />
+
+    <!-- Shotgun: barrel over a pump slide, straight stock. -->
+    <PathGeometry x:Key="WeaponIcon.shotgun"
+                  Figures="M2,9 L34,9 L34,12 L2,12 Z
+                           M10,13 L22,13 L22,16 L10,16 Z
+                           M34,8 L46,8 L46,15 L34,15 Z
+                           M38,15 L44,15 L43,21 L37,21 Z
+                           M46,9 L62,9 L62,15 L46,15 Z" />
+
+    <!-- Sniper rifle: the longest barrel in the set, with a scope on top. -->
+    <PathGeometry x:Key="WeaponIcon.sniper"
+                  Figures="M1,11 L30,11 L30,14 L1,14 Z
+                           M30,10 L46,10 L46,16 L30,16 Z
+                           M26,4 L44,4 L44,8 L26,8 Z
+                           M32,8 L34,8 L34,10 L32,10 Z
+                           M40,8 L42,8 L42,10 L40,10 Z
+                           M38,16 L44,16 L43,22 L37,22 Z
+                           M46,10 L62,10 L62,16 L46,16 Z" />
+
+    <!-- Belt-fed machine gun: heavy receiver and an ammunition box under it. -->
+    <PathGeometry x:Key="WeaponIcon.machinegun"
+                  Figures="M1,10 L22,10 L22,13 L1,13 Z
+                           M6,8 L18,8 L18,10 L6,10 Z
+                           M22,6 L46,6 L46,14 L22,14 Z
+                           M30,14 L34,14 L34,17 L30,17 Z
+                           M24,17 L42,17 L42,23 L24,23 Z
+                           M39,14 L45,14 L44,21 L38,21 Z
+                           M46,7 L61,7 L61,14 L46,14 Z" />
+
+    <!-- Grenade launcher: fat short barrel, break-action body. -->
+    <PathGeometry x:Key="WeaponIcon.launcher"
+                  Figures="M2,8 L24,8 L24,16 L2,16 Z
+                           M24,5 L40,5 L40,19 L24,19 Z
+                           M28,9 L36,9 L36,15 L28,15 Z
+                           M40,9 L46,9 L46,16 L40,16 Z
+                           M39,16 L45,16 L44,22 L38,22 Z
+                           M46,10 L60,10 L60,16 L46,16 Z" />
+
+    <!-- Pistol: slide and grip, drawn at true relative size next to a rifle. -->
+    <PathGeometry x:Key="WeaponIcon.pistol"
+                  Figures="M18,8 L44,8 L44,13 L18,13 Z
+                           M20,13 L28,13 L26,22 L18,22 Z
+                           M28,13 L32,13 L32,15 L28,15 Z" />
+
+    <!-- Magnum: heavier slide, longer barrel, squarer grip. -->
+    <PathGeometry x:Key="WeaponIcon.magnum"
+                  Figures="M14,7 L46,7 L46,13 L14,13 Z
+                           M17,13 L27,13 L25,23 L15,23 Z
+                           M27,13 L33,13 L33,16 L27,16 Z" />
+
+    <!-- Melee, edged: handle, guard, blade. Katana, machete, knife, fire axe. -->
+    <PathGeometry x:Key="WeaponIcon.blade"
+                  Figures="M4,13 L19,13 L19,17 L4,17 Z
+                           M19,10 L22,10 L22,20 L19,20 Z
+                           M22,12.5 L52,12.5 L60,16 L60,17.5 L22,17.5 Z" />
+
+    <!-- Melee, blunt: handle into a thick head. Bat, crowbar, guitar, shovel, pan. -->
+    <PathGeometry x:Key="WeaponIcon.blunt"
+                  Figures="M3,12 L7,12 L7,18 L3,18 Z
+                           M6,13.5 L26,13.5 L26,16.5 L6,16.5 Z
+                           M26,12 L42,9.5 L50,11 L54,15 L50,19 L42,20.5 L26,18 Z" />
+
+    <!-- Chainsaw: motor housing and cutting bar. -->
+    <PathGeometry x:Key="WeaponIcon.chainsaw"
+                  Figures="M4,7 L26,7 L26,20 L4,20 Z
+                           M10,4 L22,4 L22,7 L10,7 Z
+                           M26,11 L56,11 L60,13.5 L56,16 L26,16 Z" />
+
+    <!-- Riot shield. -->
+    <PathGeometry x:Key="WeaponIcon.shield"
+                  Figures="M18,4 L46,4 L46,15 L32,23 L18,15 Z" />
+
+    <!-- Anything the tables do not know: a plain crate, so an unmapped weapon still draws
+         a shape rather than an empty slot. -->
+    <PathGeometry x:Key="WeaponIcon.unknown"
+                  Figures="M14,6 L50,6 L50,21 L14,21 Z
+                           M18,10 L46,10 L46,17 L18,17 Z" />
+    <!-- The ammunition mark beside the magazine count, the way vanilla puts a single round
+         next to it. Authored in a 0..16 x 0..24 box of its own, not the weapon box: it is
+         drawn small and beside text, so it is taller than it is wide. -->
+
+    <!-- Normal rounds: one cartridge, tip and casing. -->
+    <PathGeometry x:Key="WeaponIcon.ammo"
+                  Figures="M8,1 L12,7 L12,14 L4,14 L4,7 Z
+                           M4,15 L12,15 L12,23 L4,23 Z" />
+
+    <!-- Incendiary: a flame, which is what the game marks the ammunition with. -->
+    <PathGeometry x:Key="WeaponIcon.ammo_fire"
+                  Figures="M8,0 C12,6 14,9 14,15 C14,20 11,24 8,24
+                           C5,24 2,20 2,15 C2,11 4,9 6,12 C6,8 7,4 8,0 Z" />
+
+    <!-- Explosive: a burst. Distinct from the flame at the size this actually draws. -->
+    <PathGeometry x:Key="WeaponIcon.ammo_boom"
+                  Figures="M8,0 L10,8 L16,4 L12,12 L16,20 L10,16 L8,24
+                           L6,16 L0,20 L4,12 L0,4 L6,8 Z" />
+</ResourceDictionary>

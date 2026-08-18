@@ -43,5 +43,47 @@ public sealed class Survivor
     [JsonPropertyName("kit")]     public string Kit { get; set; } = "";
     [JsonPropertyName("pill")]    public string Pill { get; set; } = "";
     [JsonPropertyName("throw")]   public string Throwable { get; set; } = "";
+
+    /// <summary>
+    /// Slot-0 weapon id, e.g. "rifle_ak47". Empty when the survivor carries none, and
+    /// always empty from an exporter older than 1.3.0.
+    /// </summary>
+    [JsonPropertyName("pri")]     public string Primary { get; set; } = "";
+
+    /// <summary>Rounds in the primary's magazine. -1 when the install exposed no route.</summary>
+    [JsonPropertyName("priclip")] public int PrimaryClip { get; set; } = -1;
+
+    /// <summary>Primary rounds in reserve. -1 when unreadable.</summary>
+    [JsonPropertyName("priammo")] public int PrimaryReserve { get; set; } = -1;
+
+    /// <summary>
+    /// What kind of rounds are loaded in the primary: 0 normal, 1 incendiary, 2 explosive.
+    /// Upgraded rounds live only in the magazine, so this returns to 0 by being fired.
+    /// </summary>
+    [JsonPropertyName("priupg")]  public int PrimaryAmmoKind { get; set; }
+
+    /// <summary>
+    /// Upgraded rounds left to fire. The upgrade's own pool, which survives a reload where
+    /// the magazine does not, so it is what the HUD counts down while one is loaded. Zero
+    /// whenever the kind is 0.
+    /// </summary>
+    [JsonPropertyName("priupgn")] public int PrimaryUpgradedLeft { get; set; }
+
+    /// <summary>
+    /// Slot-1 weapon id: "pistol", "pistol_magnum", "chainsaw", or a melee script name
+    /// such as "katana". Empty from an exporter older than 1.3.0.
+    /// </summary>
+    [JsonPropertyName("sec")]     public string Secondary { get; set; } = "";
+
+    /// <summary>Rounds in the secondary's magazine, or chainsaw fuel. -1 for melee.</summary>
+    [JsonPropertyName("secclip")] public int SecondaryClip { get; set; } = -1;
+
     [JsonPropertyName("weapon")]  public string Weapon { get; set; } = "";
+
+    /// <summary>
+    /// Which of the survivor's own slots is in their hands: "primary", "secondary",
+    /// "throwable", "kit", "pills", or empty for anything the exporter's tables do not
+    /// know. Empty from an exporter older than 1.3.0, which simply highlights nothing.
+    /// </summary>
+    [JsonPropertyName("slot")]    public string ActiveSlot { get; set; } = "";
 }

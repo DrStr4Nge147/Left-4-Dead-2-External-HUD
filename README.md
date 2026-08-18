@@ -53,14 +53,26 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v1.3.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
+ammunition, and your pistol, Magnum, chainsaw, or melee weapon beneath it, as a separate
+panel with its own corner (lower left or lower right), vertical or horizontal slot
+arrangement, and a height slider running the full screen. Weapons use L4D2's own HUD icons — all 33 the game ships,
+with drawn silhouettes behind them for the riot shield and for addon weapons — at their
+real relative sizes, so a Magnum reads as smaller than an M60; PNGs dropped into `workshop assets/weapon-icons/` override
+one weapon's art on the next build. It is
+configured under the Consistent HUD tab, has its own size slider on top of that view's
+size, and takes its opacity. The panel also carries your own throwable, kit, and pills as a
+three-slot row under the weapons, so your own Consistent HUD card no longer draws them;
+every other survivor keeps their item slots, and the Scoreboard tab shows the whole team's. This release has not been live-tested
+yet — see `docs/TESTING.md`.**
+
 **v1.2.0 — the scoreboard panel now has its own editor tab, while a separate Consistent HUD
 tab provides three named templates: Bottom - Horizontal Grid, Lower Left Vertical Grid, and
 Lower Right Vertical Grid. The horizontal grid lays out four cards across and up to three rows,
 adding columns for larger rosters; with Separate You enabled, the shared bottom roster starts at
 three columns so the independent You card can use the fourth area. The HUD design dropdown adds
-Basic and Minimalist cards; Minimalist puts the name and icon-only items before the health value
-above a five-segment compressed health strip, keeps grunge on temporary health, and truncates long
-names without hiding items. The Consistent HUD can hide health numbers or use a complete
+Basic and Minimalist cards; Minimalist puts the name before the health value above a five-segment
+compressed health strip, keeps grunge on temporary health, and truncates long names. The Consistent HUD can hide health numbers or use a complete
 black-and-white theme. A vertical-position slider moves the HUD upward from the
 bottom edge, while horizontal and vertical spacing sliders can pull cards together or overlap
 them. A configurable hotkey toggles it during play. Both halves also compare
@@ -75,13 +87,14 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v1.2.0** — exports every survivor plus `cls` classification and a `local`
-  marker for the listen-server host, and holds the game's scoreboard open on request. The
-  v1.2.0 app/VPK pair has been live-tested in L4D2. Its two transport files live in
+- **Exporter addon v1.3.0** — exports every survivor plus `cls` classification, a `local`
+  marker for the listen-server host, and each survivor's weapon slots with ammunition, and
+  holds the game's scoreboard open on request. The v1.2.0 app/VPK pair has been live-tested in
+  L4D2; v1.3.0's weapon fields have not. Its two transport files live in
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v1.2.0** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v1.3.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
@@ -90,8 +103,8 @@ has nothing to read.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-1.2.x is now live-tested for the current v1.2.0 release; `docs/TESTING.md` remains the
-regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+1.2.x is live-tested; v1.3.0 is not, and `docs/TESTING.md` carries its checklist as well as
+the standing regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over
@@ -160,8 +173,14 @@ overlay-custom-hud/
 ├── overlay-app/          # Windows overlay application (phase 3)
 ├── docs/                 # changelog, devlog, testing notes
 ├── compiled vpks/        # versioned build output - the only delivery surface
+├── tools/                # packaging scripts
 └── workshop assets/      # images
 ```
+
+Repack the addon with `tools\Build-AddonVpk.ps1`. It reads the version from
+`overlay_hud_exportddoninfo.txt` and writes `compiled vpks\overlay_hud_export_v<version>.vpk`
+as VPK format version 1 — the game's own `vpk.exe` writes v2, which the target L4D2 build
+rejects with `Unknown version 2`.
 
 ## License
 

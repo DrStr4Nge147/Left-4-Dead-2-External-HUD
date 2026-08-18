@@ -17,6 +17,11 @@
          thrown away and restarted five times a second and never visibly move. Sharing it
          also keeps every black-and-white card pulsing in step, which reads as one alarm
          instead of several. -->
+    <!-- The held slot. Green, the way vanilla marks the weapon in your hands, and carried
+         by the slot's frame rather than its art so an icon's own colours are untouched. -->
+    <SolidColorBrush x:Key="HeldSlotBorderBrush" Color="#FF6BE86B" />
+    <SolidColorBrush x:Key="HeldSlotBackgroundBrush" Color="#B4112B14" />
+
     <SolidColorBrush x:Key="BwPulseBrush" Color="#FF6060" />
     <SolidColorBrush x:Key="MonochromePulseBrush" Color="#FFFFFFFF" />
 
@@ -51,6 +56,137 @@
                Opacity="{Binding Opacity}"
                Effect="{StaticResource MinimalistItemStroke}"
                ToolTip="{Binding Label}" />
+    </DataTemplate>
+
+    <!-- One carried-item slot of the weapon HUD. Larger than the card chip because this
+         panel is read from the corner of the eye mid-fight, and an empty slot still draws
+         its box: vanilla keeps three fixed places, so "no pills" is read from an empty
+         slot rather than from a missing one. -->
+    <DataTemplate x:Key="WeaponItemTemplate">
+        <Border Width="40" Height="30" Margin="{Binding SlotMargin}"
+                CornerRadius="3"
+                ToolTip="{Binding Label}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#8C05070A" />
+                    <Setter Property="BorderBrush" Value="#40FFFFFF" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter Property="Background"
+                                    Value="{StaticResource HeldSlotBackgroundBrush}" />
+                            <Setter Property="BorderBrush"
+                                    Value="{StaticResource HeldSlotBorderBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Image Width="32" Height="24"
+                   Source="{Binding Icon}"
+                   Stretch="Uniform"
+                   SnapsToDevicePixels="True"
+                   UseLayoutRounding="True"
+                   Opacity="{Binding Opacity}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+        </Border>
+    </DataTemplate>
+
+    <!-- One slot of the weapon HUD: the weapon's silhouette with its ammunition beside
+         it, in the vanilla reading order - magazine large, reserve underneath it. Melee
+         carries no ammunition and gets the whole slot for its shape.
+
+         The silhouette is geometry from WeaponIcons.xaml, stretched uniformly inside a
+         fixed box, so a pistol stays visibly smaller than a rifle instead of every weapon
+         being scaled up to fill its slot. An embedded PNG wins when one exists for that
+         weapon id, and the short text label is the last resort. -->
+    <DataTemplate x:Key="WeaponSlotTemplate">
+        <Border Width="132" Height="52"
+                Margin="{Binding SlotMargin}"
+                CornerRadius="3"
+                ToolTip="{Binding Label}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#8C05070A" />
+                    <Setter Property="BorderBrush" Value="#40FFFFFF" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter Property="Background"
+                                    Value="{StaticResource HeldSlotBackgroundBrush}" />
+                            <Setter Property="BorderBrush"
+                                    Value="{StaticResource HeldSlotBorderBrush}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid Margin="7,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding HasAmmo,
+                                         Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ClipText}"
+                                   FontFamily="{StaticResource HudFont}"
+                                   FontSize="21"
+                                   Foreground="#FFFFFF" />
+                        <!-- What kind of rounds are loaded, beside the count the way vanilla
+                             puts a single cartridge there. It changes to a flame or a burst
+                             while an upgrade is in the magazine and back when it runs out. -->
+                        <Path Data="{Binding AmmoGlyph}"
+                              Fill="{Binding AmmoGlyphBrush}"
+                              Stretch="Uniform"
+                              Width="9" Height="15"
+                              Margin="4,2,0,0"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding HasAmmoGlyph,
+                                           Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ReserveText}"
+                               Margin="1,-3,0,0"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="12"
+                               Foreground="#9FB0C0"
+                               Visibility="{Binding HasReserve,
+                                            Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <Grid Grid.Column="1" Margin="6,0,0,0">
+                    <Path Data="{Binding Silhouette}"
+                          Fill="#F2F2F2"
+                          Stretch="Uniform"
+                          MaxWidth="{Binding ArtWidth}"
+                          MaxHeight="38"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding ShowsSilhouette,
+                                       Converter={StaticResource BoolToVisibility}}" />
+                    <Image Source="{Binding Icon}"
+                           Stretch="Uniform"
+                           MaxWidth="{Binding ArtWidth}"
+                           MaxHeight="38"
+                           SnapsToDevicePixels="True"
+                           UseLayoutRounding="True"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasIcon,
+                                        Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{Binding ShortText}"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="14"
+                               Foreground="#E6ECF2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding ShowsText,
+                                            Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <DataTemplate x:Key="MinimalistSegmentTemplate">
@@ -157,7 +293,8 @@
 
     <!-- The consistent HUD is a row-major grid, not a framed scoreboard. It keeps the same
          survivor-card values and item order, but removes the roster header and outer panel so
-         it reads as a persistent in-game HUD. -->
+         it reads as a persistent in-game HUD. The player's own card leaves its items to the
+         weapon HUD, which draws them larger beside their ammunition. -->
     <DataTemplate x:Key="ConsistentSurvivorTemplate">
         <Border Margin="{Binding RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}},
                                 Path=Tag}"
@@ -231,7 +368,7 @@
                 </Grid>
 
                 <ItemsControl Grid.Column="2"
-                              ItemsSource="{Binding ItemSlots}"
+                              ItemsSource="{Binding ConsistentItemSlots}"
                               VerticalAlignment="Center"
                               Margin="8,0,0,0"
                               ItemTemplate="{StaticResource ChipTemplate}">
@@ -246,8 +383,9 @@
     </DataTemplate>
 
     <!-- A compact health strip: the name, item icons, and health value sit above the bar.
-         The three item slots stay in their own Auto column and remain visible when the name
-         is longer than the card. -->
+         The item slots keep their own Auto column and remain visible when the name is longer
+         than the card. The player's own card draws none - their items are on the weapon HUD,
+         beside their ammunition, the way vanilla keeps them. -->
     <DataTemplate x:Key="ConsistentMinimalistTemplate">
         <Border Margin="{Binding RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}},
                                 Path=Tag}"
@@ -316,7 +454,7 @@
                     </Grid>
 
                     <ItemsControl Grid.Column="1"
-                                  ItemsSource="{Binding ItemSlots}"
+                                  ItemsSource="{Binding ConsistentItemSlots}"
                                   VerticalAlignment="Center"
                                   Margin="0,0,6,0"
                                   ItemTemplate="{StaticResource MinimalistChipTemplate}">
@@ -351,6 +489,7 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
+
             </Grid>
         </Border>
     </DataTemplate>

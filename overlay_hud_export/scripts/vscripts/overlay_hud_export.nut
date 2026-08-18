@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "1.2.0"
+::OvlHud.VERSION   <- "1.3.0"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -29,6 +29,17 @@
 // Export rate. 0.2 = 5 Hz. The overlay only needs to look current, not frame-perfect,
 // and every tick is a file write.
 ::OvlHud.INTERVAL  <- 0.2
+
+// The ammunition channel: the host player's own magazine and reserve, and nothing else.
+//
+// It exists because 5 Hz cannot count rounds. An Uzi fires about twelve a second, so the
+// roster tick drops two or three at a time and the counter jumps rather than counts down.
+// Raising the roster rate to match would multiply the cost of the whole export - every
+// survivor, every field, every tick - to fix one number belonging to one player. This
+// writes about fifteen bytes and reads three properties off one entity.
+::OvlHud.AMMO_FILE     <- "overlay_hud/ammo.txt"
+::OvlHud.AMMO_INTERVAL <- 0.05
+::OvlHud.ammoSeq       <- 0
 
 // Seconds after chapter load before the first export. The roster is not settled at t=0.
 ::OvlHud.BOOT_WAIT <- 5.0
@@ -70,7 +81,13 @@
 ::OvlHud.consoleRoute <- -1  // -1 unprobed, 1 SendToConsole, 0 no route
 ::OvlHud.botMode   <- 0      // 0 unknown, 1 IsPlayerABot(), 2 m_fFlags & FL_FAKECLIENT
 ::OvlHud.botProbed <- false
+::OvlHud.clipMode  <- -1     // -1 unprobed, 1 Clip1(), 2 m_iClip1, 0 no route
+::OvlHud.ammoMode  <- -1     // -1 unprobed, 1 m_iAmmo[m_iPrimaryAmmoType], 0 no route
+::OvlHud.meleeMode <- -1     // -1 unprobed, 1 m_strMapSetScriptName, 0 no route
+::OvlHud.dualMode  <- -1     // -1 unprobed, 1 m_isDualWielding, 0 falling back to clip size
+::OvlHud.upgMode   <- -1     // -1 unprobed, 1 m_upgradeBitVec + loaded count, 0 no route
 ::OvlHud.hostProbeWarned <- false
+::OvlHud.ammoWarned <- false
 ::OvlHud.localUid <- -1      // cached listen-server host userid; -1 when unavailable
 ::OvlHud.decayRate <- 0.34   // overwritten from pain_pills_decay_rate at load if readable
 
@@ -104,6 +121,44 @@
 	weapon_molotov    = "molotov",
 	weapon_pipe_bomb  = "pipebomb",
 	weapon_vomitjar   = "bile"
+}
+
+// Slot 0. Every tier-1 and tier-2 long gun, plus the two uncommon-tier weapons that also
+// occupy the primary slot. Classification is by classname for the same reason the item
+// tables are: m_hMyWeapons is compacted, so the index a weapon sits at means nothing.
+//
+// A custom primary from another addon is not in this table and exports as no primary at
+// all, which is the honest answer - the alternative is calling an unknown weapon "primary"
+// on the strength of it having a clip, and a deployable or a script prop would qualify.
+// The overlay does accept an id it has never seen and draws its humanised name, so adding
+// one here is the only step needed to support it.
+::OvlHud.PRIMARY_WEAPONS <- {
+	weapon_smg                = "smg",
+	weapon_smg_silenced       = "smg_silenced",
+	weapon_smg_mp5            = "smg_mp5",
+	weapon_pumpshotgun        = "pumpshotgun",
+	weapon_shotgun_chrome     = "shotgun_chrome",
+	weapon_autoshotgun        = "autoshotgun",
+	weapon_shotgun_spas       = "shotgun_spas",
+	weapon_rifle              = "rifle",
+	weapon_rifle_ak47         = "rifle_ak47",
+	weapon_rifle_desert       = "rifle_desert",
+	weapon_rifle_sg552        = "rifle_sg552",
+	weapon_rifle_m60          = "rifle_m60",
+	weapon_hunting_rifle      = "hunting_rifle",
+	weapon_sniper_military    = "sniper_military",
+	weapon_sniper_scout       = "sniper_scout",
+	weapon_sniper_awp         = "sniper_awp",
+	weapon_grenade_launcher   = "grenade_launcher"
+}
+
+// Slot 1. Melee is deliberately absent: every melee weapon shares the classname
+// weapon_melee and is told apart by its map-set script name, which MeleeId reads. So is
+// the second pistol: a pair is still weapon_pistol, and IsDualPistol tells them apart.
+::OvlHud.SECONDARY_WEAPONS <- {
+	weapon_pistol         = "pistol",
+	weapon_pistol_magnum  = "pistol_magnum",
+	weapon_chainsaw       = "chainsaw"
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +307,227 @@
 }
 
 // ---------------------------------------------------------------------------
+// weapon ammunition
+//
+// Every route below is probed once and the answer reused, the same way DetectBotMode
+// works, and every failure is logged rather than swallowed: a silently missing ammo route
+// would look exactly like a survivor who is permanently out of bullets, which is worse
+// than a card that honestly says it does not know. -1 means "not readable", and the
+// overlay draws no ammo text for it.
+// ---------------------------------------------------------------------------
+
+// Rounds in the magazine. Clip1() is the semantic accessor; m_iClip1 is the field behind
+// it and is the fallback for a build that does not expose the method.
+::OvlHud.ClipOf <- function (w)
+{
+	if (this.clipMode == 0) { return -1 }
+
+	if (this.clipMode != 2)
+	{
+		try
+		{
+			local clip = w.Clip1()
+
+			if (this.clipMode != 1)
+			{
+				this.clipMode = 1
+				this.Log("clip read: Clip1()")
+			}
+
+			return clip
+		}
+		catch (e)
+		{
+			if (this.clipMode == -1) { this.Log("clip read: Clip1 unavailable - " + e) }
+		}
+	}
+
+	try
+	{
+		local clip = NetProps.GetPropInt(w, "m_iClip1")
+
+		if (this.clipMode != 2)
+		{
+			this.clipMode = 2
+			this.Log("clip read: m_iClip1")
+		}
+
+		return clip
+	}
+	catch (e)
+	{
+		if (this.clipMode != 0)
+		{
+			this.clipMode = 0
+			this.Log("clip read: no route available, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
+// Rounds in reserve. The count lives on the PLAYER, in m_iAmmo, indexed by the ammo type
+// the weapon declares - not on the weapon, which only carries its magazine.
+::OvlHud.ReserveOf <- function (p, w)
+{
+	if (this.ammoMode == 0) { return -1 }
+
+	try
+	{
+		local slot = NetProps.GetPropInt(w, "m_iPrimaryAmmoType")
+		if (slot < 0) { return -1 }
+
+		local reserve = NetProps.GetPropIntArray(p, "m_iAmmo", slot)
+
+		if (this.ammoMode != 1)
+		{
+			this.ammoMode = 1
+			this.Log("reserve ammo read: m_iAmmo[m_iPrimaryAmmoType]")
+		}
+
+		return reserve
+	}
+	catch (e)
+	{
+		if (this.ammoMode != 0)
+		{
+			this.ammoMode = 0
+			this.Log("reserve ammo read: no route available, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
+// Which kind of rounds are actually loaded: 0 normal, 1 incendiary, 2 explosive.
+//
+// Two fields together, because either alone is wrong. m_upgradeBitVec says which upgrade
+// the weapon has been given and stays set once given; m_nUpgradedPrimaryAmmoLoaded counts
+// the upgraded rounds still to be fired and is what runs out. The HUD marks the
+// ammunition, so the count is what decides, and the bit vector only says which mark.
+//
+// The count is exported as well as the kind. It is the upgrade's own pool and survives a
+// reload, unlike the magazine, so it is the number the HUD shows while an upgrade holds -
+// a magazine that jumps back to full on reload says nothing about how much fire is left.
+// Bit values confirmed in game rather than taken from a header: the first build assumed
+// incendiary was 1 << 1 and explosive 1 << 2, and live testing gave a plain cartridge for
+// incendiary and a flame for explosive, which places the pair one bit lower. Any other bit
+// in the vector is ignored - only these two change what is in the magazine.
+::OvlHud.UPGRADE_INCENDIARY <- 1   // 1 << 0
+::OvlHud.UPGRADE_EXPLOSIVE  <- 2   // 1 << 1
+
+// Rounds left in the upgrade, set by the call below. Kept as a field rather than returned
+// alongside the kind because this runs twenty times a second and a table per tick would be
+// twenty allocations a second for two integers.
+::OvlHud.upgLoaded <- 0
+
+::OvlHud.UpgradeOf <- function (w)
+{
+	this.upgLoaded = 0
+
+	if (this.upgMode == 0) { return 0 }
+
+	try
+	{
+		local loaded = NetProps.GetPropInt(w, "m_nUpgradedPrimaryAmmoLoaded")
+		local bits   = NetProps.GetPropInt(w, "m_upgradeBitVec")
+
+		if (this.upgMode != 1)
+		{
+			this.upgMode = 1
+			this.Log("ammo upgrade read: m_upgradeBitVec + m_nUpgradedPrimaryAmmoLoaded")
+		}
+
+		if (loaded <= 0) { return 0 }
+
+		if (bits & this.UPGRADE_INCENDIARY) { this.upgLoaded = loaded; return 1 }
+		if (bits & this.UPGRADE_EXPLOSIVE)  { this.upgLoaded = loaded; return 2 }
+
+		return 0
+	}
+	catch (e)
+	{
+		if (this.upgMode != 0)
+		{
+			this.upgMode = 0
+			this.Log("ammo upgrade read: no route available, reporting normal - " + e)
+		}
+	}
+
+	return 0
+}
+
+// One pistol or two. Both are weapon_pistol, and the HUD draws a different icon for each,
+// so this has to be answered per weapon rather than assumed.
+//
+// m_isDualWielding is the direct answer. The fallback is the magazine: a single pistol
+// holds 15 and a pair holds 30, so anything past 15 is a pair. That fallback is one-way -
+// a pair down to its last rounds reads as a single pistol - which is why it is a fallback
+// and not the primary route, and why the failure is logged rather than swallowed.
+::OvlHud.IsDualPistol <- function (w, clip)
+{
+	if (this.dualMode != 0)
+	{
+		try
+		{
+			local dual = NetProps.GetPropInt(w, "m_isDualWielding") != 0
+
+			if (this.dualMode != 1)
+			{
+				this.dualMode = 1
+				this.Log("dual pistol read: m_isDualWielding")
+			}
+
+			return dual
+		}
+		catch (e)
+		{
+			if (this.dualMode != 0)
+			{
+				this.dualMode = 0
+				this.Log("dual pistol read: m_isDualWielding unavailable, "
+				         + "falling back to magazine size - " + e)
+			}
+		}
+	}
+
+	return clip > 15
+}
+
+// Which melee weapon this is. All of them share the classname weapon_melee; the specific
+// one is the map-set script name ("fireaxe", "katana", ...). An install that will not give
+// it up still reports a usable "melee".
+::OvlHud.MeleeId <- function (w)
+{
+	if (this.meleeMode == 0) { return "melee" }
+
+	try
+	{
+		local id = NetProps.GetPropString(w, "m_strMapSetScriptName")
+
+		if (this.meleeMode != 1)
+		{
+			this.meleeMode = 1
+			this.Log("melee id read: m_strMapSetScriptName")
+		}
+
+		if (id == null || id.len() == 0) { return "melee" }
+
+		return id
+	}
+	catch (e)
+	{
+		if (this.meleeMode != 0)
+		{
+			this.meleeMode = 0
+			this.Log("melee id read: no route available, reporting \"melee\" - " + e)
+		}
+	}
+
+	return "melee"
+}
+
+// ---------------------------------------------------------------------------
 // one survivor -> one JSON object
 // ---------------------------------------------------------------------------
 
@@ -294,13 +570,28 @@
 	local pill   = ""
 	local throwable = ""
 	local active = ""
+	local activeIdx = -1
+	local slot    = ""
+	local primary   = ""
+	local priClip   = -1
+	local priAmmo   = -1
+	local priUpg    = 0
+	local priUpgN   = 0
+	local secondary = ""
+	local secClip   = -1
 
 	try
 	{
 		local w = p.GetActiveWeapon()
-		if (w != null) { active = w.GetClassname() }
+		if (w != null) { active = w.GetClassname(); activeIdx = w.GetEntityIndex() }
 	}
 	catch (e) { }
+
+	// Weapons are read for the host player only. Only their own weapon HUD is drawn, so
+	// classifying every bot's rifle and reading its magazine was work whose result nothing
+	// ever displayed - and the ammunition channel below repeats part of it twenty times a
+	// second. Items stay per-survivor: those DO appear on every card.
+	local isLocal = localUid >= 0 && uid == localUid
 
 	try
 	{
@@ -313,9 +604,61 @@
 
 			local cn = w.GetClassname()
 
-			if      (cn in this.KIT_ITEMS)   { kit       = this.KIT_ITEMS[cn]   }
-			else if (cn in this.PILL_ITEMS)  { pill      = this.PILL_ITEMS[cn]  }
-			else if (cn in this.THROW_ITEMS) { throwable = this.THROW_ITEMS[cn] }
+			// Which of this survivor's own slots is in their hands. Compared by entity
+			// index against GetActiveWeapon() rather than by classname: a pair of pistols
+			// and a melee weapon share their classname with what they are held beside, and
+			// the HUD has to highlight a place, not a name. Anything the tables do not know
+			// - a gas can, another addon's weapon - leaves the slot empty, which is the
+			// honest answer: nothing the HUD draws is being held.
+			local held = activeIdx >= 0 && w.GetEntityIndex() == activeIdx
+
+			if (cn in this.KIT_ITEMS)
+			{
+				kit = this.KIT_ITEMS[cn]
+
+				if (held) { slot = "kit" }
+			}
+			else if (cn in this.PILL_ITEMS)
+			{
+				pill = this.PILL_ITEMS[cn]
+
+				if (held) { slot = "pills" }
+			}
+			else if (cn in this.THROW_ITEMS)
+			{
+				throwable = this.THROW_ITEMS[cn]
+
+				if (held) { slot = "throwable" }
+			}
+			else if (!isLocal) { continue }
+			else if (cn in this.PRIMARY_WEAPONS)
+			{
+				primary = this.PRIMARY_WEAPONS[cn]
+				priClip = this.ClipOf(w)
+				priAmmo = this.ReserveOf(p, w)
+				priUpg  = this.UpgradeOf(w)
+				priUpgN = this.upgLoaded
+
+				if (held) { slot = "primary" }
+			}
+			else if (cn in this.SECONDARY_WEAPONS)
+			{
+				secondary = this.SECONDARY_WEAPONS[cn]
+				secClip   = this.ClipOf(w)
+
+				if (cn == "weapon_pistol" && this.IsDualPistol(w, secClip))
+				{
+					secondary = "pistol_dual"
+				}
+
+				if (held) { slot = "secondary" }
+			}
+			else if (cn == "weapon_melee")
+			{
+				secondary = this.MeleeId(w)
+
+				if (held) { slot = "secondary" }
+			}
 		}
 	}
 	catch (e)
@@ -324,7 +667,6 @@
 	}
 
 	local bot = this.IsBotPlayer(p)
-	local isLocal = localUid >= 0 && uid == localUid
 
 	local json = "{"
 	json += "\"uid\":" + uid
@@ -343,10 +685,111 @@
 	json += ",\"kit\":\"" + kit + "\""
 	json += ",\"pill\":\"" + pill + "\""
 	json += ",\"throw\":\"" + throwable + "\""
+	json += ",\"pri\":\"" + this.JsonEscape(primary) + "\""
+	json += ",\"priclip\":" + priClip.tointeger()
+	json += ",\"priammo\":" + priAmmo.tointeger()
+	json += ",\"priupg\":" + priUpg
+	json += ",\"priupgn\":" + priUpgN
+	json += ",\"sec\":\"" + this.JsonEscape(secondary) + "\""
+	json += ",\"secclip\":" + secClip.tointeger()
 	json += ",\"weapon\":\"" + this.JsonEscape(active) + "\""
+	json += ",\"slot\":\"" + slot + "\""
 	json += "}"
 
 	return json
+}
+
+// ---------------------------------------------------------------------------
+// ammunition channel
+//
+// One line, four fields, rewritten at 20 Hz:
+//
+//     <seq> <primary clip> <primary reserve> <secondary clip> <ammo kind> <upgraded left>
+//
+// The ammo kind - 0 normal, 1 incendiary, 2 explosive - rides this channel rather than the
+// roster because it runs out by being fired, so it has to stop at the same round the count
+// does. A reader that only knows the first four fields is unaffected.
+//
+// Only the host player's, because only their weapon HUD is drawn. Which weapons those
+// numbers belong to still comes from state.json at 5 Hz - a weapon change is a fifth of a
+// second late, which nobody can see, while the rounds themselves are current.
+// ---------------------------------------------------------------------------
+
+::OvlHud.ExportAmmo <- function ()
+{
+	local host = null
+
+	try { host = GetListenServerHost() } catch (e) { return }
+	if (host == null) { return }
+
+	local priClip = -1
+	local priAmmo = -1
+	local secClip = -1
+	local priUpg  = 0
+	local priUpgN = 0
+
+	local size = NetProps.GetPropArraySize(host, "m_hMyWeapons")
+
+	for (local i = 0; i < size; i++)
+	{
+		local w = NetProps.GetPropEntityArray(host, "m_hMyWeapons", i)
+		if (w == null) { continue }
+
+		local cn = w.GetClassname()
+
+		if (cn in this.PRIMARY_WEAPONS)
+		{
+			priClip = this.ClipOf(w)
+			priAmmo = this.ReserveOf(host, w)
+			priUpg  = this.UpgradeOf(w)
+			priUpgN = this.upgLoaded
+		}
+		else if (cn in this.SECONDARY_WEAPONS)
+		{
+			secClip = this.ClipOf(w)
+		}
+	}
+
+	this.ammoSeq++
+
+	StringToFile(this.AMMO_FILE,
+	             this.ammoSeq + " " + priClip.tointeger() + " " + priAmmo.tointeger()
+	             + " " + secClip.tointeger() + " " + priUpg + " " + priUpgN)
+}
+
+::OvlHud.AmmoTick <- function (generation)
+{
+	if (generation != this.gen) { return }   // superseded by a newer load
+
+	try
+	{
+		this.ExportAmmo()
+	}
+	catch (e)
+	{
+		// Deliberately quiet past the first: this runs twenty times a second, and a fault
+		// that logged every tick would bury the console. The roster export carries the same
+		// numbers at 5 Hz, so the HUD keeps working through it.
+		if (!this.ammoWarned)
+		{
+			this.ammoWarned = true
+			this.Log("ammo tick threw, falling back to the 5 Hz numbers : " + e)
+		}
+	}
+
+	this.ScheduleAmmo(this.AMMO_INTERVAL)
+}
+
+::OvlHud.ScheduleAmmo <- function (delay)
+{
+	try
+	{
+		EntFire("worldspawn", "RunScriptCode", "::OvlHud.AmmoTick(" + this.gen + ")", delay)
+	}
+	catch (e)
+	{
+		this.Log("!! ammo scheduling FAILED, ammo is now 5 Hz : " + e)
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -611,7 +1054,14 @@
 	// Bot detection deliberately does not happen here - no players exist yet. The first
 	// export tick that finds a survivor does it.
 	this.botProbed = false
+	// The ammo and melee routes are re-probed per script load for the same reason: what
+	// answered on one build is not proof for the next one this VM comes up on.
+	this.clipMode  = -1
+	this.ammoMode  = -1
+	this.meleeMode = -1
+	this.dualMode  = -1
 	this.hostProbeWarned = false
+	this.ammoWarned = false
 	this.localUid = -1
 
 	// A chapter change reloads this script while the engine keeps running. Anything the
@@ -621,7 +1071,14 @@
 	this.cmdSeq  = -1
 	this.cmdSeen = 0.0
 
-	this.Schedule((wait == null) ? this.BOOT_WAIT : wait)
+	local delay = (wait == null) ? this.BOOT_WAIT : wait
+
+	this.Schedule(delay)
+
+	// The ammunition loop waits with the roster loop. Starting it early would write a file
+	// full of -1 at a loading screen, which the app would then have to distinguish from a
+	// real "no weapon" answer.
+	this.ScheduleAmmo(delay)
 }
 
 ::OvlHud.Log("Overlay HUD Export " + ::OvlHud.VERSION + " loaded - exporting to ems/" + ::OvlHud.OUT_FILE)
