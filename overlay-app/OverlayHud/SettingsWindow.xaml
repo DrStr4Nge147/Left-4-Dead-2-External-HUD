@@ -1393,7 +1393,7 @@
                                                                    Foreground="#F0F2F5"
                                                                    FontWeight="SemiBold" />
                                                     </CheckBox>
-                                                    <TextBlock Text="A separate panel showing your own primary weapon with its magazine and reserve ammo, your pistol, chainsaw, or melee weapon below it, and your throwable, kit, and pills beneath those. The Consistent HUD cards no longer draw items, so turning this off leaves them unshown until Tab. Needs exporter 1.3.0 or newer; older addons send no weapon data. The Scoreboard tab never shows it."
+                                                    <TextBlock Text="A separate panel showing your own primary weapon with its magazine and reserve ammo, your pistol, chainsaw, or melee weapon below it, and your throwable, kit, and pills beneath those. The Consistent HUD cards no longer draw items, so turning this off leaves them unshown until Tab. Needs exporter 2.0.0 or newer; older addons send no weapon data. The Scoreboard tab never shows it."
                                                                Margin="22,4,0,0" TextWrapping="Wrap"
                                                                Foreground="#AAB2BE" FontSize="11" />
                                                 </StackPanel>

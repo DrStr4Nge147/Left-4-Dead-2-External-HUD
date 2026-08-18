@@ -18,7 +18,7 @@ internal static class ActiveSlots
     public const string Pills = "pills";
 
     /// <summary>
-    /// Whether an exported token names this slot. An exporter older than 1.3.0 sends no
+    /// Whether an exported token names this slot. An exporter older than 2.0.0 sends no
     /// token at all, so nothing is highlighted rather than the wrong thing.
     /// </summary>
     public static bool Is(string? exported, string slot) =>

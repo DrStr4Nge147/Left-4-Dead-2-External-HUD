@@ -2,10 +2,13 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
-## Overlay HUD v1.3.0 - 2026-08-18: your weapons and ammunition, as their own HUD
+## Overlay HUD v2.0.0 - 2026-08-18: your own HUD, not just the roster's
 
-Health belongs to the roster; ammunition belongs where you are already looking. The weapon
-slots are their own panel rather than another column on a survivor card.
+A major version because the thing itself changed shape. Until now this drew one list of
+other people's health; it now draws your weapons, your ammunition, and your items as their
+own HUD, keeps two independent rosters instead of one shared list, and does it from a
+reworked editor. Health belongs to the roster; ammunition belongs where you are already
+looking.
 
 - Splits the roster in two. The Scoreboard panel and the Consistent HUD now have their own
   **Who to show**, and neither follows the other. The scoreboard's loses **All survivors**
@@ -68,7 +71,7 @@ slots are their own panel rather than another column on a survivor card.
   clamped to the screen it opens on.
 - Leaves the rest of the survivor cards alone. Health and state read exactly as they did in
   v1.2.0 in both HUD designs.
-- Advances the exporter addon and desktop overlay together to v1.3.0. The exporter adds the
+- Advances the exporter addon and desktop overlay together to v2.0.0. The exporter adds the
   optional `pri`, `priclip`, `priammo`, `sec`, and `secclip` transport fields for the host
   player, with `sec` distinguishing `pistol` from `pistol_dual`, plus the 20 Hz
   `ammo.txt` channel; older state

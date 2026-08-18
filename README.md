@@ -53,7 +53,7 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v1.3.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
+**v2.0.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
 ammunition, and your pistol, Magnum, chainsaw, or melee weapon beneath it, as a separate
 panel with its own corner (lower left or lower right), vertical or horizontal slot
 arrangement, and a height slider running the full screen. Weapons use L4D2's own HUD icons — all 33 the game ships,
@@ -87,14 +87,14 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v1.3.0** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.0.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. The v1.2.0 app/VPK pair has been live-tested in
-  L4D2; v1.3.0's weapon fields have not. Its two transport files live in
+  L4D2; v2.0.0's weapon fields have not. Its two transport files live in
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v1.3.0** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.0.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
@@ -103,7 +103,7 @@ has nothing to read.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-1.2.x is live-tested; v1.3.0 is not, and `docs/TESTING.md` carries its checklist as well as
+1.2.x is live-tested; v2.0.0 is not, and `docs/TESTING.md` carries its checklist as well as
 the standing regression procedure. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 

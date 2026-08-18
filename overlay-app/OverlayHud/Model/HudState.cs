@@ -46,7 +46,7 @@ public sealed class Survivor
 
     /// <summary>
     /// Slot-0 weapon id, e.g. "rifle_ak47". Empty when the survivor carries none, and
-    /// always empty from an exporter older than 1.3.0.
+    /// always empty from an exporter older than 2.0.0.
     /// </summary>
     [JsonPropertyName("pri")]     public string Primary { get; set; } = "";
 
@@ -71,7 +71,7 @@ public sealed class Survivor
 
     /// <summary>
     /// Slot-1 weapon id: "pistol", "pistol_magnum", "chainsaw", or a melee script name
-    /// such as "katana". Empty from an exporter older than 1.3.0.
+    /// such as "katana". Empty from an exporter older than 2.0.0.
     /// </summary>
     [JsonPropertyName("sec")]     public string Secondary { get; set; } = "";
 
@@ -83,7 +83,7 @@ public sealed class Survivor
     /// <summary>
     /// Which of the survivor's own slots is in their hands: "primary", "secondary",
     /// "throwable", "kit", "pills", or empty for anything the exporter's tables do not
-    /// know. Empty from an exporter older than 1.3.0, which simply highlights nothing.
+    /// know. Empty from an exporter older than 2.0.0, which simply highlights nothing.
     /// </summary>
     [JsonPropertyName("slot")]    public string ActiveSlot { get; set; } = "";
 }

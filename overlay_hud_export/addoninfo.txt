@@ -2,7 +2,7 @@
 {
 	addonSteamAppID		550
 	addontitle			"Overlay HUD Export"
-	addonversion		"1.3.0"
+	addonversion		"2.0.0"
 	addonauthor			"DrStr4nge"
 	addonDescription	"REQUIRES the separate 'Left 4 Dead 2 Customized Overlay HUD - External' application - this addon does nothing on its own. It only exports live survivor state (health, temp health, downed state, inventory) to a file; the application reads that file and draws the HUD, showing every survivor present instead of only the first four. Download the application: https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases - You must host the session, and L4D2 must run windowed borderless. Script only - changes no gameplay."
 	addonContent_Script	1

@@ -11,7 +11,7 @@ namespace OverlayHud.Services;
 /// than five updates a second can follow, so the counter jumps in twos and threes. This
 /// carries only the numbers that need to move that fast, so the roster export stays cheap.
 ///
-/// The channel is optional in every direction. An exporter older than 1.3.0 never writes
+/// The channel is optional in every direction. An exporter older than 2.0.0 never writes
 /// the file, a torn read is discarded, and anything that has not advanced recently is
 /// treated as absent — in all three cases the weapon HUD falls back to the numbers in
 /// state.json, which are correct, just coarser.

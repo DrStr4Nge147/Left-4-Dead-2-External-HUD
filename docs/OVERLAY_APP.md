@@ -8,7 +8,7 @@ process — no injection, no memory reading, no DirectX hooking.
 
 **Current verification:** the v1.2.0 app and format-v1 addon VPK were live-tested in L4D2 on
 2026-08-15, including the Consistent HUD health-number, black-and-white, and Minimalist options.
-The v1.3.0 weapon and ammunition row has not been live-tested yet.
+The v2.0.0 weapon and ammunition row has not been live-tested yet.
 
 ## Running it
 
@@ -201,7 +201,7 @@ carrying only your own magazine and reserve, and the app reads it at the same ra
 file is missing, stale, or left over from a previous session, the panel falls back to the
 roster's 5 Hz numbers — still correct, just moving in steps of two or three while firing.
 
-Ammunition needs exporter v1.3.0 or newer. An older addon sends no weapon fields at all and
+Ammunition needs exporter v2.0.0 or newer. An older addon sends no weapon fields at all and
 the panel stays hidden. A value the exporter could not read prints nothing rather than `0`,
 so blank ammo means "no reading", not "empty magazine" — the exporter logs which read route
 answered at load, in `console.log`.

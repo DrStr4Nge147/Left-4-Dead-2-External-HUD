@@ -1,6 +1,6 @@
 # Dev log
 
-## 2026-08-18 - v1.3.0: weapon slots, and what to do when the engine will not answer
+## 2026-08-18 - v2.0.0: your own HUD, and what to do when the engine will not answer
 
 Classified weapons by classname, in two tables beside the existing item tables, rather than
 by position in `m_hMyWeapons`. That array is compacted, so the index a weapon sits at says

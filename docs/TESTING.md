@@ -1,14 +1,14 @@
-# Testing — exporter v1.3.0 + overlay app v1.3.0
+# Testing — exporter v2.0.0 + overlay app v2.0.0
 
 The exporter and the v1.2.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-15,
 including the Consistent HUD presentation options. This checklist remains the repeatable
 regression procedure for future builds: whether the overlay appears over the game, follows
 Tab, and stays out of the way.
 
-**v1.3.0 has not been live-tested.** Its weapon and ammunition reads are new engine routes,
+**v2.0.0 has not been live-tested.** Its weapon and ammunition reads are new engine routes,
 and the section below is what has to pass before the release is called done.
 
-## Scoreboard hold vs the Consistent HUD (v1.3.0)
+## Scoreboard hold vs the Consistent HUD (v2.0.0)
 
 1. With the Consistent HUD on (F7), hold Tab. The persistent HUD — roster, You card, and
    weapon panel — must disappear and the scoreboard panel take its place, alongside L4D2's
@@ -20,7 +20,7 @@ and the section below is what has to pass before the release is called done.
 4. Hold and release quickly several times and confirm neither panel is left behind and the
    layout does not drift.
 
-## Weapon HUD (v1.3.0)
+## Weapon HUD (v2.0.0)
 
 1. Confirm `console.log` carries one line for each read route shortly after the first
    survivor is seen:
@@ -104,7 +104,7 @@ and the section below is what has to pass before the release is called done.
    ```text
    powershell -ExecutionPolicy Bypass -File tools\Build-AddonVpk.ps1
    ```
-3. Copy `compiled vpks\overlay_hud_export_v1.3.0.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v2.0.0.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -117,7 +117,7 @@ and the section below is what has to pass before the release is called done.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 1.3.0 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.0.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -259,7 +259,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v1.3.0` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.0.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

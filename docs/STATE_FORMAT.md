@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "1.3.0",
+  "v": "2.0.0",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -81,12 +81,12 @@ under the old name too, because that is the only name an older addon reads.
 | `kit` | `medkit`, `defib`, `explosive_ammo`, `incendiary_ammo`, or `""` |
 | `pill` | `pills`, `adrenaline`, or `""` |
 | `throw` | `molotov`, `pipebomb`, `bile`, or `""` |
-| `pri` | Slot-0 weapon id — `rifle_ak47`, `autoshotgun`, … — or `""`. **Host player only.** Added in 1.3.0 |
+| `pri` | Slot-0 weapon id — `rifle_ak47`, `autoshotgun`, … — or `""`. **Host player only.** Added in 2.0.0 |
 | `priclip` | Rounds in the primary's magazine. `-1` = the install exposed no readable route |
 | `priammo` | Primary rounds in reserve. `-1` = unreadable |
 | `sec` | Slot-1 weapon id: `pistol`, `pistol_dual`, `pistol_magnum`, `chainsaw`, or a melee script name such as `katana`. `""` when the slot is empty |
 | `secclip` | Rounds in the secondary's magazine, or chainsaw fuel. `-1` for melee and for an unreadable route |
-| `priupg` | Rounds loaded in the primary: `0` normal, `1` incendiary, `2` explosive. Added in 1.3.0 |
+| `priupg` | Rounds loaded in the primary: `0` normal, `1` incendiary, `2` explosive. Added in 2.0.0 |
 | `priupgn` | Upgraded rounds left to fire, `0` when none. The upgrade's own pool, which survives a reload |
 
 **The upgrade bits are `1 << 0` incendiary and `1 << 1` explosive.** That was established by
@@ -94,7 +94,7 @@ testing in game, not read from a header: the first build had both one bit higher
 a plain cartridge for incendiary and a flame for explosive. Any other bit in the vector is
 ignored - only these two change what is in the magazine.
 | `weapon` | Active weapon classname |
-| `slot` | Which of this survivor's own slots is in their hands: `primary`, `secondary`, `throwable`, `kit`, `pills`, or `""`. Added in 1.3.0 |
+| `slot` | Which of this survivor's own slots is in their hands: `primary`, `secondary`, `throwable`, `kit`, `pills`, or `""`. Added in 2.0.0 |
 
 **`slot` names a place, not a weapon.** The held slot cannot be identified by comparing
 `weapon` against `pri`/`sec`: a pair of pistols carries the same classname as one, and every
@@ -105,7 +105,7 @@ addon's weapon - reports `""`, since nothing the HUD draws is being held.
 
 ## Weapon fields
 
-Added in 1.3.0. An older exporter sends none of them, and the app treats that as "no
+Added in 2.0.0. An older exporter sends none of them, and the app treats that as "no
 weapon data" rather than as an unarmed survivor — the consistent HUD simply draws no
 weapon row.
 
@@ -187,7 +187,7 @@ menu, or closed. Show a stale/disconnected state rather than frozen numbers.
 
 ## Ammunition channel — `overlay_hud/ammo.txt`
 
-Added in 1.3.0. The addon writes it at 20 Hz, beside the state file:
+Added in 2.0.0. The addon writes it at 20 Hz, beside the state file:
 
 ```text
 E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\ems\overlay_hud\ammo.txt
@@ -229,7 +229,7 @@ the right way round: nobody can see the icon change late, and everybody can see 
 stutter.
 
 **The app must treat this channel as optional in every direction.** An exporter older than
-1.3.0 never writes it; a torn read must be discarded rather than half-applied; and a file
+2.0.0 never writes it; a torn read must be discarded rather than half-applied; and a file
 that has not advanced recently — or that was left behind by the previous session and has
 never been seen to advance at all — must be ignored in favour of the roster's own numbers,
 which are correct, just coarser.

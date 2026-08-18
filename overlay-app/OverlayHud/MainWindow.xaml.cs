@@ -754,7 +754,7 @@ public partial class MainWindow : Window
     ///
     /// Hidden rather than emptied when there is nothing to say: no local marker (a dedicated
     /// server, or an exporter older than 1.2.0), no weapon fields (an exporter older than
-    /// 1.3.0), or genuinely empty hands. An empty bordered box in the corner of the screen
+    /// 2.0.0), or genuinely empty hands. An empty bordered box in the corner of the screen
     /// looks like a bug in a way that an absent one does not.
     /// </summary>
     /// <summary>

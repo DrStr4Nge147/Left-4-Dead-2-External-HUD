@@ -423,7 +423,7 @@ internal static class Program
 
         var reader = new AmmoReader(statePath, TimeSpan.FromMilliseconds(10), 0.5);
 
-        // No file at all: an exporter older than 1.3.0. Nothing is claimed.
+        // No file at all: an exporter older than 2.0.0. Nothing is claimed.
         Invoke(reader, "Poll", flags);
         bool absentIsNotFresh = !reader.IsFresh;
 
@@ -653,7 +653,7 @@ internal static class Program
         bool emptyMagazineStillPrints = SurvivorCard.WeaponChip.For("rifle", 0, 0) is
             { ClipText: "0", ReserveText: "0" };
 
-        // An exporter older than 1.3.0 sends no weapon fields at all.
+        // An exporter older than 2.0.0 sends no weapon fields at all.
         bool legacyExporter = SurvivorCard.WeaponChip
             .SlotsFor(new Survivor { Name = "Legacy", Hp = 100, MaxHp = 100 }).Count == 0;
 
@@ -773,7 +773,7 @@ internal static class Program
         bool heldMarked = !holding[0].IsActive && holding[1].IsActive
             && heldItems[2].IsActive && !heldItems[0].IsActive && !heldItems[1].IsActive;
 
-        // An exporter older than 1.3.0 sends no token: nothing is highlighted rather than
+        // An exporter older than 2.0.0 sends no token: nothing is highlighted rather than
         // the first slot by accident. An empty slot is never marked either.
         bool nothingHeldByDefault = SurvivorCard.WeaponChip.SlotsFor(armed)
                 .All(chip => !chip.IsActive)

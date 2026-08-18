@@ -72,7 +72,7 @@ public sealed class AppConfig
     /// <summary>
     /// Draw the weapon HUD: the local player's own primary and secondary slots with their
     /// ammunition, as a separate panel beside the consistent HUD. Never shown by the
-    /// scoreboard view. Needs exporter 1.3.0 or newer; an older addon sends no weapon
+    /// scoreboard view. Needs exporter 2.0.0 or newer; an older addon sends no weapon
     /// fields and the panel stays hidden regardless of this setting.
     /// </summary>
     [JsonPropertyName("consistentShowWeapons")]
