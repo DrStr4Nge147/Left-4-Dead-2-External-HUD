@@ -1,8 +1,9 @@
 # Testing — exporter v2.1.2 + overlay app v2.1.2
 
-The v2.1.0 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
-the chapter-end transition, and the pause menu and console all take the overlay off screen and
-give it back. The v2.0.0 pair was live-tested on 2026-08-18, including the weapon HUD and its
+The v2.1.2 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
+the chapter-end transition, the end credits, and the pause menu and console all take the
+overlay off screen and give it back, and the run to the rescue vehicle keeps it drawn. The
+v2.0.0 pair was live-tested on 2026-08-18, including the weapon HUD and its
 ammunition reads. This checklist remains the repeatable
 regression procedure for future builds: whether the overlay appears over the game, follows
 Tab, and stays out of the way.

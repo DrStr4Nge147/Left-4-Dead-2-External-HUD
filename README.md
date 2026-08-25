@@ -53,16 +53,25 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v2.1.2 — the Consistent HUD stays away for the end credits.** Finishing a campaign used to
+bring it back over the credits: the game hands control back when the rescue vehicle leaves, so
+every read the overlay had was honestly reporting ordinary play while the credits rolled on
+top. The exporter now also asks the Director whether the finale has been won, which is the one
+thing that stays true for the whole roll. The HUD is still drawn while you fight your way to
+the vehicle. **v2.1.1** put the two hiding switches in the editor, on the Consistent HUD tab
+under **Showing it**, instead of leaving them as config-file keys. Both live-tested in L4D2 on
+2026-08-25.
+
 **v2.1.0 — the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor
 HUD, instead of sitting on top of the scene: the finale outro, where it stays away for the
 report screen and the load that follow; the chapter end, where the saferoom door closes and
 the score panel runs for several seconds before the loading bar; the map-start cinematic; and
-the pause menu or developer console. It comes back on its own each time. Each of those three
+the pause menu or developer console. It comes back on its own each time. Each of those
 scenes answers on a different signal — the outro on the game's own hidden-HUD flags and view
 camera, the chapter end on the server freezing the player, the menu on the mouse cursor L4D2
 shows for it, since a listen server does not pause and nothing in the game can be polled for
-a menu. `hideDuringCinematics` and `hideWhenGamePaused` in `config.json` turn the two rules
-off. Live-tested in L4D2 on 2026-08-25.**
+a menu. Both rules can be switched off; since v2.1.1 they are checkboxes in the editor.
+Live-tested in L4D2 on 2026-08-25.**
 
 **v2.0.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
 ammunition, and your pistol, Magnum, chainsaw, or melee weapon beneath it, as a separate
@@ -102,7 +111,7 @@ has nothing to read.
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
-  L4D2, weapon fields included, and the outro hiding on the 2.1.0 exporter with it. Its two transport files live in
+  L4D2, weapon fields included, and every scene-hiding rule on the 2.1.2 exporter with it. Its two transport files live in
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
@@ -111,7 +120,7 @@ has nothing to read.
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
   The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
-  in-game with the v2.0.0 app/VPK pair.
+  in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 

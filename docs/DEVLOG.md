@@ -35,9 +35,24 @@ The probe stays in the tree behind `PROBE = false`, with `ProbeCall` alongside i
 were identified by it now, and the name-lookup-before-call pattern is what made testing four
 candidate Director methods free rather than four builds.
 
-**Verification**: the signal is read off the author's live capture; the build acting on it is
-source inspection, `dotnet build` Release clean, and all 24 checks passing. The credits
-behaviour itself has not been played yet.
+**Verification**: **live-tested and confirmed working** 2026-08-25 on v2.1.2 - the overlay
+stays drawn through the run to the rescue vehicle, leaves with the escape, and stays away for
+the credits. The signal itself was read off the author's probe capture; the build also passes
+`dotnet build` Release clean and all 24 checks.
+
+That closes the set. Four scenes, four different reads, none of them guessed:
+
+| Scene | Answers on |
+|---|---|
+| Finale outro | `m_iHideHUD` mask, `m_hViewEntity` |
+| Chapter end, map start | `FL_FROZEN` |
+| End credits | `Director.IsFinaleWon()` |
+| Pause menu, console | the mouse cursor, from outside the game |
+
+The pattern that got there: when a theory-driven build failed, the next build was a probe
+rather than another theory. Three of the four signals came out of capture files, and the two
+wrong guesses along the way - `HIDEHUD_ALL` for the chapter end, export staleness for the
+menu - were each killed by one play session rather than argued about.
 
 ## 2026-08-25 - a UTF-8 BOM killed v2.1.1-exp1 outright
 

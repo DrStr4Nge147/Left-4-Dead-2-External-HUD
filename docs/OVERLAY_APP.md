@@ -8,8 +8,9 @@ process — no injection, no memory reading, no DirectX hooking.
 
 **Current verification:** the v2.0.0 app and format-v1 addon VPK were live-tested in L4D2 on
 2026-08-18, including the weapon HUD, its ammunition and carried-item row, the incendiary and
-explosive marks, and the two independent rosters. The 2.1.0 hiding rules - finale outro, chapter-end
-transition, pause menu and console - were confirmed in L4D2 on 2026-08-25.
+explosive marks, and the two independent rosters. All of the hiding rules - finale outro, end
+credits, chapter-end transition, map-start cinematic, pause menu and console - were confirmed
+in L4D2 on 2026-08-25 with the v2.1.2 pair.
 
 ## Running it
 
