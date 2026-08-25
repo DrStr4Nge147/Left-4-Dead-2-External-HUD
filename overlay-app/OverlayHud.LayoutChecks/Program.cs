@@ -50,6 +50,8 @@ internal static class Program
         return RunHookRecoveryCheck();
     if (args.Length > 0 && string.Equals(args[0], "menu-stale", StringComparison.OrdinalIgnoreCase))
         return RunMenuStaleCheck();
+    if (args.Length > 0 && string.Equals(args[0], "scene-hiding", StringComparison.OrdinalIgnoreCase))
+        return RunSceneHidingCheck();
     if (args.Length > 0 && string.Equals(args[0], "debug-log", StringComparison.OrdinalIgnoreCase))
         return RunDebugLogCheck();
     if (args.Length > 0 && string.Equals(args[0], "version-gate", StringComparison.OrdinalIgnoreCase))
@@ -1604,6 +1606,17 @@ internal static class Program
         bool themeOptionsLoadDefaults = showHealthNumbersCheckBox.IsChecked == true
             && monochromeCheckBox.IsChecked == false;
 
+        // The two scene-hiding switches. They were config.json-only when they shipped, and
+        // an option nobody can find is an option that gets reported as a bug.
+        var hideCinematicsCheckBox =
+            (CheckBox)GetField(settings, "HideDuringCinematicsCheckBox", flags);
+        var hidePausedCheckBox =
+            (CheckBox)GetField(settings, "HideWhenGamePausedCheckBox", flags);
+        bool sceneHidingLoadsOn = hideCinematicsCheckBox.IsChecked == true
+            && hidePausedCheckBox.IsChecked == true
+            && new AppConfig().HideDuringCinematics
+            && new AppConfig().HideWhenGamePaused;
+
         var presetSettings = new SettingsWindow(new AppConfig(), () => { });
         Invoke(presetSettings, "LoadControls", flags);
         var presetDesignCombo = (ComboBox)GetField(presetSettings, "ConsistentDesignCombo", flags);
@@ -1645,6 +1658,24 @@ internal static class Program
         bool separateYouWrites = editorDraft.ConsistentSeparateYou;
         bool themeOptionsWrite = !editorDraft.ConsistentShowHealthNumbers
             && editorDraft.ConsistentMonochrome;
+
+        // Unchecking has to reach the draft, or the switches are decorative.
+        hideCinematicsCheckBox.IsChecked = false;
+        hidePausedCheckBox.IsChecked = false;
+        Invoke(settings, "ReadControls", flags);
+        bool sceneHidingWrites = !editorDraft.HideDuringCinematics
+            && !editorDraft.HideWhenGamePaused;
+
+        // ...and must NOT be swept up by Reset UI, which restores visual layout. These are
+        // behaviour, like Show HUD consistently and Exit when L4D2 closes.
+        var hidingAppliedConfig = new AppConfig();
+        hidingAppliedConfig.CopyUiFrom(editorDraft);
+        bool sceneHidingIsNotLayout = hidingAppliedConfig.HideDuringCinematics
+            && hidingAppliedConfig.HideWhenGamePaused;
+
+        hideCinematicsCheckBox.IsChecked = true;
+        hidePausedCheckBox.IsChecked = true;
+        Invoke(settings, "ReadControls", flags);
         bool designLoadsBasic = designCombo.SelectedItem is ComboBoxItem
         {
             Tag: ConsistentHudPolicy.BasicDesign
@@ -1694,6 +1725,7 @@ internal static class Program
             && basicDesignDefaults && minimalistDesignDefaults && basicDesignDefaultsRestore
             && resetRestoresThemeDefaults
             && resetKeepsBehaviorOptions
+            && sceneHidingLoadsOn && sceneHidingWrites && sceneHidingIsNotLayout
             && previewChoiceRemembered && livePreviewIsDefault
             && rosterSectionIsCosmetic;
 
@@ -1726,6 +1758,8 @@ internal static class Program
             $"opensFilled={opensOnAFilledTab} newTabLaysOut={newTabLaysOutImmediately} " +
             $"stickyTabs={tabsAreSticky} " +
             $"resetKeepsBehaviorOptions={resetKeepsBehaviorOptions} " +
+            $"sceneHidingLoadsOn={sceneHidingLoadsOn} sceneHidingWrites={sceneHidingWrites} " +
+            $"sceneHidingIsNotLayout={sceneHidingIsNotLayout} " +
             $"previewChoiceRemembered={previewChoiceRemembered} " +
             $"livePreviewIsDefault={livePreviewIsDefault} " +
             $"rosterSectionIsCosmetic={rosterSectionIsCosmetic}");
@@ -2031,6 +2065,10 @@ internal static class Program
         Invoke(noOpReader, "Poll", flags);
         typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, noOpReader);
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+        // The desktop cursor is visible while these checks run, and a visible cursor over a
+        // foregrounded game means "menu open". Pinned closed so the roster assertions below
+        // are about the roster; the menu rule has its own check.
+        typeof(MainWindow).GetField("_menuProbe", flags)!.SetValue(window, (Func<bool>)(() => false));
         typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
         Invoke(window, "ApplyLayout", flags);
         Invoke(window, "Render", flags);
@@ -2187,6 +2225,10 @@ internal static class Program
 
         Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+        // The desktop cursor is visible while these checks run, and a visible cursor over a
+        // foregrounded game means "menu open". Pinned closed so the roster assertions below
+        // are about the roster; the menu rule has its own check.
+        typeof(MainWindow).GetField("_menuProbe", flags)!.SetValue(window, (Func<bool>)(() => false));
 
         var panel = (Border)GetField(window, "Panel", flags);
         var badge = (Border)GetField(window, "MenuBadge", flags);
@@ -3060,6 +3102,10 @@ internal static class Program
         typeof(MainWindow).GetField("_keys", flags)!.SetValue(window, keys);
         typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, reader);
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+        // The desktop cursor is visible while these checks run, and a visible cursor over a
+        // foregrounded game means "menu open". Pinned closed so the roster assertions below
+        // are about the roster; the menu rule has its own check.
+        typeof(MainWindow).GetField("_menuProbe", flags)!.SetValue(window, (Func<bool>)(() => false));
 
         var panel = (Border)GetField(window, "Panel", flags);
         var columns = (ItemsControl)GetField(window, "Columns", flags);
@@ -3118,6 +3164,10 @@ internal static class Program
         typeof(MainWindow).GetField("_keys", flags)!.SetValue(provenWindow, provenKeys);
         typeof(MainWindow).GetField("_reader", flags)!.SetValue(provenWindow, proven);
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(provenWindow, true);
+        // The desktop cursor is visible while these checks run, and a visible cursor over a
+        // foregrounded game means "menu open". Pinned closed so the roster assertions below
+        // are about the roster; the menu rule has its own check.
+        typeof(MainWindow).GetField("_menuProbe", flags)!.SetValue(provenWindow, (Func<bool>)(() => false));
         Invoke(proven, "Poll", flags);
         typeof(MainWindow).GetField("_dirty", flags)!.SetValue(provenWindow, true);
         Invoke(provenWindow, "Render", flags);
@@ -3150,6 +3200,126 @@ internal static class Program
         // Written by the overlay when this check drove its first live export. It belongs to
         // the harness folder, not to a user, and leaving it there changes what the next
         // check sees.
+        try { System.IO.File.Delete(AppConfig.ConfigPath); } catch { }
+
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The overlay stands in for the vanilla survivor HUD, so it has to leave when that one
+    /// leaves: a cinematic the exporter reports, or a menu the game draws over itself.
+    ///
+    /// Both rules were live-confirmed before they were checked here, and both are one boolean
+    /// away from hiding the HUD for a whole session, so each is asserted in both directions -
+    /// hides when it should, and draws when it should not.
+    /// </summary>
+    private static int RunSceneHidingCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                                            "OverlayHudCheck", $"scene-hiding-{Guid.NewGuid():N}");
+        System.IO.Directory.CreateDirectory(folder);
+        var file = System.IO.Path.Combine(folder, "state.json");
+
+        string Snapshot(long seq, int cine) =>
+            $"{{\"v\":\"{AppIdentity.DisplayVersion}\",\"seq\":{seq},\"time\":1,\"count\":2," +
+            $"\"cine\":{cine},\"hud\":2048,\"view\":0,\"frz\":{cine}," +
+            "\"survivors\":[" +
+            "{\"uid\":1,\"name\":\"Soldier A\",\"cls\":\"soldier\",\"hp\":100,\"maxhp\":100}," +
+            "{\"uid\":2,\"name\":\"Soldier B\",\"cls\":\"soldier\",\"hp\":80,\"maxhp\":100}]}";
+
+        var reader = new StateReader(file, TimeSpan.FromMilliseconds(100), 5.0);
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.AlwaysShow = true;           // the consistent HUD is what these rules govern
+        config.IgnoreForeground = true;
+        config.RosterFilter = "all";
+        config.ConsistentRosterFilter = "all";
+        config.ExporterProven = false;
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+
+        typeof(MainWindow).GetField("_reader", flags)!.SetValue(window, reader);
+        typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+
+        bool cursorShown = false;
+        typeof(MainWindow).GetField("_menuProbe", flags)!
+            .SetValue(window, (Func<bool>)(() => cursorShown));
+
+        var panel = (Border)GetField(window, "Panel", flags);
+
+        void Advance(long seq, int cine)
+        {
+            System.IO.File.WriteAllText(file, Snapshot(seq, cine));
+            Invoke(reader, "Poll", flags);
+            typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+            Invoke(window, "Render", flags);
+        }
+
+        // Two advances: the first sighting of a file is never an export, so the roster is
+        // only live from the second one on.
+        Advance(1, 0);
+        Advance(2, 0);
+        bool drawsInPlay = panel.Visibility == Visibility.Visible;
+
+        // The exporter reports a cinematic - outro, chapter end, map-start scene.
+        Advance(3, 1);
+        bool hidesForCinematic = panel.Visibility != Visibility.Visible;
+
+        // It has to outlive its own staleness window: the outro is the last thing exported
+        // before a map ends, so the panel must not reappear for the report screen.
+        for (int i = 0; i < 3; i++) Invoke(reader, "Poll", flags);
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "Render", flags);
+        bool staysHiddenWhenStale = panel.Visibility != Visibility.Visible;
+
+        Advance(4, 0);
+        bool comesBackAfterCinematic = panel.Visibility == Visibility.Visible;
+
+        // The menu is not in the export at all - it is the cursor the game shows for it.
+        cursorShown = true;
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "Render", flags);
+        bool hidesForMenu = panel.Visibility != Visibility.Visible;
+
+        cursorShown = false;
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "Render", flags);
+        bool comesBackAfterMenu = panel.Visibility == Visibility.Visible;
+
+        // Both switches have to actually switch it off, or they are decoration in the editor.
+        config.HideWhenGamePaused = false;
+        cursorShown = true;
+        typeof(MainWindow).GetField("_dirty", flags)!.SetValue(window, true);
+        Invoke(window, "Render", flags);
+        bool menuRuleCanBeTurnedOff = panel.Visibility == Visibility.Visible;
+        cursorShown = false;
+
+        config.HideDuringCinematics = false;
+        Advance(5, 1);
+        bool cinematicRuleCanBeTurnedOff = panel.Visibility == Visibility.Visible;
+
+        bool passed = drawsInPlay && hidesForCinematic && staysHiddenWhenStale
+            && comesBackAfterCinematic && hidesForMenu && comesBackAfterMenu
+            && menuRuleCanBeTurnedOff && cinematicRuleCanBeTurnedOff;
+
+        Console.WriteLine(
+            $"drawsInPlay={drawsInPlay} hidesForCinematic={hidesForCinematic} " +
+            $"staysHiddenWhenStale={staysHiddenWhenStale} " +
+            $"comesBackAfterCinematic={comesBackAfterCinematic} " +
+            $"hidesForMenu={hidesForMenu} comesBackAfterMenu={comesBackAfterMenu} " +
+            $"menuRuleCanBeTurnedOff={menuRuleCanBeTurnedOff} " +
+            $"cinematicRuleCanBeTurnedOff={cinematicRuleCanBeTurnedOff}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: the overlay must leave for cinematics and menus, and return afterwards");
+
+        reader.Dispose();
+        window.Close();
+        app.Shutdown();
+        try { System.IO.Directory.Delete(folder, true); } catch { }
         try { System.IO.File.Delete(AppConfig.ConfigPath); } catch { }
 
         return passed ? 0 : 1;
@@ -3249,6 +3419,10 @@ internal static class Program
         config.ExporterProven = true;
         Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
         typeof(MainWindow).GetField("_gameForeground", flags)!.SetValue(window, true);
+        // The desktop cursor is visible while these checks run, and a visible cursor over a
+        // foregrounded game means "menu open". Pinned closed so the roster assertions below
+        // are about the roster; the menu rule has its own check.
+        typeof(MainWindow).GetField("_menuProbe", flags)!.SetValue(window, (Func<bool>)(() => false));
 
         var badge = (Border)GetField(window, "MenuBadge", flags);
         var notice = (Border)GetField(window, "Notice", flags);

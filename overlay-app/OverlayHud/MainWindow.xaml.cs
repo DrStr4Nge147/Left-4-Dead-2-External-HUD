@@ -31,6 +31,14 @@ public partial class MainWindow : Window
     private Native.RECT _lastRect;
     private VersionCheck _version;
     private bool _gameForeground;
+
+    /// <summary>
+    /// Whether L4D2 is showing one of its own menus. A seam, not a preference: the answer
+    /// comes from the desktop cursor, which is global state a check cannot arrange - the
+    /// developer's own cursor is visible while the checks run, so a direct call made every
+    /// roster-drawing check fail at once. Production keeps the real probe.
+    /// </summary>
+    private Func<bool> _menuProbe = GameMenuProbe.CursorVisible;
     private volatile bool _settingsActive;
     private bool _dirty = true;
     private int _lastCardCount = -1;
@@ -412,7 +420,7 @@ public partial class MainWindow : Window
                 $"hideHud bits: {_reader?.Current?.HideHudBits ?? -1}   " +
                 $"view camera: {_reader?.Current?.ViewCamera ?? -1}   " +
                 $"frozen: {_reader?.Current?.Frozen ?? -1}   " +
-                $"cursor: {(GameMenuProbe.CursorVisible() ? "shown (menu)" : "hidden (play)")}   " +
+                $"cursor: {(_menuProbe() ? "shown (menu)" : "hidden (play)")}   " +
                 $"hiding: {(_cfg.HideDuringCinematics ? "on" : "off")}"
         });
     }
@@ -1182,7 +1190,7 @@ public partial class MainWindow : Window
         //   stopped  exports have stopped advancing: loading screen, main menu, game exited.
         //            HasExported keeps an overlay launched before the game drawing its empty
         //            panel - never having exported is not the same as having stopped.
-        bool menuOpen = _gameForeground && GameMenuProbe.CursorVisible();
+        bool menuOpen = _gameForeground && _menuProbe();
         bool stopped  = _reader is { HasExported: true, IsStale: true };
 
         bool paused = _cfg.HideWhenGamePaused && !LivePreview && (menuOpen || stopped);

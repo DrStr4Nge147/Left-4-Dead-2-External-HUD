@@ -283,6 +283,8 @@ public partial class SettingsWindow : Window
         MaxColumnsSlider.Value = Math.Clamp(_draft.MaxColumns, 1, 2);
         ExitWhenGameClosesCheckBox.IsChecked = _draft.ExitWhenGameCloses;
         AlwaysShowCheckBox.IsChecked = _draft.AlwaysShow;
+        HideDuringCinematicsCheckBox.IsChecked = _draft.HideDuringCinematics;
+        HideWhenGamePausedCheckBox.IsChecked = _draft.HideWhenGamePaused;
         ConsistentSeparateYouCheckBox.IsChecked = _draft.ConsistentSeparateYou;
         ConsistentShowHealthNumbersCheckBox.IsChecked = _draft.ConsistentShowHealthNumbers;
         ConsistentMonochromeCheckBox.IsChecked = _draft.ConsistentMonochrome;
@@ -781,6 +783,8 @@ public partial class SettingsWindow : Window
         _draft.MaxColumns = (int)Math.Round(MaxColumnsSlider.Value);
         _draft.ExitWhenGameCloses = ExitWhenGameClosesCheckBox.IsChecked == true;
         _draft.AlwaysShow = AlwaysShowCheckBox.IsChecked == true;
+        _draft.HideDuringCinematics = HideDuringCinematicsCheckBox.IsChecked == true;
+        _draft.HideWhenGamePaused = HideWhenGamePausedCheckBox.IsChecked == true;
         _draft.ShowStatusBadge = ShowStatusBadgeCheckBox.IsChecked == true;
         _draft.RosterFilter = RosterPolicy.ToConfigValue(SelectedRosterMode());
         _draft.ConsistentRosterFilter =
@@ -1109,6 +1113,8 @@ public partial class SettingsWindow : Window
         // layout, and neither of these is layout.
         _live.ExitWhenGameCloses = _draft.ExitWhenGameCloses;
         _live.AlwaysShow = _draft.AlwaysShow;
+        _live.HideDuringCinematics = _draft.HideDuringCinematics;
+        _live.HideWhenGamePaused = _draft.HideWhenGamePaused;
         _live.ConsistentKey = _draft.ConsistentKey;
         _live.PreviewMode = _draft.PreviewMode;
         _live.PreviewScoreboard = _draft.PreviewScoreboard;

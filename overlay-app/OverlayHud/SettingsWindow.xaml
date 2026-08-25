@@ -1151,6 +1151,29 @@
                                                                Foreground="#AAB2BE" FontSize="11" />
                                                 </StackPanel>
                                             </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                                                <StackPanel>
+                                                    <TextBlock Text="Get out of the way" FontWeight="SemiBold" />
+                                                    <CheckBox x:Name="HideDuringCinematicsCheckBox"
+                                                              Margin="0,7,0,0"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Hide for cinematics"
+                                                                   Foreground="#F0F2F5" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="The finale outro, the chapter-end score screen, and the cinematic at the start of a chapter - the moments L4D2 hides its own survivor HUD."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                    <CheckBox x:Name="HideWhenGamePausedCheckBox"
+                                                              Margin="0,9,0,0"
+                                                              Click="OnOptionChanged">
+                                                        <TextBlock Text="Hide for menus"
+                                                                   Foreground="#F0F2F5" />
+                                                    </CheckBox>
+                                                    <TextBlock Text="The pause menu, the developer console, loading screens, and the main menu. Detected from the mouse cursor the game shows for its own menus."
+                                                               Margin="22,4,0,0" TextWrapping="Wrap"
+                                                               Foreground="#AAB2BE" FontSize="11" />
+                                                </StackPanel>
+                                            </Border>
                     </UniformGrid>
                     <TextBlock Text="LAYOUT" Style="{StaticResource SectionHeading}" />
                     <UniformGrid Columns="3">
