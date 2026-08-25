@@ -52,7 +52,7 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 [*][b]Separate You:[/b] moves your card out of the roster to its own side, with a gap that prevents overlap.
 [*][b]Weapon HUD:[/b] can be turned off, placed in either bottom corner, stacked or side by side, moved anywhere up the screen, and sized on its own on top of the Consistent HUD's size.
 [*][b]Presentation:[/b] health numbers can be hidden, the Consistent HUD can go black-and-white, and card spacing may be negative for intentional overlap.
-[*][b]Scene hiding:[/b] on by default, and switchable in [b]config.json[/b] - [b]hideDuringCinematics[/b] for the outro, chapter end, and map-start cinematic, [b]hideWhenGamePaused[/b] for the pause menu, console, and loading screens.
+[*][b]Scene hiding:[/b] both on by default - [b]Hide for cinematics[/b] covers the outro, chapter end, and map-start cinematic; [b]Hide for menus[/b] covers the pause menu, console, and loading screens.
 [*][b]Preview:[/b] the live roster over L4D2, or a simulated one when the game is closed. The editor can also ask the addon to hold the scoreboard open while you position the panel.
 [/list]
 

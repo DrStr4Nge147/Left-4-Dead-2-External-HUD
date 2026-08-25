@@ -109,14 +109,15 @@ or overlap them.
 ### When it hides itself
 
 Standing in for the vanilla survivor HUD means leaving when that one leaves. The panel takes
-itself off screen for four moments, and returns on its own from each:
+itself off screen for four moments, and returns on its own from each. Both switches live on the
+Consistent HUD tab under **Showing it**, are on by default, and are left alone by Reset UI:
 
-| Moment | How it is known | Setting |
+| Moment | How it is known | Editor switch |
 |---|---|---|
-| Finale outro | The exporter reads `m_iHideHUD` against `HIDEHUD_ALL \| HIDEHUD_HEALTH`, or `m_hViewEntity` bound to a scripted camera | `hideDuringCinematics` |
-| Chapter end, map-start cinematic | `m_fFlags & FL_FROZEN` — the server has frozen the player for a scene. `m_iHideHUD` never moves for the score screen, so it cannot answer this one | `hideDuringCinematics` |
-| Pause menu, developer console | The mouse cursor L4D2 shows for its own menus, read with `GetCursorInfo` from outside the game. A listen server does **not** pause when the menu opens, so the exporter keeps running and nothing in the game can be polled for it | `hideWhenGamePaused` |
-| Loading screen, main menu, game closed | Exports have stopped advancing past `staleAfterSeconds` | `hideWhenGamePaused` |
+| Finale outro | The exporter reads `m_iHideHUD` against `HIDEHUD_ALL \| HIDEHUD_HEALTH`, or `m_hViewEntity` bound to a scripted camera | **Hide for cinematics** |
+| Chapter end, map-start cinematic | `m_fFlags & FL_FROZEN` — the server has frozen the player for a scene. `m_iHideHUD` never moves for the score screen, so it cannot answer this one | **Hide for cinematics** |
+| Pause menu, developer console | The mouse cursor L4D2 shows for its own menus, read with `GetCursorInfo` from outside the game. A listen server does **not** pause when the menu opens, so the exporter keeps running and nothing in the game can be polled for it | **Hide for menus** |
+| Loading screen, main menu, game closed | Exports have stopped advancing past `staleAfterSeconds` | **Hide for menus** |
 
 The cinematic verdict is honoured even after the state file goes stale: the outro is the last
 thing exported before a map ends, so a freshness gate would put the panel back up for exactly

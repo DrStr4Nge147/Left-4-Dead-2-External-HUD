@@ -19,7 +19,7 @@ The Consistent HUD stands in for the vanilla survivor HUD, so it now goes away w
 [*][b]Pause menu and developer console[/b] - the panel goes the moment the menu opens and returns on Return to game.
 [/list]
 
-Both rules are on by default and can be switched off in [b]config.json[/b]: [b]hideDuringCinematics[/b] for the cinematic scenes, [b]hideWhenGamePaused[/b] for the menu, console, and loading screens.
+Both are on by default and both can be turned off in the overlay's editor, on the [b]Consistent HUD[/b] tab under [b]Showing it[/b]: [b]Hide for cinematics[/b] and [b]Hide for menus[/b]. Reset UI leaves them alone.
 
 The overlay application advances to v2.1.0 with the addon and both halves are required - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url]. Close L4D2 before the addon updates; a Workshop pack replaced while the game is running is not reloaded until the game restarts.
 

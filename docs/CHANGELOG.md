@@ -15,8 +15,9 @@ Two components, released under one shared version: the exporter addon and overla
   the game and nothing in it can be polled for them, so the overlay reads the mouse cursor
   L4D2 shows for its own menus and hides while you play. It leaves for stopped exports too,
   which covers loading screens, the main menu, and the game closing.
-- Adds `hideDuringCinematics` and `hideWhenGamePaused` to `config.json`, both on by default.
-  Set either to `false` to keep the panel drawn through those moments.
+- Both rules are switchable in the editor, on the Consistent HUD tab under **Showing it**:
+  **Hide for cinematics** and **Hide for menus**, on by default and left alone by Reset UI.
+  They are `hideDuringCinematics` and `hideWhenGamePaused` in `config.json`.
 - The debug console gains a `cinematic` line carrying the verdict and the two raw engine
   reads behind it, and the exporter logs every change in those reads, so a scene that fails
   to hide the panel can be read off a capture.
