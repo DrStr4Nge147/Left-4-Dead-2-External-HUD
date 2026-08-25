@@ -1,5 +1,45 @@
 # Dev log
 
+## 2026-08-25 - v2.1.1, and why the end credits still draw the HUD
+
+2.1.1 is the editor promotion: the two hiding switches were config-file keys, which is the
+same as not having them. No exporter behaviour changed; the addon advances with the app to
+keep the pair on one version.
+
+The open bug is the end credits. The author's capture is unambiguous about what happens:
+
+```text
+[CF AutoSpawn][DEBUG] finale_vehicle_leaving fired.
+[OVLHUD] cinematic reads changed: hud=3963 view=0 frozen=1 -> hidden
+[OVLHUD] cinematic reads changed: hud=3961 view=1 frozen=1 -> hidden
+[CF AutoSpawn][DEBUG] finale_win fired.
+[OVLHUD] cinematic reads changed: hud=2048 view=0 frozen=0 -> drawn
+[OVLHUD] cinematic ended (hud=2048 view=0 frozen=0)
+```
+
+The outro hides correctly. Then `finale_win` fires, the game unfreezes everyone, drops the
+camera, and puts `m_iHideHUD` back to its 2048 baseline - and the credits roll over a map that
+is still live, with four healthy survivors still in it. All three reads honestly say "ordinary
+play", because from the server's point of view it is. The credits are client-side VGUI, the
+same class of problem the pause menu was.
+
+The menu was solved from outside the game, by the cursor. The credits do not show a cursor, so
+that route does not extend to them.
+
+Rather than guess a fourth signal, `v2.1.1-exp1` re-enables the probe with candidate reads
+aimed at this specific moment - `m_isEscaping`, `m_hasEscaped`, and Director calls
+`IsFinaleEscapeInProgress` and `IsFinaleWon`, with `HasAnySurvivorLeftSafeArea` and
+`IsTankInPlay` as controls proving Director calls reach the engine at all. Every name is a
+candidate, not a documented API; `ProbeCall` looks the name up before calling it, so one that
+does not exist prints `?` and costs a caught exception rather than a build.
+
+If all six print `?` through the credits, nothing server-side sees them and the next place to
+look is outside the process, as with the menu.
+
+**Verification**: the diagnosis is read off the author's live capture. The 2.1.1 release is
+source inspection, `dotnet build` Release clean, and the editor and scene-hiding checks
+passing. The credits are NOT fixed in it.
+
 ## 2026-08-25 - v2.1.0 goes stable
 
 **Live-tested and confirmed working** 2026-08-25, on `v2.1.0-exp2` plus the cursor build of

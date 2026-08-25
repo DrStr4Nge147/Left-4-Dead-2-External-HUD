@@ -5,6 +5,20 @@ Steam Workshop change notes, BBCode, newest first. Paste the top block into the
 Keep each block to what a player sees. Mechanism detail belongs in CHANGELOG.md.
 
 ================================================================================
+v2.1.1
+================================================================================
+
+[h1]v2.1.1 - the hiding switches are in the editor now[/h1]
+
+[list]
+[*][b]Hide for cinematics[/b] and [b]Hide for menus[/b] are now checkboxes in the overlay's editor, on the [b]Consistent HUD[/b] tab under [b]Showing it[/b]. They were config-file keys before, which made them options nobody could find. Both stay on by default and Reset UI leaves them alone.
+[/list]
+
+The addon itself is unchanged in this release; it advances to v2.1.1 so both halves stay on the same version. [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Get the matching application here[/url], and close L4D2 before the addon updates.
+
+[b]Known issue:[/b] the Consistent HUD comes back for the end credits after a campaign is finished. When the rescue vehicle leaves, the game hands control back and every signal the addon watches returns to its normal in-game values, so the credits are indistinguishable from live play from the outside. Being worked on.
+
+================================================================================
 v2.1.0
 ================================================================================
 

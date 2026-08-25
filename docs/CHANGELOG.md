@@ -2,6 +2,19 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.1.1 - 2026-08-25: the hiding switches move into the editor
+
+- **Hide for cinematics** and **Hide for menus** are now checkboxes on the Consistent HUD
+  tab, under **Showing it**, instead of keys you had to find in `config.json`. Both stay on
+  by default, and Reset UI leaves them alone. The config keys still work.
+- No exporter behaviour changes. The addon advances to 2.1.1 with the app so the two halves
+  keep matching versions.
+
+**Known, not fixed in this release:** the Consistent HUD comes back for the end credits after
+a campaign is finished. At `finale_win` the game unfreezes the survivors and returns every
+flag the exporter watches to its ordinary-play baseline, so the credits look identical to
+live play from the outside. Identifying a signal for it is in progress.
+
 ## Overlay HUD v2.1.0 - 2026-08-25: the HUD leaves when the game's own HUD does
 
 - The consistent HUD now goes away while the game is running a cinematic over you, the same

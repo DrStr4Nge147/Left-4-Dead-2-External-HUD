@@ -2,7 +2,7 @@
 
 [h2][b]Download the application:[/b] [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Left 4 Dead 2 Customized Overlay HUD - External (GitHub releases)[/url][/h2]
 
-This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be v2.1.0.
+This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be on the same version - currently v2.1.1.
 
 [list]
 [*][b]Standalone[/b] includes the required .NET components.
@@ -13,13 +13,11 @@ This Workshop item is the exporter half. It writes live survivor state to a file
 
 An external survivor HUD for oversized rosters. It shows every mortal survivor in the session, not only the four slots available in the built-in HUD. It is designed for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] and other mods that spawn more than four survivors.
 
-Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, and incapacitated / hanging / dying / dead state. Cards show each survivor's carried items, except your own: your throwable, kit, and pills sit with your weapons and ammunition instead, where vanilla keeps them. The Tab scoreboard shows the whole team's, including yours.
+Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, and incapacitated / hanging / dying / dead state. Cards show each survivor's carried items, except your own: your throwable, kit, and pills sit with your weapons and ammunition instead, where vanilla keeps them. The Tab scoreboard shows the whole extra survivor team.
 
 Your own weapons sit in their own panel: primary with its magazine and reserve, pistol / Magnum / chainsaw / melee below it, and your throwable, kit, and pills under those. Weapons use the game's own HUD icons, and ammunition counts down round by round. The count is marked with a cartridge, a flame for incendiary, or a burst for explosive - while an upgrade is loaded the number is the upgraded rounds left, so reloading does not reset it - and whatever is in your hands is outlined in green.
 
 The [b]Scoreboard[/b] view appears while [b]Tab[/b] is held. The [b]Consistent HUD[/b] view stays visible during play; holding Tab puts it away and shows the scoreboard panel instead, the way the game hides its own survivor HUD. The application watches Tab without changing key binds.
-
-It also leaves the screen wherever L4D2 hides its own survivor HUD: the finale outro, the chapter-end score screen, the map-start cinematic, and the pause menu or developer console. It comes back on its own each time, so the HUD is never the only thing left drawn over a scene.
 
 [h1]REQUIREMENTS[/h1]
 
@@ -52,7 +50,6 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 [*][b]Separate You:[/b] moves your card out of the roster to its own side, with a gap that prevents overlap.
 [*][b]Weapon HUD:[/b] can be turned off, placed in either bottom corner, stacked or side by side, moved anywhere up the screen, and sized on its own on top of the Consistent HUD's size.
 [*][b]Presentation:[/b] health numbers can be hidden, the Consistent HUD can go black-and-white, and card spacing may be negative for intentional overlap.
-[*][b]Scene hiding:[/b] both on by default - [b]Hide for cinematics[/b] covers the outro, chapter end, and map-start cinematic; [b]Hide for menus[/b] covers the pause menu, console, and loading screens.
 [*][b]Preview:[/b] the live roster over L4D2, or a simulated one when the game is closed. The editor can also ask the addon to hold the scoreboard open while you position the panel.
 [/list]
 
@@ -76,8 +73,6 @@ The Scoreboard panel always excludes the original four: L4D2's own scoreboard be
 [*]Keep the application and addon on the same version - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url]. The application reports a mismatch without blocking the HUD.
 [/list]
 
-[b]Current: v2.1.0[/b] - the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor HUD: the finale outro, the chapter-end score screen, and the pause menu or console, instead of sitting on top of them. v2.0.0 added the weapon HUD with live ammunition, carried items, incendiary / explosive marking, and green marking of the slot in your hands, and gave the Scoreboard panel and the Consistent HUD independent rosters. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
-
 [h1]IF NOTHING APPEARS[/h1]
 
 [list]
@@ -85,7 +80,7 @@ The Scoreboard panel always excludes the original four: L4D2's own scoreboard be
 [*]Check the top-right badge: it reports when the addon is missing, duplicated, disabled, or out of date.
 [*]No badge or HUD at all - use [b]-windowed -noborder[/b] and confirm the application is running.
 [*]Panel empty - confirm the session is hosted and that the selected roster filter has survivors to show.
-[*]No weapon panel - confirm the addon is v2.1.0 and that you are the host. It draws the host's own weapons and is never shown while Tab is held.
+[*]No weapon panel - confirm the addon and the app are the latest versions and that you are the host. It draws the host's own weapons and is never shown while Tab is held.
 [*]Enable the [b]debug console[/b] for a readable log of the addon, state file, version, and errors.
 [/list]
 

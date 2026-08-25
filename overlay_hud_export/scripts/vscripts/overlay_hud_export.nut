@@ -1,4 +1,4 @@
-// Overlay HUD Export - live survivor state exporter.
+﻿// Overlay HUD Export - live survivor state exporter.
 //
 // Writes every survivor currently in the session to a JSON file that an external overlay
 // application reads. Read-only with respect to the game: it reads state and writes one
@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.1.0"
+::OvlHud.VERSION   <- "2.1.1"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -977,6 +977,23 @@
 	try { return "" + NetProps.GetPropInt(ent, prop) } catch (e) { return "?" }
 }
 
+// Calls a no-argument Director method by name and returns its value as text, or "?" when
+// this build does not have it.
+//
+// Name-driven rather than written out as calls, deliberately: the point of a probe is to
+// find out which of several candidates exists on the install in front of us, and a name that
+// is not there costs one caught exception instead of a whole build. Nothing here decides
+// anything - see the credits note in Probe.
+::OvlHud.ProbeCall <- function (name)
+{
+	try
+	{
+		if (!(name in ::Director)) { return "?" }
+		return "" + ::Director[name]()
+	}
+	catch (e) { return "?" }
+}
+
 ::OvlHud.Probe <- function (p)
 {
 	if (!this.PROBE) { return }
@@ -994,6 +1011,25 @@
 	           + " hidehud=" + this.ProbeInt(p, "m_Local.m_iHideHUD")
 	           + " viewmodel=" + this.ProbeInt(p, "m_Local.m_bDrawViewmodel")
 	           + " solid=" + this.ProbeInt(p, "m_Collision.m_nSolidType")
+
+	           // Candidates for "the campaign is over and the credits are rolling", which
+	           // none of the three shipped reads can see: at finale_win the game unfreezes
+	           // everyone and returns every flag to its ordinary-play baseline while the
+	           // credits roll over a map that is still live with healthy survivors in it.
+	           // [OBSERVED - console.log 2026-08-25: hud=2048 view=0 frozen=0 across the
+	           // whole credits, which is the same triple as ordinary play.]
+	           //
+	           // Every name below is a CANDIDATE, not a documented API. A "?" means this
+	           // build does not have it and the name can be struck off; a value that moves
+	           // when the credits start is the answer. leftsafe and tank are controls - if
+	           // those two also print "?" then no Director call is reaching the engine and
+	           // the others prove nothing.
+	           + " esc=" + this.ProbeInt(p, "m_isEscaping")
+	           + " escaped=" + this.ProbeInt(p, "m_hasEscaped")
+	           + " finescape=" + this.ProbeCall("IsFinaleEscapeInProgress")
+	           + " finwon=" + this.ProbeCall("IsFinaleWon")
+	           + " leftsafe=" + this.ProbeCall("HasAnySurvivorLeftSafeArea")
+	           + " tank=" + this.ProbeCall("IsTankInPlay")
 
 	// seq is appended after the comparison, never inside it: it advances every tick, so a
 	// line carrying it could never match the previous one and the probe would print at 5 Hz.

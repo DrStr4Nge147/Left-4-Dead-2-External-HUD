@@ -98,7 +98,7 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.1.0** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.1.1** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
@@ -106,7 +106,7 @@ has nothing to read.
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.0** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.1** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.

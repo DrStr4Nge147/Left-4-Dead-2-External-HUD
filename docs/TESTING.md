@@ -1,4 +1,4 @@
-# Testing — exporter v2.1.0 + overlay app v2.1.0
+# Testing — exporter v2.1.1 + overlay app v2.1.1
 
 The v2.1.0 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
 the chapter-end transition, and the pause menu and console all take the overlay off screen and
@@ -171,7 +171,7 @@ running after any change to the detector.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 2.1.0 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.1.1 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -313,7 +313,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.0` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.1` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**
