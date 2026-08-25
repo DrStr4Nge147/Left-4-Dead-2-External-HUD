@@ -404,7 +404,16 @@ public partial class MainWindow : Window
             $"input       hold key down: {(_keys?.IsHeld == true ? "yes" : "no")}   " +
                 $"hook reinstalls: {_keys?.Recoveries ?? 0}",
             $"panel       {(Panel.Visibility == Visibility.Visible ? "drawing" : "hidden")}   " +
-                $"scale: {PanelScale.ScaleX:0.000}   surface: {_surfaceWidth:0}x{_surfaceHeight:0}"
+                $"scale: {PanelScale.ScaleX:0.000}   surface: {_surfaceWidth:0}x{_surfaceHeight:0}",
+
+            // The two raw reads sit beside the verdict on purpose: if an outro ever fails
+            // to hide the panel, which of them moved is the whole question.
+            $"cinematic   {((_reader?.Current?.Cinematic ?? 0) == 1 ? "yes" : "no")}   " +
+                $"hideHud bits: {_reader?.Current?.HideHudBits ?? -1}   " +
+                $"view camera: {_reader?.Current?.ViewCamera ?? -1}   " +
+                $"frozen: {_reader?.Current?.Frozen ?? -1}   " +
+                $"cursor: {(GameMenuProbe.CursorVisible() ? "shown (menu)" : "hidden (play)")}   " +
+                $"hiding: {(_cfg.HideDuringCinematics ? "on" : "off")}"
         });
     }
 
@@ -1150,7 +1159,36 @@ public partial class MainWindow : Window
         // working perfectly - the app cannot tell "not installed" from "no map loaded" from
         // the state file alone. That explanation now lives under the top-right badge, where
         // it is backed by an actual look at the addons folder. See UpdateNotice.
-        bool show = ShouldShow() && (hasActiveRoster || _cfg.AlwaysShow || LivePreview);
+        // Deliberately read off the last state the reader parsed, not the fresh-only one
+        // above. A finale outro is the last thing the exporter reports before the map ends
+        // and the exports stop, so the verdict has to outlive its own staleness window -
+        // otherwise the panel would come back for the report screen it is meant to sit out.
+        // The next map's first export clears it.
+        bool cinematic = _cfg.HideDuringCinematics && !LivePreview
+                         && (_reader?.Current?.Cinematic ?? 0) == 1;
+
+        // The pause menu and the console are drawn entirely client-side: nothing the exporter
+        // can poll knows they are open, and L4D2 hides its own survivor HUD for them, leaving
+        // this overlay as the only thing still drawn over the menu.
+        //
+        // Two separate reasons to be away, and the first version of this shipped only the
+        // second, which is why ESC did nothing:
+        //
+        //   menu     L4D2 shows a mouse cursor for its own menus and hides it during play.
+        //            A listen server does NOT pause when the menu opens - the export loop
+        //            keeps running and the file keeps advancing - so staleness never sees it.
+        //            Paired with the foreground gate, since a visible cursor over some other
+        //            application says nothing about the game.
+        //   stopped  exports have stopped advancing: loading screen, main menu, game exited.
+        //            HasExported keeps an overlay launched before the game drawing its empty
+        //            panel - never having exported is not the same as having stopped.
+        bool menuOpen = _gameForeground && GameMenuProbe.CursorVisible();
+        bool stopped  = _reader is { HasExported: true, IsStale: true };
+
+        bool paused = _cfg.HideWhenGamePaused && !LivePreview && (menuOpen || stopped);
+
+        bool show = ShouldShow() && !cinematic && !paused
+                    && (hasActiveRoster || _cfg.AlwaysShow || LivePreview);
 
         Panel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (!show)
@@ -1167,7 +1205,13 @@ public partial class MainWindow : Window
         // and the panel cannot answer it while it is the thing not being drawn.
         DebugLog.Note("panel", "render", show
             ? "drawing"
-            : !ShouldShow()
+            : cinematic
+                ? "hidden - the game is running a cinematic"
+                : paused
+                ? menuOpen
+                    ? "hidden - L4D2 is showing a menu or the console"
+                    : "hidden - exports stopped (loading, main menu, or game closed)"
+                : !ShouldShow()
                 ? _cfg.AlwaysShow || HoldKeyDown
                     ? "hidden - L4D2 is not the foreground window"
                     : "hidden - hold key is not down"

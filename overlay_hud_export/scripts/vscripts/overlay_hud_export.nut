@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.0.0"
+::OvlHud.VERSION   <- "2.1.0"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -86,6 +86,14 @@
 ::OvlHud.meleeMode <- -1     // -1 unprobed, 1 m_strMapSetScriptName, 0 no route
 ::OvlHud.dualMode  <- -1     // -1 unprobed, 1 m_isDualWielding, 0 falling back to clip size
 ::OvlHud.upgMode   <- -1     // -1 unprobed, 1 m_upgradeBitVec + loaded count, 0 no route
+::OvlHud.hudMode   <- -1     // -1 unprobed, 1 m_Local.m_iHideHUD, 0 no route
+::OvlHud.viewMode  <- -1     // -1 unprobed, 1 m_hViewEntity, 0 no route
+::OvlHud.frozenMode <- -1    // -1 unprobed, 1 m_fFlags & FL_FROZEN, 0 no route
+::OvlHud.cine      <- 0      // 1 while the game is running a cinematic over the player
+::OvlHud.lastHudBits <- -2   // last logged raw reads; -2 is "nothing logged yet"
+::OvlHud.lastViewCam <- -2
+::OvlHud.lastFrozen  <- -2
+::OvlHud.lastProbe   <- ""   // last diagnostic probe line, logged only when it changes
 ::OvlHud.hostProbeWarned <- false
 ::OvlHud.ammoWarned <- false
 ::OvlHud.localUid <- -1      // cached listen-server host userid; -1 when unavailable
@@ -890,6 +898,210 @@
 }
 
 // ---------------------------------------------------------------------------
+// cinematic detection
+//
+// The finale outro, the chapter-end stats screen, and any other scripted camera the game
+// takes the player through all hide L4D2's own survivor HUD. An overlay drawn on top of one
+// of those scenes is the one thing still on screen, which is exactly what the consistent HUD
+// must not be.
+//
+// The chapter end is the same mechanism seen from a different angle: the saferoom door
+// closes, the screen blurs, the score panel comes up and the music plays, and only then does
+// the loading bar appear. The overlay currently survives all of that and leaves at the load,
+// which is several seconds too late.
+//
+// There is no game-event route to this: event callbacks are registered but never delivered
+// to this addon on this install (see DEVLOG, v1.0.7-exp1/exp2), so the same polling loop
+// that exports the roster has to observe it. Two independent reads are taken from the host
+// player, either of which is enough on its own:
+//
+//   m_Local.m_iHideHUD  the engine's own "what is hidden" bitfield. HIDEHUD_ALL hides the
+//                       lot and HIDEHUD_HEALTH hides precisely the survivor HUD this
+//                       overlay stands in for, so either bit means the vanilla HUD is gone.
+//   m_hViewEntity       set while the view is bound to a camera entity rather than the
+//                       player's own eyes, which is what a scripted camera does.
+//
+// Both are probed once and remembered like every other route here. Both raw values ride
+// state.json beside the verdict, and every change in either one is logged whether or not it
+// moves the verdict - a scene that hides the HUD through some third bit shows up in the
+// capture as a value this build did not act on, which is one test session rather than
+// another guessing round.
+//
+// The finale outro is live-confirmed on 2.1.0. The chapter end is NOT: the widened mask did
+// not fire there, so neither read moves for it, or the export loop is no longer running by
+// the time it would. That is what the probe below is for - it is diagnostic scaffolding for
+// one capture, not a second theory.
+//
+// [UNVERIFIED] What server-visible state the chapter-end transition moves at all. The stats
+// panel may well be drawn entirely client-side, in which case no polled property will ever
+// see it and the answer has to come from somewhere else.
+// ---------------------------------------------------------------------------
+
+::OvlHud.HIDEHUD_ALL    <- 4
+::OvlHud.HIDEHUD_HEALTH <- 8
+
+// Either bit means L4D2 has stopped drawing the survivor HUD.
+::OvlHud.HIDEHUD_MASK   <- 12
+
+// m_fFlags bit 5. The server freezes the player for a scene it is running: the map-start
+// intro, and - the reason this is here - the chapter-end transition, where the door closes
+// and the score panel comes up.
+//
+// [OBSERVED - console.log 2026-08-25] Across one full chapter this bit appears three times
+// and only three: the spawn freeze at t=6.2, the intro cinematic at t=9.2, and t=42.4, one
+// tick before Host_Changelevel. It is absent for every sample of ordinary play in between.
+// m_iHideHUD stayed flat at its 2048 baseline through that same transition, which is why
+// the 2.1.0 mask widening did nothing there.
+::OvlHud.FL_FROZEN      <- 32
+
+// ---------------------------------------------------------------------------
+// chapter-end probe  [DIAGNOSTIC - exp builds only]
+//
+// Reads a spread of host-player state every tick and logs the whole line whenever any field
+// in it changes. It decides nothing and gates nothing; the point is that one saferoom finish
+// captured with this loaded says which field - if any - the transition moves, instead of
+// costing a build per guess.
+//
+// Every field is read behind its own try. A property this build cannot read prints `?` and
+// the rest of the line still lands, because a probe that dies on its first missing property
+// tells you nothing about the twelve that follow.
+//
+// PROBE is switched off in a release build. It prints on change, not per tick, but a
+// transition that flickers a value would still be noisy in someone's console.
+// ---------------------------------------------------------------------------
+
+::OvlHud.PROBE <- false
+
+::OvlHud.ProbeInt <- function (ent, prop)
+{
+	try { return "" + NetProps.GetPropInt(ent, prop) } catch (e) { return "?" }
+}
+
+::OvlHud.Probe <- function (p)
+{
+	if (!this.PROBE) { return }
+
+	// m_fFlags is masked rather than printed raw. The onground and ducking bits flicker with
+	// every step the player takes, so a raw print made the probe fire several times a second
+	// through ordinary play and buried the transitions it exists to show.
+	local flags = "?"
+	try { flags = "" + (NetProps.GetPropInt(p, "m_fFlags") & this.FL_FROZEN) } catch (e) {}
+
+	local line = "frozenbit=" + flags
+	           + " life=" + this.ProbeInt(p, "m_lifeState")
+	           + " obs=" + this.ProbeInt(p, "m_iObserverMode")
+	           + " move=" + this.ProbeInt(p, "m_MoveType")
+	           + " hidehud=" + this.ProbeInt(p, "m_Local.m_iHideHUD")
+	           + " viewmodel=" + this.ProbeInt(p, "m_Local.m_bDrawViewmodel")
+	           + " solid=" + this.ProbeInt(p, "m_Collision.m_nSolidType")
+
+	// seq is appended after the comparison, never inside it: it advances every tick, so a
+	// line carrying it could never match the previous one and the probe would print at 5 Hz.
+	// It is here so the capture shows whether the export loop is still ticking at all
+	// through the transition - a frozen seq is a different failure from an unmoved property.
+	if (line != this.lastProbe)
+	{
+		this.lastProbe = line
+		this.Log("probe: " + line + " (seq=" + this.seq + " t=" + format("%.1f", Time()) + ")")
+	}
+}
+
+// The engine's hidden-HUD bitfield for this player, or -1 when there is no route to it.
+::OvlHud.HideHudBits <- function (p)
+{
+	if (this.hudMode == 0) { return -1 }
+
+	try
+	{
+		local bits = NetProps.GetPropInt(p, "m_Local.m_iHideHUD")
+
+		if (this.hudMode != 1)
+		{
+			this.hudMode = 1
+			this.Log("cinematic read: m_Local.m_iHideHUD")
+		}
+
+		return bits
+	}
+	catch (e)
+	{
+		if (this.hudMode != 0)
+		{
+			this.hudMode = 0
+			this.Log("cinematic read: m_iHideHUD unavailable, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
+// 1 while the server has the player frozen for a scene it is running, 0 while they have
+// control of themselves, -1 when there is no route to it.
+::OvlHud.IsFrozen <- function (p)
+{
+	if (this.frozenMode == 0) { return -1 }
+
+	try
+	{
+		local flags = NetProps.GetPropInt(p, "m_fFlags")
+
+		if (this.frozenMode != 1)
+		{
+			this.frozenMode = 1
+			this.Log("cinematic read: m_fFlags & FL_FROZEN")
+		}
+
+		return ((flags & this.FL_FROZEN) != 0) ? 1 : 0
+	}
+	catch (e)
+	{
+		if (this.frozenMode == -1)
+		{
+			this.frozenMode = 0
+			this.Log("cinematic read: m_fFlags unavailable, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
+// 1 while the player's view is bound to a camera entity, 0 when it is their own eyes,
+// -1 when there is no route to it.
+::OvlHud.HasViewCamera <- function (p)
+{
+	if (this.viewMode == 0) { return -1 }
+
+	try
+	{
+		local cam = NetProps.GetPropEntity(p, "m_hViewEntity")
+
+		if (this.viewMode != 1)
+		{
+			this.viewMode = 1
+			this.Log("cinematic read: m_hViewEntity")
+		}
+
+		// The player's own view entity is the player. Anything else is a camera. Compared
+		// by entity index rather than by handle: two handles to one entity are not the
+		// same Squirrel instance, and == on instances compares the instance.
+		return (cam == null || cam.GetEntityIndex() == p.GetEntityIndex()) ? 0 : 1
+	}
+	catch (e)
+	{
+		// Only an unprobed route is retired on a throw. Once this one has answered, a
+		// later throw is a dangling camera handle in one frame, not a missing route, and
+		// retiring it there would blind the detector for the rest of the session.
+		if (this.viewMode == -1)
+		{
+			this.viewMode = 0
+			this.Log("cinematic read: m_hViewEntity unavailable, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
+// ---------------------------------------------------------------------------
 // export tick
 // ---------------------------------------------------------------------------
 
@@ -898,6 +1110,7 @@
 	local body  = ""
 	local count = 0
 	local localUid = this.localUid
+	local host = null
 
 	// The app runs on the listen-server host's machine, so the host survivor is the
 	// current player's card. GetListenServerHost is a native on this L4D2 build; keep the
@@ -907,7 +1120,7 @@
 	// on and off between exporter ticks.
 	try
 	{
-		local host = GetListenServerHost()
+		host = GetListenServerHost()
 		if (host != null)
 		{
 			local candidate = host.GetPlayerUserId()
@@ -949,11 +1162,57 @@
 
 	this.seq++
 
+	// Cinematic state rides the roster tick rather than the 20 Hz ammunition channel: a
+	// fifth of a second either side of a camera cut is not visible, and the app already
+	// holds the last roster it read through a stale window, which is exactly the window a
+	// finale outro runs into as the map ends.
+	local hudBits = -1
+	local viewCam = -1
+	local frozen  = -1
+
+	if (host != null)
+	{
+		hudBits = this.HideHudBits(host)
+		viewCam = this.HasViewCamera(host)
+		frozen  = this.IsFrozen(host)
+		this.Probe(host)
+	}
+
+	// Three reads, any one of which is enough. The outro answers on the first two; the
+	// chapter end answers only on the third, where m_iHideHUD never leaves its baseline.
+	local cine = ((hudBits > 0 && (hudBits & this.HIDEHUD_MASK) != 0)
+	              || viewCam == 1
+	              || frozen == 1) ? 1 : 0
+
+	// Logged on every change in the raw reads, not only when the verdict flips. A scene that
+	// hides the vanilla HUD through something this build does not act on leaves its value in
+	// the capture, which is what makes the next build a correction rather than another guess.
+	if (hudBits != this.lastHudBits || viewCam != this.lastViewCam
+	    || frozen != this.lastFrozen)
+	{
+		this.lastHudBits = hudBits
+		this.lastViewCam = viewCam
+		this.lastFrozen  = frozen
+		this.Log("cinematic reads changed: hud=" + hudBits + " view=" + viewCam
+		         + " frozen=" + frozen + " -> " + (cine == 1 ? "hidden" : "drawn"))
+	}
+
+	if (cine != this.cine)
+	{
+		this.cine = cine
+		this.Log("cinematic " + (cine == 1 ? "started" : "ended")
+		         + " (hud=" + hudBits + " view=" + viewCam + " frozen=" + frozen + ")")
+	}
+
 	local json = "{"
 	json += "\"v\":\"" + this.VERSION + "\""
 	json += ",\"seq\":" + this.seq
 	json += ",\"time\":" + format("%.2f", Time())
 	json += ",\"count\":" + count
+	json += ",\"cine\":" + cine
+	json += ",\"hud\":" + hudBits
+	json += ",\"view\":" + viewCam
+	json += ",\"frz\":" + frozen
 	json += ",\"survivors\":[" + body + "]"
 	json += "}"
 
@@ -1060,6 +1319,17 @@
 	this.ammoMode  = -1
 	this.meleeMode = -1
 	this.dualMode  = -1
+	this.hudMode   = -1
+	this.viewMode  = -1
+	this.frozenMode = -1
+	// A round restart runs through a live VM, so a cinematic verdict from the round that
+	// just ended would otherwise stay latched and keep the overlay hidden for the whole
+	// next round.
+	this.cine      = 0
+	this.lastHudBits = -2
+	this.lastViewCam = -2
+	this.lastFrozen  = -2
+	this.lastProbe   = ""
 	this.hostProbeWarned = false
 	this.ammoWarned = false
 	this.localUid = -1

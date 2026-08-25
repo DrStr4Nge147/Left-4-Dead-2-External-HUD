@@ -21,10 +21,14 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "2.0.0",
+  "v": "2.1.0",
   "seq": 412,
   "time": 183.40,
   "count": 8,
+  "cine": 0,
+  "hud": 0,
+  "view": 0,
+  "frz": 0,
   "survivors": [
     {
       "uid": 2,
@@ -65,6 +69,10 @@ under the old name too, because that is the only name an older addon reads.
 | `seq` | Increments every write. Same `seq` twice = the game is paused, stopped, or gone |
 | `time` | Server `Time()` in seconds since map load |
 | `count` | Length of `survivors` |
+| `cine` | `1` while the game is running a cinematic over the host player - the finale outro above all - and has therefore hidden its own survivor HUD. Added in 2.1.0 |
+| `hud` | Raw `m_Local.m_iHideHUD` for the host player, `-1` when there is no route to it. Diagnostic; `cine` is the verdict |
+| `view` | `1` while the host's view is bound to a camera entity, `0` for their own eyes, `-1` when unreadable. Diagnostic |
+| `frz` | `1` while the server has the host player frozen for a scene it is running, `0` when they have control, `-1` when unreadable. This is the read that answers at the chapter end. Diagnostic |
 | `uid` | Player user id. Stable within a session; **not** stable across map changes |
 | `name` | Display name — "Cpl. Blake", "Louis", or the human's Steam name |
 | `team` | 2 or 4. Both are survivors (see below) |
@@ -143,6 +151,37 @@ them and the exporter reports `pistol_dual`, which the app draws with the game's
 two-pistol icon. If that property cannot be read the exporter falls back to the magazine —
 over 15 rounds means a pair — and says so once in `console.log`. That fallback is one-way:
 a pair down to its last rounds reports as a single pistol.
+
+## Cinematic fields
+
+`cine` exists so the consistent HUD can leave the screen for the finale outro, which is the
+one moment the game hides its own survivor HUD and an overlay would be the only thing left
+drawn over the scene.
+
+There is no event route to it. Game-event callbacks are registered but never delivered to
+this addon on this install — two builds, two registration sites, zero callbacks, see the
+DEVLOG entries for v1.0.7-exp1 and exp2 — so the export tick observes it by polling the host
+player instead. Two independent reads, either of which is enough on its own:
+
+- `m_Local.m_iHideHUD` against `HIDEHUD_ALL | HIDEHUD_HEALTH` (bits `4` and `8`) — the
+  engine's own record of what it has stopped drawing;
+- `m_hViewEntity` pointing at something other than the player — a scripted camera has the
+  view;
+- `m_fFlags & FL_FROZEN` (bit `32`) — the server has the player frozen for a scene.
+
+The outro answers on the first two. **The chapter end answers only on the third**: through a
+whole chapter, `m_iHideHUD` sits at a constant `2048` baseline and never moves for the score
+screen, while `FL_FROZEN` appears exactly three times — the spawn freeze, the intro cinematic,
+and one tick before `Host_Changelevel`. That was read off a live capture, not inferred.
+
+All three raw values ship beside the verdict as `hud`, `view`, and `frz`, and the debug
+console's `cinematic` line shows what each said at the time, so a scene that fails to hide the
+panel can be diagnosed rather than guessed at.
+
+`cine` is cleared on every boot and re-arm, so a round restart cannot leave it latched. The
+app deliberately honours the last value it read even after the file goes stale: the outro is
+the last thing exported before the map ends, and the panel has to stay away for the report
+screen and the load that follow. The next map's first export clears it.
 
 ## Notes for the overlay app
 

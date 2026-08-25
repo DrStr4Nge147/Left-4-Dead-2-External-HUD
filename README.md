@@ -53,6 +53,12 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v2.1.0 — the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor
+HUD, instead of sitting on top of the scene. The finale outro is confirmed in game: the panel
+goes with the escape and stays away for the report screen and the load that follow. The same
+detection covers the chapter end, where the saferoom door closes and the score panel comes up
+several seconds before the loading bar. `hideDuringCinematics` in `config.json` turns it off.**
+
 **v2.0.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
 ammunition, and your pistol, Magnum, chainsaw, or melee weapon beneath it, as a separate
 panel with its own corner (lower left or lower right), vertical or horizontal slot
@@ -87,14 +93,15 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.0.0** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.1.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
-  holds the game's scoreboard open on request. The v2.0.0 app/VPK pair has been live-tested
-  in L4D2, weapon fields included. Its two transport files live in
+  holds the game's scoreboard open on request. It also reports when the game has hidden its
+  own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
+  L4D2, weapon fields included, and the outro hiding on the 2.1.0 exporter with it. Its two transport files live in
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.0.0** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.

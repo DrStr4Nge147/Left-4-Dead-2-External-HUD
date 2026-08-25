@@ -2,6 +2,25 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.1.0 - 2026-08-25: the HUD leaves when the game's own HUD does
+
+- The consistent HUD now goes away while the game is running a cinematic over you, the same
+  as the vanilla survivor HUD it stands in for. The finale outro is confirmed in game: the
+  panel leaves with the escape scene and stays away for the report screen and the load that
+  follow, then comes back on the next chapter.
+- Extends the same detection to the chapter end, where the saferoom door closes, the screen
+  blurs and the score panel comes up several seconds before the loading bar. The overlay
+  used to sit through all of it and leave only at the load.
+- The panel also leaves for the pause menu and the developer console. Those are drawn inside
+  the game and nothing in it can be polled for them, so the overlay reads the mouse cursor
+  L4D2 shows for its own menus and hides while you play. It leaves for stopped exports too,
+  which covers loading screens, the main menu, and the game closing.
+- Adds `hideDuringCinematics` and `hideWhenGamePaused` to `config.json`, both on by default.
+  Set either to `false` to keep the panel drawn through those moments.
+- The debug console gains a `cinematic` line carrying the verdict and the two raw engine
+  reads behind it, and the exporter logs every change in those reads, so a scene that fails
+  to hide the panel can be read off a capture.
+
 ## Overlay HUD v2.0.0 - 2026-08-18: your own HUD, not just the roster's
 
 A major version because the thing itself changed shape. Until now this drew one list of

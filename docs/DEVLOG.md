@@ -1,5 +1,228 @@
 # Dev log
 
+## 2026-08-25 - v2.1.0 goes stable
+
+**Live-tested and confirmed working** 2026-08-25, on `v2.1.0-exp2` plus the cursor build of
+the app: the finale outro, the chapter-end transition, and the pause menu and console all
+take the overlay off screen, and it comes back on its own each time.
+
+Promoted as-is. The experimental marker is off the banner, `PROBE` is back to `false`, and
+`overlay_hud_export_v2.1.0.vpk` is packed from exactly the source that was played. The probe
+itself stays in the tree behind its flag - it earned that by answering the chapter-end
+question in one capture, and the next scene that needs identifying will want it again.
+
+Three entries below record how each half was found, in the order they were found. The route
+that mattered in the end differs per scene: the outro moves `m_iHideHUD` and the view entity,
+the chapter end moves only `FL_FROZEN`, and the menu moves nothing at all in the game - it is
+read from the mouse cursor, outside the process.
+
+## 2026-08-25 - app: the menu is a cursor, not a pause
+
+The stale-export rule below did nothing for ESC, and the author's report says why in one
+line: **a listen server does not pause when the menu opens.** The export loop keeps ticking,
+`seq` keeps advancing, the reader never goes stale, and the panel stays drawn over the menu.
+The theory was wrong about the mechanism, not about the goal.
+
+The observable difference is the cursor. L4D2 hides it while the player is looking around and
+shows the arrow for any menu it draws - the pause menu and the developer console alike - and
+cursor visibility is global state `GetCursorInfo` reports to any process. That is one call per
+render tick, no hooking and nothing touching the game.
+
+It is paired with the existing foreground gate, because a visible cursor over some other
+application says nothing about L4D2, and that case is already covered. `GameMenuProbe` fails
+open: a failed read reports "no menu", so a broken API leaves the overlay drawn rather than
+hiding it for the session with no way to tell why.
+
+The stale rule stays alongside it. It was never wrong - loading screens, the main menu and a
+closed game are all still reasons to be away - it just does not answer this particular
+question.
+
+[UNVERIFIED] Whether any in-game state shows a cursor during play - a mod, a vote panel, the
+Steam overlay. The debug console now prints the cursor verdict on its `cinematic` line so an
+unexpected hide can be read off directly.
+
+**Verification**: source inspection, `dotnet build` Release clean, layout check passing. Not
+live-tested. App only; the exporter stays on `v2.1.0-exp2`.
+
+## 2026-08-25 - app: hiding for the pause menu and the console (superseded)
+
+Superseded by the entry above: this shipped the stale-export half only, and it does not fire
+for the menu because the server does not pause.
+
+The author's screenshot shows the overlay drawn over the ESC menu, with L4D2's own survivor
+HUD correctly gone - the overlay as the only HUD left on a paused screen.
+
+There is nothing for the exporter to see here. The pause menu and the console are client-side
+UI; no server-visible property knows either is open, and the FL_FROZEN route that answers the
+chapter end does not fire for them.
+
+The consequence is observable even though the cause is not. Opening the menu on a locally
+hosted game pauses the server, the export loop stops with it, and `seq` stops advancing -
+which is what `StateReader` already calls stale. So the app hides on stale rather than trying
+to identify menus, and that one rule covers the main menu, loading screens, the console, and
+a game that has exited, all of which are moments the panel should be away for anyway.
+
+`HasExported` gates it: an overlay launched before the game has never seen an export, which is
+not the same as having stopped, and that case still draws its empty panel so the thing can be
+positioned before a session. The threshold is the existing `staleAfterSeconds`, so a two-second
+hitch does not blink the panel, and `hideWhenGamePaused: false` turns the whole rule off.
+
+[UNVERIFIED] Whether a listen server with other humans connected pauses at all on ESC. If it
+does not, exports keep advancing and nothing hides - the rule is correct but silent there, and
+no client-side signal is available to replace it.
+
+**Verification**: source inspection, `dotnet build` Release clean, layout check passing. Not
+live-tested. App only; no addon change, and the exporter stays on `v2.1.0-exp2`.
+
+## 2026-08-25 - v2.1.0-exp2: the chapter end is a freeze, not a hidden HUD
+
+The exp1 probe capture answered it in one run. From the author's `console.log`, the last
+export tick before the transition:
+
+```text
+[OVLHUD] probe: flags=16546 life=0 obs=0 move=2 hidehud=2048 viewmodel=1 solid=2 (seq=174 t=42.4)
+[OVLHUD] probe: flags=16545 ... (seq=176 t=42.8)
+---- Host_Changelevel ----
+L 08/25/2026 - 14:57:13: -------- Mapchange to c8m2_subway --------
+```
+
+`hidehud` never moves. It sits at **2048 as its ordinary baseline** for the whole chapter -
+which also means the 2.1.0 mask widening was never going to fire here, and that `HIDEHUD_ALL`
+was the wrong family of guess for this transition. What does move is `m_fFlags`, gaining
+**32, FL_FROZEN**, two ticks before `Host_Changelevel`.
+
+Across the entire capture that bit appears exactly three times: the spawn freeze at t=6.2,
+the intro cinematic at t=9.2, and t=42.4 at the chapter end. Every sample of ordinary play in
+between is clear of it. Three scenes, three appearances, no false positives in the sample -
+and all three are scenes the overlay should sit out, so acting on the bit is right for the
+intro as well as for the chapter end.
+
+So the verdict becomes three reads, any one of which is enough: the `HIDEHUD` mask, the view
+camera, and now FL_FROZEN. The outro answers on the first two; the chapter end answers only
+on the third.
+
+The probe survives, with two changes. `m_fFlags` is now printed **masked to FL_FROZEN** rather
+than raw: the onground and ducking bits flicker with every step, so the raw print fired the
+probe several times a second through ordinary play and buried the transitions it exists to
+show. And `seq`/`t` ride outside the change comparison, as before.
+
+One thing the capture could not settle: `seq` only prints on a line the comparison already
+let through, so a frozen `seq` through a long score screen would not have been visible. It did
+not matter here - the freeze bit answered first - but the "is the exporter even still ticking"
+question is still open if a later scene needs it.
+
+[UNVERIFIED] Whether anything in ordinary play sets FL_FROZEN - a charger pin, a smoker drag,
+a scripted map moment. Nothing in this capture did, but one chapter is one chapter. If the
+overlay ever vanishes mid-fight, this is the first thing to suspect, and
+`hideDuringCinematics: false` turns it off outright.
+
+**Verification**: the chapter-end signal is identified from the author's live capture; the
+build acting on it is source inspection, `dotnet build` Release clean and the layout check
+passing. Not yet played. Packed as `overlay_hud_export_v2.1.0-exp2.vpk`; `addonversion` and
+the app stay at 2.1.0.
+
+## 2026-08-25 - v2.1.0-exp1: the chapter end does not move either read
+
+2.1.0 widened the mask to `HIDEHUD_ALL | HIDEHUD_HEALTH` on the theory that the chapter-end
+score screen is the outro seen from another angle. The author played it: the panel did not
+disappear. So the transition moves neither `m_iHideHUD` nor `m_hViewEntity` on the host, or
+the export loop is no longer running by the time it would - and those are different failures
+with different fixes.
+
+Guessing a third property here would be the third guess in a row, so this build guesses
+nothing. It adds a probe that reads a spread of host-player state every tick and logs the
+whole line whenever any field in it changes, each field behind its own try so a property this
+build cannot read prints `?` instead of taking the line with it:
+
+```text
+[OVLHUD] probe: flags=257 life=0 obs=0 move=2 hidehud=0 viewmodel=1 solid=3 (seq=812 t=204.6)
+```
+
+`seq` and `t` ride outside the change comparison - they advance every tick, and a line
+carrying them inside it could never match the previous one, which would print the probe at
+5 Hz. They are there because **a frozen `seq` through the transition is the answer on its
+own**: it would mean the exporter stops before the score screen and no polled property could
+ever catch it, which points the fix at the app rather than the addon.
+
+The live possibility this build is set up to prove or kill: the end-of-chapter panel may be
+drawn entirely client-side, with nothing server-visible moving at all. If the capture shows
+every field flat from the saferoom door to the loading bar, polling is the wrong layer and
+the next candidate is the app noticing the game's own transition instead.
+
+`PROBE` is a flag on the table and ships false in a release build; only exp builds set it.
+
+**Verification**: source inspection only. Packed as `overlay_hud_export_v2.1.0-exp1.vpk`;
+`addonversion` and the app both stay at 2.1.0, and the 2.1.0 outro behaviour is unchanged.
+
+## 2026-08-25 - v2.1.0: hiding the consistent HUD when the game hides its own
+
+**Live-tested and confirmed working** 2026-08-25 for the finale outro, as
+`overlay_hud_export_v2.0.0-exp1.vpk`: the panel leaves with the escape scene and comes back
+on the next map. That confirmation is what promoted the work from exp1 to 2.1.0.
+
+The author then reported the other half of the same problem: at the chapter end the saferoom
+door closes, the screen blurs, the score panel comes up and the music plays, and only then
+does the loading bar appear. The overlay sat through all of that and left at the load, which
+is seconds too late. It is the same mechanism - the game has stopped drawing its own HUD -
+so it is the same detector, with the mask widened from `HIDEHUD_ALL` alone to
+`HIDEHUD_ALL | HIDEHUD_HEALTH`: `HIDEHUD_HEALTH` hides precisely the survivor HUD this
+overlay stands in for, so either bit answers the question being asked.
+
+The exporter now also logs **every change in the raw reads**, not only the ones that move the
+verdict. If some scene hides the vanilla HUD through a third bit, that value lands in
+`console.log` as a state this build declined to act on, which makes the next build a
+correction rather than another guess.
+
+[UNVERIFIED] The chapter-end half. The outro is confirmed; whether the same two reads move
+for the saferoom transition is exactly what the widened mask and the new logging are there to
+settle. A false negative leaves the pre-2.1.0 behaviour in place and nothing else.
+
+The rest of this entry is the exp1 work the confirmation promoted.
+
+The consistent HUD stands in for the vanilla survivor HUD, so it has to leave when that one
+leaves. The finale outro was where it did not: L4D2 hides its own HUD for the escape scene
+and the overlay stayed drawn over it, which is the only thing on screen at the one moment
+nothing should be.
+
+The obvious mechanism is a game event - `finale_win` would name the moment exactly. It is
+also the one mechanism this addon has already proven it cannot use: v1.0.7-exp1 and exp2
+registered a listener from both the mapspawn and director phases and the callback was never
+delivered in either build, while other addons' handlers for the same event fired in the same
+log. That is settled and is not being re-litigated; detection has to come from the export
+tick that is already running.
+
+So the tick polls the host player for two independent reads, either of which is enough:
+
+- `m_Local.m_iHideHUD` with `HIDEHUD_ALL` set - the engine's own record of what it has
+  stopped drawing, which makes it the signal by definition rather than by inference;
+- `m_hViewEntity` pointing at anything other than the player - a scripted camera owns the
+  view.
+
+Which of the two L4D2 actually moves during an outro was unverified when this was written,
+which is why both
+raw values ride `state.json` as `hud` and `view` beside the `cine` verdict, and why the debug
+console prints all three. If the panel stays up through an outro, the capture says which read
+was silent instead of costing another guess. Both reads are probed once and remembered, like
+every other route in this exporter, and a missing route reports -1 rather than a confident 0.
+
+Two lifecycle details decide whether this is correct rather than merely working:
+
+- `cine` is cleared in `Boot`, so the verdict cannot survive a round restart. The script VM
+  does survive one - that is the whole reason the re-entry files exist - so a latched
+  cinematic would otherwise hide the panel for the entire next round.
+- The app honours the last `cine` it read **even after the file goes stale**. That is
+  deliberate: the outro is the last thing exported before the map ends and the exports stop,
+  so a freshness gate would put the panel back up for exactly the report screen it is meant
+  to sit out. The next chapter's first export clears it.
+
+`hideDuringCinematics` in `config.json` turns the whole thing off, since a detector built on
+raw engine reads deserves a switch.
+
+**Verification**: the finale outro is live-confirmed on `v2.0.0-exp1`, as recorded at the top
+of this entry. The chapter-end widening that ships with 2.1.0 is source inspection,
+`dotnet build` Release clean and the layout check passing - it has not been played yet.
+Packed as `overlay_hud_export_v2.1.0.vpk`; exporter and app advance together, as always.
+
 ## 2026-08-18 - v2.0.0: your own HUD, and what to do when the engine will not answer
 
 **Live-tested and confirmed working** 2026-08-18: the v2.0.0 app and format-v1 VPK together

@@ -5,6 +5,8 @@
   "editorKey": 45,
   "alwaysShow": false,
   "consistentKey": 118,
+  "hideDuringCinematics": true,
+  "hideWhenGamePaused": true,
   "ignoreForeground": false,
   "exitWhenGameCloses": true,
   "anchor": "TopLeft",

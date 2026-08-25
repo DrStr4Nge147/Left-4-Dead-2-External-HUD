@@ -27,6 +27,22 @@ public sealed class AppConfig
     /// <summary>Virtual-key code that toggles the consistent HUD. 0x76 = F7; 0 disables.</summary>
     [JsonPropertyName("consistentKey")] public int ConsistentKey { get; set; } = 0x76;
 
+    /// <summary>
+    /// Hide the panel while the game is running a cinematic over the player - the finale
+    /// outro above all - matching L4D2, which hides its own survivor HUD there. Needs an
+    /// exporter that reports the cinematic field; older ones never report one, and the
+    /// panel keeps its previous always-drawn behavior.
+    /// </summary>
+    [JsonPropertyName("hideDuringCinematics")] public bool HideDuringCinematics { get; set; } = true;
+
+    /// <summary>
+    /// Hide the panel once the exporter stops advancing: the pause menu or console on a
+    /// locally hosted game, a loading screen, or the main menu. L4D2 hides its own survivor
+    /// HUD for those, and the overlay would otherwise be the only thing drawn over them.
+    /// Uses <c>staleAfterSeconds</c> as its threshold.
+    /// </summary>
+    [JsonPropertyName("hideWhenGamePaused")] public bool HideWhenGamePaused { get; set; } = true;
+
     /// <summary>Draw even when L4D2 is not the foreground window. Debug aid.</summary>
     [JsonPropertyName("ignoreForeground")] public bool IgnoreForeground { get; set; }
 

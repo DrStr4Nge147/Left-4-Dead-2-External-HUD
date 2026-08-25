@@ -11,6 +11,31 @@ public sealed class HudState
     [JsonPropertyName("seq")]       public long Seq { get; set; }
     [JsonPropertyName("time")]      public double Time { get; set; }
     [JsonPropertyName("count")]     public int Count { get; set; }
+
+    /// <summary>
+    /// 1 while the game is running a cinematic over the player - the finale outro above
+    /// all - and has therefore hidden its own survivor HUD. Absent from exporters that
+    /// predate the field, which leaves it 0 and keeps the original always-drawn behavior.
+    /// </summary>
+    [JsonPropertyName("cine")]      public int Cinematic { get; set; }
+
+    /// <summary>
+    /// The engine's hidden-HUD bitfield for the host survivor, or -1 when the exporter
+    /// found no route to it. Diagnostic only: the verdict is <see cref="Cinematic"/>.
+    /// </summary>
+    [JsonPropertyName("hud")]       public int HideHudBits { get; set; } = -1;
+
+    /// <summary>
+    /// 1 while the host's view is bound to a camera entity, 0 when it is their own eyes,
+    /// -1 when unreadable. Diagnostic only, as with <see cref="HideHudBits"/>.
+    /// </summary>
+    [JsonPropertyName("view")]      public int ViewCamera { get; set; } = -1;
+
+    /// <summary>
+    /// 1 while the server has the host player frozen for a scene it is running, -1 when
+    /// unreadable. Diagnostic, and the one read that answers at the chapter end.
+    /// </summary>
+    [JsonPropertyName("frz")]       public int Frozen { get; set; } = -1;
     [JsonPropertyName("survivors")] public List<Survivor> Survivors { get; set; } = new();
 }
 

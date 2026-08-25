@@ -1,7 +1,9 @@
-# Testing — exporter v2.0.0 + overlay app v2.0.0
+# Testing — exporter v2.1.0 + overlay app v2.1.0
 
-The exporter and the v2.0.0 overlay app/VPK pair were live-tested in L4D2 on 2026-08-18,
-including the weapon HUD and its ammunition reads. This checklist remains the repeatable
+The v2.1.0 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
+the chapter-end transition, and the pause menu and console all take the overlay off screen and
+give it back. The v2.0.0 pair was live-tested on 2026-08-18, including the weapon HUD and its
+ammunition reads. This checklist remains the repeatable
 regression procedure for future builds: whether the overlay appears over the game, follows
 Tab, and stays out of the way.
 
@@ -16,6 +18,61 @@ Tab, and stays out of the way.
    releasing shows nothing at all.
 4. Hold and release quickly several times and confirm neither panel is left behind and the
    layout does not drift.
+
+## Cinematic hiding — outro and chapter end (v2.1.0)
+
+Both halves are live-confirmed on 2026-08-25. They answer on different reads — the outro on
+`m_iHideHUD` and the view entity, the chapter end on `FL_FROZEN` alone — so both are worth
+running after any change to the detector.
+
+1. Confirm `console.log` names the three cinematic routes shortly after the first survivor is
+   seen:
+
+   ```text
+   [OVLHUD] cinematic read: m_Local.m_iHideHUD
+   [OVLHUD] cinematic read: m_hViewEntity
+   [OVLHUD] cinematic read: m_fFlags & FL_FROZEN
+   ```
+
+   An `unavailable, reporting -1` line for one of them is survivable — any read alone is
+   enough for the scene it answers. All three missing means the detector cannot fire at all;
+   send the lines.
+2. With the Consistent HUD on, finish a finale and watch the escape. The moment L4D2 drops
+   its own survivor HUD, the overlay must go with it, and must stay gone through the stats
+   screen and the load that follows.
+3. It must come back on its own on the next chapter or the next map, with no restart of the
+   app.
+4. Wipe a finale instead of winning it. After the round restarts, the overlay must be drawn
+   again — a latched cinematic would leave it hidden for the whole round.
+5. **Chapter end.** Get everyone into the saferoom and close the door. The overlay must go
+   at the blur, before the score panel and the music — not at the loading bar, which is
+   where it used to leave. It must come back on the next chapter on its own.
+6. Whatever the outcome, open the debug console during the scene if you can, or send
+   `console.log` afterwards: the `cinematic` line carries `hideHud bits` and `view camera`,
+   and the exporter logs every change in those reads:
+
+   ```text
+   [OVLHUD] cinematic reads changed: hud=2048 view=0 frozen=1 -> hidden
+   [OVLHUD] cinematic started (hud=2048 view=0 frozen=1)
+   ```
+
+   A `reads changed` line with no `cinematic started` after it is the useful failure: it
+   names the value the game moved to and this build declined to act on.
+
+## Pause menu and console (v2.1.0)
+
+1. Mid-round, with the Consistent HUD on, press ESC. The panel must go immediately — this is
+   read off the mouse cursor, not off export staleness — and come straight back on **Return
+   to game**. A listen server does not pause for the menu, so a version that waited for the
+   exports to stop never fired here.
+2. Repeat with the developer console. Same behaviour.
+3. Confirm it does *not* blink during ordinary play, including a heavy horde or an
+   alt-tab and back.
+4. If it hides when it should not, open the debug console: the `cinematic` line now ends with
+   `cursor: shown (menu)` or `cursor: hidden (play)`, which says whether the cursor read is
+   the cause.
+5. Launch the overlay with L4D2 closed and confirm the empty panel still draws, so it can be
+   positioned before a session — never having exported is not the same as having stopped.
 
 ## Weapon HUD (v2.0.0)
 
@@ -101,7 +158,7 @@ Tab, and stays out of the way.
    ```text
    powershell -ExecutionPolicy Bypass -File tools\Build-AddonVpk.ps1
    ```
-3. Copy `compiled vpks\overlay_hud_export_v2.0.0.vpk` into:
+3. Copy `compiled vpks\overlay_hud_export_v2.1.0.vpk` into:
 
    ```text
    E:\SteamLibrary\steamapps\common\Left 4 Dead 2\left4dead2\addons\
@@ -114,7 +171,7 @@ Tab, and stays out of the way.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 2.0.0 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.1.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -256,7 +313,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v2.0.0` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

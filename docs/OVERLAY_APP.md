@@ -8,7 +8,8 @@ process — no injection, no memory reading, no DirectX hooking.
 
 **Current verification:** the v2.0.0 app and format-v1 addon VPK were live-tested in L4D2 on
 2026-08-18, including the weapon HUD, its ammunition and carried-item row, the incendiary and
-explosive marks, and the two independent rosters.
+explosive marks, and the two independent rosters. The 2.1.0 hiding rules - finale outro, chapter-end
+transition, pause menu and console - were confirmed in L4D2 on 2026-08-25.
 
 ## Running it
 
@@ -312,6 +313,8 @@ Sits next to the exe. Edit and restart the app.
 | `editorKey` | `45` | Key used with `holdKey` to open the editor. 45 = Insert; `0` disables the shortcut |
 | `alwaysShow` | `false` | Start the consistent HUD enabled; the configured toggle key changes it during play |
 | `consistentKey` | `118` | Virtual-key code for the consistent-HUD toggle. 118 = F7; `0` disables it |
+| `hideDuringCinematics` | `true` | Hide the panel while the game is running a cinematic over you — the finale outro above all — the same as the vanilla survivor HUD. `false` keeps it drawn through the scene. Needs an exporter that reports the cinematic field |
+| `hideWhenGamePaused` | `true` | Hide the panel while L4D2 shows a menu — the pause menu or the developer console, detected from the mouse cursor the game shows for them — and once the exporter stops advancing (loading screen, main menu, game closed) |
 | `ignoreForeground` | `false` | Draw even when the game is not focused. Debug aid |
 | `exitWhenGameCloses` | `true` | Exit after an observed L4D2 process closes; `false` keeps the app in the tray |
 | `anchor` | `TopLeft` | `Top`/`Middle`/`Bottom` + `Left`/`Center`/`Right` |
