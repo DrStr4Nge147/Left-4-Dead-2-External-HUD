@@ -1,0 +1,26 @@
+Steam Workshop change notes, BBCode, newest first. Paste the top block into the
+"Change Note" box when updating the item; the description itself lives in
+"Workshop Description.txt" and is a separate field.
+
+Keep each block to what a player sees. Mechanism detail belongs in CHANGELOG.md.
+
+================================================================================
+v2.1.0
+================================================================================
+
+[h1]v2.1.0 - the HUD leaves when the game's own HUD does[/h1]
+
+The Consistent HUD stands in for the vanilla survivor HUD, so it now goes away wherever that one goes away, instead of being the only thing left drawn over the scene. It comes back on its own every time.
+
+[list]
+[*][b]Finale outro[/b] - the panel leaves with the escape and stays away for the report screen and the loading that follows.
+[*][b]Chapter end[/b] - it leaves as the saferoom door closes, not seconds later at the loading bar, so the blur, the score panel, and the music play clean.
+[*][b]Map-start cinematic[/b] - same treatment at the other end of the chapter.
+[*][b]Pause menu and developer console[/b] - the panel goes the moment the menu opens and returns on Return to game.
+[/list]
+
+Both rules are on by default and can be switched off in [b]config.json[/b]: [b]hideDuringCinematics[/b] for the cinematic scenes, [b]hideWhenGamePaused[/b] for the menu, console, and loading screens.
+
+The overlay application advances to v2.1.0 with the addon and both halves are required - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url]. Close L4D2 before the addon updates; a Workshop pack replaced while the game is running is not reloaded until the game restarts.
+
+Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url]

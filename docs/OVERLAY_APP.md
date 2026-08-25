@@ -106,6 +106,25 @@ Horizontal and vertical spacing are layout pixels before the HUD scale is applie
 the original spacing, positive values spread cards apart, and negative values pull them together
 or overlap them.
 
+### When it hides itself
+
+Standing in for the vanilla survivor HUD means leaving when that one leaves. The panel takes
+itself off screen for four moments, and returns on its own from each:
+
+| Moment | How it is known | Setting |
+|---|---|---|
+| Finale outro | The exporter reads `m_iHideHUD` against `HIDEHUD_ALL \| HIDEHUD_HEALTH`, or `m_hViewEntity` bound to a scripted camera | `hideDuringCinematics` |
+| Chapter end, map-start cinematic | `m_fFlags & FL_FROZEN` — the server has frozen the player for a scene. `m_iHideHUD` never moves for the score screen, so it cannot answer this one | `hideDuringCinematics` |
+| Pause menu, developer console | The mouse cursor L4D2 shows for its own menus, read with `GetCursorInfo` from outside the game. A listen server does **not** pause when the menu opens, so the exporter keeps running and nothing in the game can be polled for it | `hideWhenGamePaused` |
+| Loading screen, main menu, game closed | Exports have stopped advancing past `staleAfterSeconds` | `hideWhenGamePaused` |
+
+The cinematic verdict is honoured even after the state file goes stale: the outro is the last
+thing exported before a map ends, so a freshness gate would put the panel back up for exactly
+the report screen it is meant to sit out. The next map's first export clears it.
+
+The debug console's `cinematic` line carries the verdict, the three raw exporter reads, and the
+cursor state, which is where an unexpected hide is diagnosed.
+
 When **Separate You** is checked, the exporter-marked listen-server host card is removed from
 the shared grid and drawn as one independent card. **Bottom - Horizontal Grid** puts the shared
 roster at lower left and You at lower right, with a reserved gap between the two groups.

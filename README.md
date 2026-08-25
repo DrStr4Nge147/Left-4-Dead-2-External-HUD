@@ -54,10 +54,15 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 ## Status
 
 **v2.1.0 — the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor
-HUD, instead of sitting on top of the scene. The finale outro is confirmed in game: the panel
-goes with the escape and stays away for the report screen and the load that follow. The same
-detection covers the chapter end, where the saferoom door closes and the score panel comes up
-several seconds before the loading bar. `hideDuringCinematics` in `config.json` turns it off.**
+HUD, instead of sitting on top of the scene: the finale outro, where it stays away for the
+report screen and the load that follow; the chapter end, where the saferoom door closes and
+the score panel runs for several seconds before the loading bar; the map-start cinematic; and
+the pause menu or developer console. It comes back on its own each time. Each of those three
+scenes answers on a different signal — the outro on the game's own hidden-HUD flags and view
+camera, the chapter end on the server freezing the player, the menu on the mouse cursor L4D2
+shows for it, since a listen server does not pause and nothing in the game can be polled for
+a menu. `hideDuringCinematics` and `hideWhenGamePaused` in `config.json` turn the two rules
+off. Live-tested in L4D2 on 2026-08-25.**
 
 **v2.0.0 — adds a weapon HUD: your own primary weapon with its magazine and reserve
 ammunition, and your pistol, Magnum, chainsaw, or melee weapon beneath it, as a separate

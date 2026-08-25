@@ -19,6 +19,8 @@ Your own weapons sit in their own panel: primary with its magazine and reserve, 
 
 The [b]Scoreboard[/b] view appears while [b]Tab[/b] is held. The [b]Consistent HUD[/b] view stays visible during play; holding Tab puts it away and shows the scoreboard panel instead, the way the game hides its own survivor HUD. The application watches Tab without changing key binds.
 
+It also leaves the screen wherever L4D2 hides its own survivor HUD: the finale outro, the chapter-end score screen, the map-start cinematic, and the pause menu or developer console. It comes back on its own each time, so the HUD is never the only thing left drawn over a scene.
+
 [h1]REQUIREMENTS[/h1]
 
 [list]
@@ -50,6 +52,7 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 [*][b]Separate You:[/b] moves your card out of the roster to its own side, with a gap that prevents overlap.
 [*][b]Weapon HUD:[/b] can be turned off, placed in either bottom corner, stacked or side by side, moved anywhere up the screen, and sized on its own on top of the Consistent HUD's size.
 [*][b]Presentation:[/b] health numbers can be hidden, the Consistent HUD can go black-and-white, and card spacing may be negative for intentional overlap.
+[*][b]Scene hiding:[/b] on by default, and switchable in [b]config.json[/b] - [b]hideDuringCinematics[/b] for the outro, chapter end, and map-start cinematic, [b]hideWhenGamePaused[/b] for the pause menu, console, and loading screens.
 [*][b]Preview:[/b] the live roster over L4D2, or a simulated one when the game is closed. The editor can also ask the addon to hold the scoreboard open while you position the panel.
 [/list]
 
@@ -73,7 +76,7 @@ The Scoreboard panel always excludes the original four: L4D2's own scoreboard be
 [*]Keep the application and addon on the same version - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url]. The application reports a mismatch without blocking the HUD.
 [/list]
 
-[b]Current: v2.1.0[/b] - the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor HUD: the finale outro and the chapter-end score screen, instead of sitting on top of them. v2.0.0 added the weapon HUD with live ammunition, carried items, incendiary / explosive marking, and green marking of the slot in your hands, and gave the Scoreboard panel and the Consistent HUD independent rosters. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
+[b]Current: v2.1.0[/b] - the Consistent HUD now leaves the screen whenever L4D2 hides its own survivor HUD: the finale outro, the chapter-end score screen, and the pause menu or console, instead of sitting on top of them. v2.0.0 added the weapon HUD with live ammunition, carried items, incendiary / explosive marking, and green marking of the slot in your hands, and gave the Scoreboard panel and the Consistent HUD independent rosters. Full history: [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/blob/main/docs/CHANGELOG.md]CHANGELOG.md[/url].
 
 [h1]IF NOTHING APPEARS[/h1]
 
