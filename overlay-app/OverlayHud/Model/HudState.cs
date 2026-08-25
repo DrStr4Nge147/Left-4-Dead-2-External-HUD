@@ -36,6 +36,13 @@ public sealed class HudState
     /// unreadable. Diagnostic, and the one read that answers at the chapter end.
     /// </summary>
     [JsonPropertyName("frz")]       public int Frozen { get; set; } = -1;
+
+    /// <summary>
+    /// 1 once the finale has been won, -1 when unreadable. Diagnostic, and the one read that
+    /// answers for the end credits: the game hands control back at that point, so every
+    /// player-side read is honestly reporting ordinary play while the credits roll.
+    /// </summary>
+    [JsonPropertyName("won")]       public int FinaleWon { get; set; } = -1;
     [JsonPropertyName("survivors")] public List<Survivor> Survivors { get; set; } = new();
 }
 

@@ -109,13 +109,14 @@ or overlap them.
 ### When it hides itself
 
 Standing in for the vanilla survivor HUD means leaving when that one leaves. The panel takes
-itself off screen for four moments, and returns on its own from each. Both switches live on the
+itself off screen for five moments, and returns on its own from each. Both switches live on the
 Consistent HUD tab under **Showing it**, are on by default, and are left alone by Reset UI:
 
 | Moment | How it is known | Editor switch |
 |---|---|---|
 | Finale outro | The exporter reads `m_iHideHUD` against `HIDEHUD_ALL \| HIDEHUD_HEALTH`, or `m_hViewEntity` bound to a scripted camera | **Hide for cinematics** |
 | Chapter end, map-start cinematic | `m_fFlags & FL_FROZEN` — the server has frozen the player for a scene. `m_iHideHUD` never moves for the score screen, so it cannot answer this one | **Hide for cinematics** |
+| End credits | `Director.IsFinaleWon()`, which flips true when the escape ends and stays true. Every player-side read is back to its ordinary-play value there: the game has handed control back and is rolling credits over a map that is still live | **Hide for cinematics** |
 | Pause menu, developer console | The mouse cursor L4D2 shows for its own menus, read with `GetCursorInfo` from outside the game. A listen server does **not** pause when the menu opens, so the exporter keeps running and nothing in the game can be polled for it | **Hide for menus** |
 | Loading screen, main menu, game closed | Exports have stopped advancing past `staleAfterSeconds` | **Hide for menus** |
 

@@ -2,7 +2,7 @@
 
 [h2][b]Download the application:[/b] [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Left 4 Dead 2 Customized Overlay HUD - External (GitHub releases)[/url][/h2]
 
-This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be on the same version - currently v2.1.1.
+This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be on the same version - currently v2.1.2.
 
 [list]
 [*][b]Standalone[/b] includes the required .NET components.

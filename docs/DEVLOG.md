@@ -1,5 +1,60 @@
 # Dev log
 
+## 2026-08-25 - v2.1.2: the credits are a Director question, not a player one
+
+The exp1 probe answered in one capture, and both candidate Director calls turned out to
+exist on this build:
+
+```text
+probe: ... hidehud=3961 ... finescape=true  finwon=false ... (seq=206 t=49.2)
+probe: ... hidehud=3961 ... finescape=false finwon=true  ... (seq=322 t=73.3)
+```
+
+`Director.IsFinaleWon()` flips false to true exactly at the moment the escape ends and the
+credits begin, and stays true. That is the fourth read, and the panel now hides on it.
+
+`Director.IsFinaleEscapeInProgress()` exists too and is deliberately **not** used: it is
+already true at t=49.2, while the team is still fighting its way to the rescue vehicle. Acting
+on it would take the HUD away during the most dangerous stretch of the campaign - the exact
+opposite of the point.
+
+Each of the four scenes is visible to a different read, which is worth stating plainly because
+it is the thing that made this take four builds:
+
+| Scene | Answers on |
+|---|---|
+| Finale outro | `m_iHideHUD` mask, `m_hViewEntity` |
+| Chapter end, map-start | `FL_FROZEN` |
+| End credits | `Director.IsFinaleWon()` |
+| Pause menu, console | the mouse cursor, from outside the game |
+
+`won` is read every tick regardless of whether a host player was found, because it is world
+state rather than player state, and `wonMode` is probed once like every other route.
+
+The probe stays in the tree behind `PROBE = false`, with `ProbeCall` alongside it. Two scenes
+were identified by it now, and the name-lookup-before-call pattern is what made testing four
+candidate Director methods free rather than four builds.
+
+**Verification**: the signal is read off the author's live capture; the build acting on it is
+source inspection, `dotnet build` Release clean, and all 24 checks passing. The credits
+behaviour itself has not been played yet.
+
+## 2026-08-25 - a UTF-8 BOM killed v2.1.1-exp1 outright
+
+`Set-Content -Encoding utf8` in Windows PowerShell writes a BOM, and it was used to flip the
+probe flag for that build and to restore the file afterwards. Squirrel will not parse a file
+that starts with one, so the addon loaded as nothing at all: no export loop, no state file,
+no HUD, and nothing in `console.log` naming the cause. The author reported it as the overlay
+being broken, which is exactly what it looked like.
+
+The BOM reached the committed source as well, so anyone packing from the repo would have got
+the same dead addon. The stable v2.1.1 VPK was packed before the bad write and was never
+affected.
+
+`Build-AddonVpk.ps1` now refuses to pack any `.nut` that starts with a BOM, naming the file
+and the reason. A failure mode with no error message deserves a guard at the one place every
+build has to pass through.
+
 ## 2026-08-25 - v2.1.1, and why the end credits still draw the HUD
 
 2.1.1 is the editor promotion: the two hiding switches were config-file keys, which is the

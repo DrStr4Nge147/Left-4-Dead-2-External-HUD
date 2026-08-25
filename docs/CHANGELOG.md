@@ -2,6 +2,15 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.1.2 - 2026-08-25: the HUD stays away for the end credits
+
+- Finishing a campaign no longer brings the Consistent HUD back for the end credits. It now
+  stays away from the escape through the credits and the return to the lobby.
+- Fixes the 2.1.1 known issue. Every read the overlay had went back to its ordinary in-game
+  values the moment the rescue vehicle left, because the game really does hand control back
+  there — it just rolls credits over the top. The exporter now also asks the Director whether
+  the finale has been won, which is the one thing that stays true for the whole credits roll.
+
 ## Overlay HUD v2.1.1 - 2026-08-25: the hiding switches move into the editor
 
 - **Hide for cinematics** and **Hide for menus** are now checkboxes on the Consistent HUD

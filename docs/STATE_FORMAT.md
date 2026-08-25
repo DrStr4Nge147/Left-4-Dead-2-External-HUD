@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "2.1.0",
+  "v": "2.1.2",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -29,6 +29,7 @@ under the old name too, because that is the only name an older addon reads.
   "hud": 0,
   "view": 0,
   "frz": 0,
+  "won": 0,
   "survivors": [
     {
       "uid": 2,
@@ -73,6 +74,7 @@ under the old name too, because that is the only name an older addon reads.
 | `hud` | Raw `m_Local.m_iHideHUD` for the host player, `-1` when there is no route to it. Diagnostic; `cine` is the verdict |
 | `view` | `1` while the host's view is bound to a camera entity, `0` for their own eyes, `-1` when unreadable. Diagnostic |
 | `frz` | `1` while the server has the host player frozen for a scene it is running, `0` when they have control, `-1` when unreadable. This is the read that answers at the chapter end. Diagnostic |
+| `won` | `1` once the finale has been won, `0` before that, `-1` when unreadable. `Director.IsFinaleWon()`. This is the read that answers for the end credits |
 | `uid` | Player user id. Stable within a session; **not** stable across map changes |
 | `name` | Display name — "Cpl. Blake", "Louis", or the human's Steam name |
 | `team` | 2 or 4. Both are survivors (see below) |
@@ -160,21 +162,33 @@ drawn over the scene.
 
 There is no event route to it. Game-event callbacks are registered but never delivered to
 this addon on this install — two builds, two registration sites, zero callbacks, see the
-DEVLOG entries for v1.0.7-exp1 and exp2 — so the export tick observes it by polling the host
-player instead. Two independent reads, either of which is enough on its own:
+DEVLOG entries for v1.0.7-exp1 and exp2 — so the export tick observes it by polling instead.
+Four independent reads, any one of which is enough on its own:
 
 - `m_Local.m_iHideHUD` against `HIDEHUD_ALL | HIDEHUD_HEALTH` (bits `4` and `8`) — the
   engine's own record of what it has stopped drawing;
 - `m_hViewEntity` pointing at something other than the player — a scripted camera has the
   view;
-- `m_fFlags & FL_FROZEN` (bit `32`) — the server has the player frozen for a scene.
+- `m_fFlags & FL_FROZEN` (bit `32`) — the server has the player frozen for a scene;
+- `Director.IsFinaleWon()` — the campaign is over and the credits are rolling.
 
-The outro answers on the first two. **The chapter end answers only on the third**: through a
-whole chapter, `m_iHideHUD` sits at a constant `2048` baseline and never moves for the score
-screen, while `FL_FROZEN` appears exactly three times — the spawn freeze, the intro cinematic,
-and one tick before `Host_Changelevel`. That was read off a live capture, not inferred.
+Each scene is visible to a different read, and all of it was read off live captures rather
+than inferred:
 
-All three raw values ship beside the verdict as `hud`, `view`, and `frz`, and the debug
+- **Outro** — the first two. `m_iHideHUD` goes to `3961` and the view binds to a camera.
+- **Chapter end and map start** — the third only. `m_iHideHUD` sits at a constant `2048`
+  baseline through a whole chapter and never moves for the score screen, while `FL_FROZEN`
+  appears exactly three times: the spawn freeze, the intro cinematic, and one tick before
+  `Host_Changelevel`.
+- **End credits** — the fourth only. At `finale_win` the game unfreezes everyone, drops the
+  camera and returns `m_iHideHUD` to `2048`, because it really has handed control back — it
+  is rolling credits over a map that is still live. `IsFinaleWon()` flips true there and
+  stays true.
+
+`Director.IsFinaleEscapeInProgress()` also exists and is deliberately unused: it is already
+true while the team is still fighting its way to the rescue vehicle.
+
+All four raw values ship beside the verdict as `hud`, `view`, `frz`, and `won`, and the debug
 console's `cinematic` line shows what each said at the time, so a scene that fails to hide the
 panel can be diagnosed rather than guessed at.
 

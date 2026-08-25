@@ -1,4 +1,4 @@
-# Testing — exporter v2.1.1 + overlay app v2.1.1
+# Testing — exporter v2.1.2 + overlay app v2.1.2
 
 The v2.1.0 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
 the chapter-end transition, and the pause menu and console all take the overlay off screen and
@@ -19,23 +19,24 @@ Tab, and stays out of the way.
 4. Hold and release quickly several times and confirm neither panel is left behind and the
    layout does not drift.
 
-## Cinematic hiding — outro and chapter end (v2.1.0)
+## Cinematic hiding — outro, chapter end, and credits (v2.1.2)
 
-Both halves are live-confirmed on 2026-08-25. They answer on different reads — the outro on
-`m_iHideHUD` and the view entity, the chapter end on `FL_FROZEN` alone — so both are worth
-running after any change to the detector.
+Every scene answers on a different read — the outro on `m_iHideHUD` and the view entity, the
+chapter end on `FL_FROZEN` alone, the credits on `Director.IsFinaleWon()` alone — so all of
+them are worth running after any change to the detector.
 
-1. Confirm `console.log` names the three cinematic routes shortly after the first survivor is
+1. Confirm `console.log` names the four cinematic routes shortly after the first survivor is
    seen:
 
    ```text
    [OVLHUD] cinematic read: m_Local.m_iHideHUD
    [OVLHUD] cinematic read: m_hViewEntity
    [OVLHUD] cinematic read: m_fFlags & FL_FROZEN
+   [OVLHUD] cinematic read: Director.IsFinaleWon()
    ```
 
    An `unavailable, reporting -1` line for one of them is survivable — any read alone is
-   enough for the scene it answers. All three missing means the detector cannot fire at all;
+   enough for the scene it answers. All four missing means the detector cannot fire at all;
    send the lines.
 2. With the Consistent HUD on, finish a finale and watch the escape. The moment L4D2 drops
    its own survivor HUD, the overlay must go with it, and must stay gone through the stats
@@ -47,13 +48,18 @@ running after any change to the detector.
 5. **Chapter end.** Get everyone into the saferoom and close the door. The overlay must go
    at the blur, before the score panel and the music — not at the loading bar, which is
    where it used to leave. It must come back on the next chapter on its own.
-6. Whatever the outcome, open the debug console during the scene if you can, or send
+6. **End credits (v2.1.2).** Finish a campaign and let the credits run rather than skipping
+   them. The overlay must stay away from the escape, through the credits, and until the next
+   session starts. It must **not** disappear while you are still fighting your way to the
+   rescue vehicle — that is `IsFinaleEscapeInProgress`, which is deliberately not used, and
+   an early hide there means the wrong call was wired in.
+7. Whatever the outcome, open the debug console during the scene if you can, or send
    `console.log` afterwards: the `cinematic` line carries `hideHud bits` and `view camera`,
    and the exporter logs every change in those reads:
 
    ```text
-   [OVLHUD] cinematic reads changed: hud=2048 view=0 frozen=1 -> hidden
-   [OVLHUD] cinematic started (hud=2048 view=0 frozen=1)
+   [OVLHUD] cinematic reads changed: hud=2048 view=0 frozen=1 won=0 -> hidden
+   [OVLHUD] cinematic started (hud=2048 view=0 frozen=1 won=0)
    ```
 
    A `reads changed` line with no `cinematic started` after it is the useful failure: it
@@ -171,7 +177,7 @@ running after any change to the detector.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 2.1.1 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.1.2 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -313,7 +319,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.1` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.2` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

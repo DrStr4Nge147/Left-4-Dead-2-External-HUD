@@ -420,6 +420,7 @@ public partial class MainWindow : Window
                 $"hideHud bits: {_reader?.Current?.HideHudBits ?? -1}   " +
                 $"view camera: {_reader?.Current?.ViewCamera ?? -1}   " +
                 $"frozen: {_reader?.Current?.Frozen ?? -1}   " +
+                $"finale won: {_reader?.Current?.FinaleWon ?? -1}   " +
                 $"cursor: {(_menuProbe() ? "shown (menu)" : "hidden (play)")}   " +
                 $"hiding: {(_cfg.HideDuringCinematics ? "on" : "off")}"
         });

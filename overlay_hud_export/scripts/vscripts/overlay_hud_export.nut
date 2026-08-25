@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.1.1"
+::OvlHud.VERSION   <- "2.1.2"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -89,10 +89,12 @@
 ::OvlHud.hudMode   <- -1     // -1 unprobed, 1 m_Local.m_iHideHUD, 0 no route
 ::OvlHud.viewMode  <- -1     // -1 unprobed, 1 m_hViewEntity, 0 no route
 ::OvlHud.frozenMode <- -1    // -1 unprobed, 1 m_fFlags & FL_FROZEN, 0 no route
+::OvlHud.wonMode   <- -1     // -1 unprobed, 1 Director.IsFinaleWon(), 0 no route
 ::OvlHud.cine      <- 0      // 1 while the game is running a cinematic over the player
 ::OvlHud.lastHudBits <- -2   // last logged raw reads; -2 is "nothing logged yet"
 ::OvlHud.lastViewCam <- -2
 ::OvlHud.lastFrozen  <- -2
+::OvlHud.lastWon     <- -2
 ::OvlHud.lastProbe   <- ""   // last diagnostic probe line, logged only when it changes
 ::OvlHud.hostProbeWarned <- false
 ::OvlHud.ammoWarned <- false
@@ -1071,6 +1073,51 @@
 	return -1
 }
 
+// 1 once the finale has been won, 0 before that, -1 when there is no route to it.
+//
+// This is the end credits, and nothing on the player can see them. At finale_win the game
+// unfreezes everyone, drops the camera and returns m_iHideHUD to its ordinary 2048 baseline
+// while the credits roll over a map that is still live with healthy survivors in it - so all
+// three player reads say "ordinary play", correctly, and the overlay came back.
+//
+// [OBSERVED - console.log 2026-08-25] Director.IsFinaleWon() exists on this build and flips
+// false -> true at exactly that moment: t=49.2 escape running and won false, t=73.3 escape
+// over and won true. Director.IsFinaleEscapeInProgress() exists too and is deliberately NOT
+// used: it is already true while the team is still fighting its way to the rescue vehicle,
+// which is the last moment to take the HUD away.
+//
+// The verdict is not cleared until the script VM reloads on the next map, which is what
+// keeps the panel away for the whole credits roll rather than for one tick of it.
+::OvlHud.IsFinaleWon <- function ()
+{
+	if (this.wonMode == 0) { return -1 }
+
+	try
+	{
+		if (!("IsFinaleWon" in ::Director)) { throw "Director.IsFinaleWon not on this build" }
+
+		local won = ::Director.IsFinaleWon()
+
+		if (this.wonMode != 1)
+		{
+			this.wonMode = 1
+			this.Log("cinematic read: Director.IsFinaleWon()")
+		}
+
+		return won ? 1 : 0
+	}
+	catch (e)
+	{
+		if (this.wonMode == -1)
+		{
+			this.wonMode = 0
+			this.Log("cinematic read: IsFinaleWon unavailable, reporting -1 - " + e)
+		}
+	}
+
+	return -1
+}
+
 // 1 while the server has the player frozen for a scene it is running, 0 while they have
 // control of themselves, -1 when there is no route to it.
 ::OvlHud.IsFrozen <- function (p)
@@ -1205,6 +1252,7 @@
 	local hudBits = -1
 	local viewCam = -1
 	local frozen  = -1
+	local won     = this.IsFinaleWon()   // world state, not the player's - read regardless
 
 	if (host != null)
 	{
@@ -1214,30 +1262,37 @@
 		this.Probe(host)
 	}
 
-	// Three reads, any one of which is enough. The outro answers on the first two; the
-	// chapter end answers only on the third, where m_iHideHUD never leaves its baseline.
+	// Four reads, any one of which is enough, because each scene is only visible to some of
+	// them. The outro answers on the first two; the chapter end only on the third, where
+	// m_iHideHUD never leaves its baseline; the end credits only on the fourth, where all
+	// three player reads are back to their ordinary-play values because the game really has
+	// handed control back - it is just rolling credits over the top.
 	local cine = ((hudBits > 0 && (hudBits & this.HIDEHUD_MASK) != 0)
 	              || viewCam == 1
-	              || frozen == 1) ? 1 : 0
+	              || frozen == 1
+	              || won == 1) ? 1 : 0
 
 	// Logged on every change in the raw reads, not only when the verdict flips. A scene that
 	// hides the vanilla HUD through something this build does not act on leaves its value in
 	// the capture, which is what makes the next build a correction rather than another guess.
 	if (hudBits != this.lastHudBits || viewCam != this.lastViewCam
-	    || frozen != this.lastFrozen)
+	    || frozen != this.lastFrozen || won != this.lastWon)
 	{
 		this.lastHudBits = hudBits
 		this.lastViewCam = viewCam
 		this.lastFrozen  = frozen
+		this.lastWon     = won
 		this.Log("cinematic reads changed: hud=" + hudBits + " view=" + viewCam
-		         + " frozen=" + frozen + " -> " + (cine == 1 ? "hidden" : "drawn"))
+		         + " frozen=" + frozen + " won=" + won
+		         + " -> " + (cine == 1 ? "hidden" : "drawn"))
 	}
 
 	if (cine != this.cine)
 	{
 		this.cine = cine
 		this.Log("cinematic " + (cine == 1 ? "started" : "ended")
-		         + " (hud=" + hudBits + " view=" + viewCam + " frozen=" + frozen + ")")
+		         + " (hud=" + hudBits + " view=" + viewCam + " frozen=" + frozen
+		         + " won=" + won + ")")
 	}
 
 	local json = "{"
@@ -1249,6 +1304,8 @@
 	json += ",\"hud\":" + hudBits
 	json += ",\"view\":" + viewCam
 	json += ",\"frz\":" + frozen
+	json += ",\"won\":" + won
+	json += ",\"won\":" + won
 	json += ",\"survivors\":[" + body + "]"
 	json += "}"
 
@@ -1358,6 +1415,7 @@
 	this.hudMode   = -1
 	this.viewMode  = -1
 	this.frozenMode = -1
+	this.wonMode    = -1
 	// A round restart runs through a live VM, so a cinematic verdict from the round that
 	// just ended would otherwise stay latched and keep the overlay hidden for the whole
 	// next round.
@@ -1365,6 +1423,7 @@
 	this.lastHudBits = -2
 	this.lastViewCam = -2
 	this.lastFrozen  = -2
+	this.lastWon     = -2
 	this.lastProbe   = ""
 	this.hostProbeWarned = false
 	this.ammoWarned = false
