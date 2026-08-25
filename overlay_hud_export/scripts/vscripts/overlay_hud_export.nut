@@ -1,4 +1,4 @@
-﻿// Overlay HUD Export - live survivor state exporter.
+// Overlay HUD Export - live survivor state exporter.
 //
 // Writes every survivor currently in the session to a JSON file that an external overlay
 // application reads. Read-only with respect to the game: it reads state and writes one

@@ -76,12 +76,24 @@ foreach ($file in Get-ChildItem $Source -Recurse -File) {
     $directory = if ($relative.Contains('/')) { $relative.Substring(0, $relative.LastIndexOf('/')) } else { ' ' }
     $name = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
 
+    $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+
+    # A UTF-8 BOM on a .nut is fatal and completely silent: Squirrel will not parse the file,
+    # so the addon never loads, nothing is ever exported, and the overlay simply shows
+    # nothing - with no error naming the cause. It is trivially easy to introduce, because
+    # Windows PowerShell's Set-Content -Encoding utf8 writes one, and that is exactly how a
+    # v2.1.1-exp1 build shipped broken. Refused at the packer so it can never reach a VPK.
+    if ($extension -eq 'nut' -and $bytes.Length -ge 3 -and
+        $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        throw "$relative starts with a UTF-8 BOM. Squirrel cannot parse it and the addon would load silently as nothing. Rewrite the file as UTF-8 without BOM."
+    }
+
     $entries += [pscustomobject]@{
         Extension = $extension
         Directory = $directory
         Name      = $name
         Relative  = $relative
-        Bytes     = [System.IO.File]::ReadAllBytes($file.FullName)
+        Bytes     = $bytes
     }
 }
 
