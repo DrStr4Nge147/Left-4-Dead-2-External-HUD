@@ -1,4 +1,8 @@
-# Testing — exporter v2.1.2 + overlay app v2.1.2
+# Testing — exporter v2.1.3 + overlay app v2.1.3
+
+The v2.1.3 pair is built but not live-tested: its one change, the REINFORCEMENT badge, needs a
+Finale Soldiers build from `feature/go-command`, where `help!` lives. Everything else is
+unchanged from v2.1.2.
 
 The v2.1.2 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
 the chapter-end transition, the end credits, and the pause menu and console all take the
@@ -178,7 +182,7 @@ them are worth running after any change to the detector.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 2.1.2 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.1.3 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -263,7 +267,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
   cards, and the separate You card; the Scoreboard tab should not change.
 - Toggle **Show health numbers** off and confirm the numeric value disappears from both designs
   while the bars remain. Toggle **Black & white theme** on and confirm health bars, state labels,
-  follower markers, and warning edges use only grayscale colors. The Scoreboard tab should retain
+  follower and reinforcement markers, and warning edges use only grayscale colors. The Scoreboard tab should retain
   its normal colored health/state presentation.
 - Tick **Separate You** in the Consistent HUD tab. In simulated preview, the first sample card
   should leave the shared grid and appear as one independent card at the lower right for the
@@ -320,7 +324,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.2` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.3` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**
@@ -386,19 +390,28 @@ Start a campaign with the soldiers spawning, then:
 - **Roster filters.** Spawn soldiers, turn `!cfmortal` on, and send one soldier to follow
   you, so all three classes are present at once. The scoreboard panel and the Consistent HUD
   have separate filters, so check each view against its own. For each **Who to show** option:
-  - **All survivors** (Consistent HUD only) — every mortal soldier, the follower, the four
+  - **All survivors** (Consistent HUD only) — every mortal soldier, the follower, the reinforcement, the four
     original survivors, and any extra plain survivor appear; no card for an immortal holdout
     soldier. The four vanilla survivors appearing here is intentional: the vanilla survivor
     HUD is hidden while this one is up.
   - **Extra survivors** — the four original plain survivors drop off; the extra plain survivor,
-    mortal soldier, and follower remain. This is what the scoreboard panel always does with
+    mortal soldier, follower, and reinforcement remain. This is what the scoreboard panel always does with
     plain survivors, whichever of its three options is selected.
   - **Mortal soldiers + followers** — extra plain survivors drop off; soldiers stay.
-  - **Followers only** — only the soldier following you remains. Press the follow key
+  - **Followers only** — only the soldiers following you remain, the `help!` reinforcements
+    among them. Press the follow key
     again and the panel should empty within a fraction of a second.
-  - The follower's card should show a blue **FOLLOW** marker in the first two options and
-    no marker in **Followers only**. The marker must appear and disappear as you toggle
+  - The hand-picked follower's card should show a blue **FOLLOW** marker in the first two
+    options and no marker in **Followers only**. It must appear and disappear as you toggle
     follow, alongside `DOWN` / `B&W` rather than replacing it.
+- **Reinforcements.** On a Finale Soldiers build from `feature/go-command`, type `help!` and
+  let the reinforcements arrive. Each one's card should carry a yellow **REINFORCEMENT** marker
+  instead of the blue FOLLOW, in every filter including **Followers only**, and should keep it
+  after it is killed while its body is still on the map. A soldier you then tell to follow by
+  hand must still read FOLLOW, so the two are never confused on one roster.
+- **Reinforcement timeout.** Let a reinforcement's timeout run out rather than killing it. Its
+  card must leave the panel when it turns immortal, which is before its body despawns — watch
+  the body still standing there with no card for it. The remaining reinforcements keep theirs.
 - Walk a mortal soldier far enough away to trip the distance suspension (it goes team 4 to
   dodge the bot-catchup teleport). It must **stay** on the panel, not flicker off and back.
 - Get incapped, get revived, go black-and-white, let a soldier die, pop pills. Check each

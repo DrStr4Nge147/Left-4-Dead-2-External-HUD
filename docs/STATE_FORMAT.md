@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "2.1.2",
+  "v": "2.1.3",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -80,7 +80,7 @@ under the old name too, because that is the only name an older addon reads.
 | `team` | 2 or 4. Both are survivors (see below) |
 | `char` | `m_survivorCharacter`. **Unreliable for spawned soldiers** — all four read 8 |
 | `local` | `true` for the listen-server host's current survivor; omitted by older exporters |
-| `cls` | `survivor`, `soldier`, `follower`, or `holdout` (see below). Absent before v0.6.5 |
+| `cls` | `survivor`, `soldier`, `reinforcement`, `follower`, or `holdout` (see below). Absent before v0.6.5; `reinforcement` added in v2.1.3 |
 | `bot` | `true` / `false` / `null` when the install exposes no bot test |
 | `hp` | Permanent health |
 | `maxhp` | Max health |
@@ -209,14 +209,28 @@ back on team 2 twenty seconds later. Filtering to team 2 makes them blink out of
 |---|---|
 | `survivor` | Not a Finale Soldiers bot: a real survivor, or another addon's extra bot |
 | `soldier` | A mortal soldier holding a post — shootable, killable, worth a health card |
-| `follower` | A soldier following a player. Always forced mortal while it follows |
-| `holdout` | An immortal team-4 holdout soldier. The overlay never draws these |
+| `reinforcement` | A soldier called in with `help!`, while it is still mortal. Carries the yellow **REINFORCEMENT** badge |
+| `follower` | A soldier told to follow a player by hand. Always forced mortal while it follows. Carries the blue **FOLLOW** badge |
+| `holdout` | Any immortal soldier: a team-4 holdout, or a reinforcement whose timeout ran out and turned it immortal. The overlay never draws these |
 
 The exporter reads Finale Soldiers' own per-player script-scope markers — `cf_soldier_bot`,
-`cf_soldier_following`, `cf_soldier_mortal`, `cf_soldier_distance_suspended` — because both
+`cf_soldier_following`, `cf_soldier_help_temp`, `cf_soldier_mortal`, `cf_soldier_distance_suspended` — because both
 addons run in the same server VM. A distance-suspended mortal soldier still reports
 `soldier`: it is sitting on team 4 only to dodge the engine's bot-catchup teleport, and
 letting that flip its class would make it flicker out of the HUD whenever it wandered.
+
+Mortality is tested before either following class. A reinforcement is turned immortal when its
+timeout runs out, some time before its body despawns, and from that moment it reports `holdout`
+and its card leaves the panel — an immortal soldier is scenery whatever else it is. A
+distance-suspended soldier still counts as mortal, per the paragraph above.
+
+`reinforcement` is tested before `follower`, on `cf_soldier_help_temp`. A `help!` soldier runs
+the same `ToggleSoldierFollow` a hand-picked follower does, so `cf_soldier_following` is true
+for both; `cf_soldier_help_temp` is written once at adoption, before that toggle, and never
+cleared. `cf_soldier_help_active` is not used for identity: it goes false on a dead
+reinforcement whose body is still on the map, which would drop the card back to `follower`
+mid-round. The `help!` feature ships on Finale Soldiers' `feature/go-command` branch, so an
+install without it never sends `reinforcement` and following soldiers all read `follower`.
 
 Without the addon installed every player reports `survivor`, and so does everything from an
 exporter older than v0.6.5, which the overlay treats as the previous behavior.

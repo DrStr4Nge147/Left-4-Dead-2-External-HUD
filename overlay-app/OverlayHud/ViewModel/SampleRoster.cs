@@ -19,8 +19,9 @@ public static class SampleRoster
     };
 
     /// <summary>
-    /// <paramref name="markFollowers"/> tags a few of the samples as followers so the
-    /// marker is visible while laying out, exactly as a mixed live roster would show it.
+    /// <paramref name="markFollowers"/> tags a few of the samples as followers and a few as
+    /// help! reinforcements, so both markers are visible while laying out, exactly as a mixed
+    /// live roster would show them.
     /// The theme and number options mirror the live consistent-HUD renderer.
     /// </summary>
     /// <summary>
@@ -88,7 +89,10 @@ public static class SampleRoster
             };
 
             result.Add(SurvivorCard.From(survivor,
-                                         markFollowers && i % 4 == 1,
+                                         !markFollowers   ? CardMarker.None
+                                             : i % 4 == 1 ? CardMarker.Reinforcement
+                                             : i % 4 == 3 ? CardMarker.Follower
+                                             : CardMarker.None,
                                          monochrome,
                                          showHealthNumbers));
         }

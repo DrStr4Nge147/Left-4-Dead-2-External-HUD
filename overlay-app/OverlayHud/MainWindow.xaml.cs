@@ -1235,7 +1235,7 @@ public partial class MainWindow : Window
         var cards = rosterSurvivors
             .Select(s => SurvivorCard.From(
                 s,
-                RosterPolicy.MarksFollower(s, mode),
+                RosterPolicy.Marker(s, mode),
                 monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
                 showHealthNumbers: !ConsistentMode || _cfg.ConsistentShowHealthNumbers))
             .ToList();
@@ -1244,7 +1244,7 @@ public partial class MainWindow : Window
         if (localSurvivor != null)
         {
             youCards.Add(SurvivorCard.From(localSurvivor,
-                                           RosterPolicy.MarksFollower(localSurvivor, mode),
+                                           RosterPolicy.Marker(localSurvivor, mode),
                                            monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
                                            showHealthNumbers: !ConsistentMode
                                                || _cfg.ConsistentShowHealthNumbers));

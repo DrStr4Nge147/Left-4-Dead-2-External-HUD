@@ -235,14 +235,15 @@
                                Foreground="#F2F2F2"
                                TextTrimming="CharacterEllipsis" />
                     <StackPanel Orientation="Horizontal">
-                        <!-- Only marked when the roster is mixed; in followers-only mode
+                        <!-- FOLLOW for a hand-picked follower, REINFORCE for a help! reinforcement.
+                             The follow badge is dropped in followers-only mode
                              every card would carry it and it would say nothing. -->
-                        <TextBlock Text="FOLLOW"
+                        <TextBlock Text="{Binding MarkerText}"
                                    Margin="0,0,6,0"
                                    FontFamily="{StaticResource HudFont}"
                                    FontSize="10"
-                                   Foreground="{Binding FollowerBrush}"
-                                   Visibility="{Binding IsFollower,
+                                   Foreground="{Binding MarkerBrush}"
+                                   Visibility="{Binding HasMarker,
                                                 Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding StateText}"
                                    FontFamily="{StaticResource HudFont}"
@@ -331,12 +332,12 @@
                                Foreground="#F2F2F2"
                                TextTrimming="CharacterEllipsis" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="FOLLOW"
+                        <TextBlock Text="{Binding MarkerText}"
                                    Margin="0,0,5,0"
                                    FontFamily="{StaticResource HudFont}"
                                    FontSize="9"
-                                   Foreground="{Binding FollowerBrush}"
-                                   Visibility="{Binding IsFollower,
+                                   Foreground="{Binding MarkerBrush}"
+                                   Visibility="{Binding HasMarker,
                                                 Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding StateText}"
                                    FontFamily="{StaticResource HudFont}"
@@ -436,12 +437,12 @@
                                    TextWrapping="NoWrap"
                                    VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1"
-                                   Text="FOLLOW"
+                                   Text="{Binding MarkerText}"
                                    Margin="4,0,0,0"
                                    FontFamily="{StaticResource HudFont}"
                                    FontSize="8"
-                                   Foreground="{Binding FollowerBrush}"
-                                   Visibility="{Binding IsFollower,
+                                   Foreground="{Binding MarkerBrush}"
+                                   Visibility="{Binding HasMarker,
                                                 Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Grid.Column="2"
                                    Text="{Binding StateText}"

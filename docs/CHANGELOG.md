@@ -2,6 +2,29 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.1.3 - 2026-08-26: reinforcements get their own card badge
+
+- Soldiers called in with Finale Soldiers' `help!` now carry a yellow **REINFORCEMENT** badge
+  instead of the blue **FOLLOW** one. They follow their caller like any other follower, so the
+  old card said nothing about where they came from or that they leave on their own.
+- The card leaves when the reinforcement's timeout runs out, not when its body despawns.
+  Finale Soldiers turns an expired reinforcement immortal first and removes it later, and an
+  immortal soldier cannot be hurt, so the exporter now tests mortality ahead of every soldier
+  class and reports one as `holdout`.
+- The badge survives the reinforcement's death while its body is still on the map, and it is
+  drawn in every roster filter, including **Followers only** - the one place a plain follower
+  goes unbadged, since every card there is following.
+- The exporter tells them apart on `cf_soldier_help_temp`, written at adoption before the
+  follow toggle runs and never cleared, rather than on `cf_soldier_following`, which both
+  kinds set. The new class is `cls: "reinforcement"` in the state file. `cf_soldier_help_active`
+  is deliberately not the test: it goes false on a dead reinforcement.
+- Roster filters are unchanged: a reinforcement counts as a follower everywhere, so
+  **Followers only** lists both kinds.
+
+**Requires** a Finale Soldiers build with `help!` - the feature lives on its
+`feature/go-command` branch. Without it, nothing changes: every following soldier reports
+`follower` and keeps the blue badge.
+
 ## Overlay HUD v2.1.2 - 2026-08-25: the HUD stays away for the end credits
 
 - Finishing a campaign no longer brings the Consistent HUD back for the end credits. It now

@@ -66,7 +66,11 @@ function Publish-Shape {
     # stale settings overwriting someone's tuned layout on update.
     Get-ChildItem $target -Exclude '*.exe' | Remove-Item -Recurse -Force
 
+    # Named for the download, not for the build: the two shapes end up in the same downloads
+    # folder as each other and as every earlier release, and "OverlayHud.exe" tells you
+    # nothing about which one you kept.
     $exe = Get-ChildItem $target -Filter *.exe | Select-Object -First 1
+    $exe = Rename-Item $exe.FullName -NewName "OverlayHud-$Name-$version.exe" -PassThru
     [pscustomobject]@{
         Shape = $Name
         File  = $exe.FullName

@@ -35,7 +35,7 @@ public sealed class SurvivorCard
 
     public Brush HealthBrush { get; init; } = Brushes.LimeGreen;
     public Brush BasicHealthNumberBrush { get; init; } = Brushes.White;
-    public Brush FollowerBrush { get; init; } = Brushes.LightSkyBlue;
+    public Brush MarkerBrush { get; init; } = Brushes.LightSkyBlue;
 
     /// <summary>
     /// The temp-health segment: the game's scratched-up overlay in the health bar's own
@@ -47,8 +47,13 @@ public sealed class SurvivorCard
     public Brush StateBrush { get; init; } = Brushes.Transparent;
     public bool HasState => StateText.Length > 0;
 
-    /// <summary>Marks a Finale Soldiers follower. Only set when the roster is mixed.</summary>
-    public bool IsFollower { get; init; }
+    /// <summary>
+    /// FOLLOW for a hand-picked follower, REINFORCEMENT for a <c>help!</c> reinforcement, empty
+    /// for everyone else. See <see cref="RosterPolicy.Marker"/> for when each is set.
+    /// </summary>
+    public string MarkerText { get; init; } = "";
+
+    public bool HasMarker => MarkerText.Length > 0;
 
     /// <summary>
     /// On the last strike and still up. Drives the card's pulsing outline - the one state
@@ -86,9 +91,10 @@ public sealed class SurvivorCard
     private static readonly SolidColorBrush Bone  = Frozen(0xD8, 0xD8, 0xD0);
     private static readonly SolidColorBrush Grey  = Frozen(0x6A, 0x6A, 0x6A);
     private static readonly SolidColorBrush Mono  = Frozen(0xF2, 0xF2, 0xF2);
-    private static readonly SolidColorBrush FollowerBlue = Frozen(0x6F, 0xB4, 0xFF);
+    private static readonly SolidColorBrush FollowerBlue     = Frozen(0x6F, 0xB4, 0xFF);
+    private static readonly SolidColorBrush ReinforceYellow  = Frozen(0xFF, 0xD8, 0x4A);
 
-    public static SurvivorCard From(Survivor s, bool markFollower = false,
+    public static SurvivorCard From(Survivor s, CardMarker marker = CardMarker.None,
                                     bool monochrome = false, bool showHealthNumbers = true)
     {
         int max = s.MaxHp > 0 ? s.MaxHp : 100;
@@ -151,11 +157,18 @@ public sealed class SurvivorCard
             // scratched overlay only on the buffer past current health.
             HealthBrush    = healthBrush,
             BasicHealthNumberBrush = monochrome ? Brushes.Black : Brushes.White,
-            FollowerBrush  = monochrome ? Mono : FollowerBlue,
+            MarkerText     = marker switch
+            {
+                CardMarker.Reinforcement => "REINFORCEMENT",
+                CardMarker.Follower      => "FOLLOW",
+                _                        => ""
+            },
+            MarkerBrush    = monochrome
+                ? Mono
+                : marker == CardMarker.Reinforcement ? ReinforceYellow : FollowerBlue,
             TempBrush      = tempBrush,
             StateText      = stateText,
             StateBrush     = stateBrush,
-            IsFollower     = markFollower,
             IsBlackAndWhite = s.BlackAndWhite && !dead && !down,
             CardOpacity    = dead ? 0.45 : 1.0,
             IsLocal        = s.IsLocal,

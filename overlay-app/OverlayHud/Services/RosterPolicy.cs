@@ -14,8 +14,20 @@ public enum RosterMode
     /// <summary>Finale Soldiers mortal soldiers and followers only.</summary>
     SoldiersAndFollowers,
 
-    /// <summary>Followers only.</summary>
+    /// <summary>Followers only - reinforcements included, since they follow too.</summary>
     Followers
+}
+
+/// <summary>The badge a card carries, if any.</summary>
+public enum CardMarker
+{
+    None,
+
+    /// <summary>A soldier told to follow by hand.</summary>
+    Follower,
+
+    /// <summary>A soldier called in with <c>help!</c>.</summary>
+    Reinforcement
 }
 
 /// <summary>
@@ -45,6 +57,14 @@ public static class RosterPolicy
     public const string ClassSoldier  = "soldier";
     public const string ClassFollower = "follower";
     public const string ClassHoldout  = "holdout";
+
+    /// <summary>
+    /// A soldier called in with <c>help!</c>. Finale Soldiers tags it with
+    /// <c>cf_soldier_help_temp</c> before the follow toggle runs, so the exporter can tell it
+    /// apart from a hand-picked follower even though both end up following. Sent by exporter
+    /// v2.1.3 and later; an older one reports these as <see cref="ClassFollower"/>.
+    /// </summary>
+    public const string ClassReinforcement = "reinforcement";
 
     /// <summary>
     /// The scoreboard's own reading of the setting. It never resolves to
@@ -119,16 +139,23 @@ public static class RosterPolicy
     }
 
     /// <summary>
-    /// True when this entry should carry the follower marker. Followers-only mode marks
-    /// nothing: every card would carry it, which says nothing.
+    /// The badge this entry carries. A reinforcement is badged everywhere, including
+    /// followers-only, where it is the one thing separating it from a hand-picked follower.
+    /// The plain follower badge is dropped in that mode: with every card following, only the
+    /// reinforcements need saying.
     /// </summary>
-    public static bool MarksFollower(Survivor survivor, RosterMode mode) =>
-        mode != RosterMode.Followers && Classify(survivor) == ClassFollower;
+    public static CardMarker Marker(Survivor survivor, RosterMode mode) => Classify(survivor) switch
+    {
+        ClassReinforcement => CardMarker.Reinforcement,
+        ClassFollower      => mode == RosterMode.Followers ? CardMarker.None : CardMarker.Follower,
+        _                  => CardMarker.None
+    };
 
     private static string Classify(Survivor survivor) =>
         survivor.Cls?.Trim().ToLowerInvariant() switch
         {
             ClassSoldier  => ClassSoldier,
+            ClassReinforcement => ClassReinforcement,
             ClassFollower => ClassFollower,
             ClassHoldout  => ClassHoldout,
             _             => ClassSurvivor

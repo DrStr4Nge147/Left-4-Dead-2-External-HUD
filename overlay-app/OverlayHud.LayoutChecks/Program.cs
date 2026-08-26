@@ -1860,7 +1860,7 @@ internal static class Program
                 == Color.FromRgb(0xF2, 0xF2, 0xF2)
             && ((SolidColorBrush)themedCard.BasicHealthNumberBrush).Color
                 == Colors.Black
-            && ((SolidColorBrush)themedCard.FollowerBrush).Color
+            && ((SolidColorBrush)themedCard.MarkerBrush).Color
                 == Color.FromRgb(0xF2, 0xF2, 0xF2);
 
         config.ConsistentDesign = ConsistentHudPolicy.MinimalistDesign;
@@ -2631,6 +2631,7 @@ internal static class Program
             Named("Cpl. Blake", RosterPolicy.ClassHoldout),
             Named("Cpl. Nguyen", RosterPolicy.ClassSoldier),
             Named("Pvt. Chambers", RosterPolicy.ClassFollower),
+            Named("Pvt. Ortiz", RosterPolicy.ClassReinforcement),
             Named("Cpl. Foster", RosterPolicy.ClassHoldout)
         };
 
@@ -2653,12 +2654,13 @@ internal static class Program
             .Any(name => name is "Cpl. Blake" or "Cpl. Foster");
         bool allMode = all.SequenceEqual(
             new[] { "Host", "Ellis", "Coach", "Rochelle", "Extra bot",
-                    "Cpl. Nguyen", "Pvt. Chambers" });
+                    "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
         bool extrasMode = extras.SequenceEqual(
-            new[] { "Extra bot", "Cpl. Nguyen", "Pvt. Chambers" });
+            new[] { "Extra bot", "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
         bool soldierMode = soldiers.SequenceEqual(
-            new[] { "Cpl. Nguyen", "Pvt. Chambers" });
-        bool followerMode = followers.SequenceEqual(new[] { "Pvt. Chambers" });
+            new[] { "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
+        // A reinforcement follows too, so followers-only keeps it beside the hand-picked one.
+        bool followerMode = followers.SequenceEqual(new[] { "Pvt. Chambers", "Pvt. Ortiz" });
         bool legacyAllIncludesVanilla = legacyAll.SequenceEqual(
             new[] { "Host", "Ellis", "Coach", "Rochelle", "Pvt. Chambers" });
         bool legacyExtrasUnchanged = legacyExtras.SequenceEqual(new[] { "Pvt. Chambers" });
@@ -2687,14 +2689,19 @@ internal static class Program
             && new AppConfig().RosterFilter == "extras"
             && new AppConfig().ConsistentRosterFilter == "all";
 
-        // The follower marker only means something on a mixed roster.
+        // FOLLOW only means something on a mixed roster; REINFORCEMENT means something
+        // everywhere, since it is what separates a help! soldier from a hand-picked one.
         var follower = Named("Pvt. Chambers", RosterPolicy.ClassFollower);
+        var reinforcement = Named("Pvt. Ortiz", RosterPolicy.ClassReinforcement);
         var soldier = Named("Cpl. Nguyen", RosterPolicy.ClassSoldier);
         bool marksOnMixedRosters =
-            RosterPolicy.MarksFollower(follower, RosterMode.All)
-            && RosterPolicy.MarksFollower(follower, RosterMode.SoldiersAndFollowers)
-            && !RosterPolicy.MarksFollower(follower, RosterMode.Followers)
-            && !RosterPolicy.MarksFollower(soldier, RosterMode.All);
+            RosterPolicy.Marker(follower, RosterMode.All) == CardMarker.Follower
+            && RosterPolicy.Marker(follower, RosterMode.SoldiersAndFollowers) == CardMarker.Follower
+            && RosterPolicy.Marker(follower, RosterMode.Followers) == CardMarker.None
+            && RosterPolicy.Marker(soldier, RosterMode.All) == CardMarker.None
+            && RosterPolicy.Marker(reinforcement, RosterMode.All) == CardMarker.Reinforcement
+            && RosterPolicy.Marker(reinforcement, RosterMode.Followers)
+                == CardMarker.Reinforcement;
 
         // The editor is the only way to reach the setting, so all four controls are part
         // of the contract: they must load from config and write back to it.
@@ -2703,8 +2710,10 @@ internal static class Program
 
         // Rendered, not just modelled: the marker has to survive the shared card template.
         bool markerRenders =
-            FollowerMarkerVisible(app, SurvivorCard.From(follower, true))
-            && !FollowerMarkerVisible(app, SurvivorCard.From(follower, false));
+            MarkerVisible(app, SurvivorCard.From(follower, CardMarker.Follower), "FOLLOW")
+            && MarkerVisible(app, SurvivorCard.From(reinforcement, CardMarker.Reinforcement),
+                             "REINFORCEMENT")
+            && !MarkerVisible(app, SurvivorCard.From(follower, CardMarker.None), "FOLLOW");
         var settings = new SettingsWindow(
             new AppConfig { RosterFilter = "extras", ConsistentRosterFilter = "followers" },
             () => { });
@@ -2788,7 +2797,7 @@ internal static class Program
         return passed ? 0 : 1;
     }
 
-    private static bool FollowerMarkerVisible(App app, SurvivorCard card)
+    private static bool MarkerVisible(App app, SurvivorCard card, string text)
     {
         var presenter = new ContentPresenter
         {
@@ -2801,7 +2810,7 @@ internal static class Program
         presenter.Arrange(new Rect(presenter.DesiredSize));
         presenter.UpdateLayout();
 
-        return FindTextBlock(presenter, "FOLLOW") is { Visibility: Visibility.Visible };
+        return FindTextBlock(presenter, text) is { Visibility: Visibility.Visible };
     }
 
     private static TextBlock? FindTextBlock(DependencyObject parent, string text)

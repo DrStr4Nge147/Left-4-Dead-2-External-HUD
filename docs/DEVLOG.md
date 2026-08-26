@@ -1,5 +1,37 @@
 # Dev log
 
+## 2026-08-26 - v2.1.3: telling a reinforcement from a follower
+
+`help!` reinforcements reached the overlay as plain followers, because the exporter classified
+on `cf_soldier_following` and help.nut calls `ToggleSoldierFollow` for its adopted soldiers
+like anything else does. The separating marker was already there: help.nut writes
+`cf_soldier_help_temp` (with `help_active`, `help_owner`, `help_group`, `help_called`,
+`help_leaving`) at adoption, before the follow toggle, and a hand-picked follower never touches
+any `cf_soldier_help_*` key. Both of help.nut's removal paths guard on `help_temp`, so it is
+written once and never cleared - the identity test.
+
+`cf_soldier_help_active` is the wrong test and is not used: it is flipped false on a dead
+reinforcement whose body is still on the map, which would have made the card fall back to
+FOLLOW mid-round. `help_active` + `help_leaving` are the state pair, kept in reserve for a
+"withdrawing" badge if one is ever wanted.
+
+Classification order changed with it. `Classify` used to answer the follow question before the
+mortality question, which was harmless while only hand-picked followers existed - those are
+forced mortal for as long as they follow. An expired reinforcement is not: Finale Soldiers
+turns it immortal when its timeout runs out and removes it some time later, so a help-first
+test kept a health card on screen for something that could no longer be hurt. Mortality now
+gates everything below `cf_soldier_bot`, and an immortal soldier of any kind reports `holdout`.
+Distance-suspended soldiers are still counted mortal, or they would flicker out whenever they
+wandered.
+
+App side, `IsFollower` + `FollowerBrush` became `MarkerText` + `MarkerBrush`: one badge slot
+per card with two values, rather than a second bool and a second TextBlock in all three card
+templates. The roster filters were left alone - a reinforcement follows, so it belongs
+wherever a follower belongs.
+
+Not verified in game yet: the feature only exists on Finale Soldiers' `feature/go-command`
+branch, so the live confirmation has to be run against that build.
+
 ## 2026-08-25 - v2.1.2: the credits are a Director question, not a player one
 
 The exp1 probe answered in one capture, and both candidate Director calls turned out to

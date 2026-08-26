@@ -53,6 +53,15 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v2.1.3 — reinforcements get their own card badge.** Soldiers called in with Finale
+Soldiers' `help!` now carry a yellow **REINFORCEMENT** badge instead of the blue **FOLLOW** one.
+They follow their caller like any other follower, so the old card said nothing about where
+they came from; the exporter now tells the two apart on the `cf_soldier_help_temp` marker
+Finale Soldiers writes at adoption, and sends them as a `reinforcement` class of their own.
+The card also leaves the moment an expired reinforcement is turned immortal, rather than
+waiting for its body to despawn. The feature needs a Finale Soldiers build carrying `help!`;
+without it every following soldier reports as before. Not yet confirmed in game.
+
 **v2.1.2 — the Consistent HUD stays away for the end credits.** Finishing a campaign used to
 bring it back over the credits: the game hands control back when the rescue vehicle leaves, so
 every read the overlay had was honestly reporting ordinary play while the credits rolled on
@@ -107,7 +116,7 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.1.2** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.1.3** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
@@ -115,12 +124,14 @@ has nothing to read.
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.2** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.3** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
   The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
-  in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair.
+  in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair. The
+  v2.1.3 reinforcement badge is not yet confirmed in game: it needs a Finale Soldiers build
+  from `feature/go-command`, which is where `help!` lives.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
@@ -164,7 +175,10 @@ Immortal team-4 holdout soldiers are never drawn under any option: nothing can h
 so a health card for one carries no information.
 
 Followers carry a blue **FOLLOW** marker in the first two options, where the roster is
-mixed. In **Followers only** they are not marked — every card would carry it.
+mixed. In **Followers only** they are not marked — every card would carry it. A soldier called
+in with `help!` carries a yellow **REINFORCEMENT** marker instead, in every option including
+**Followers only**, since there it is the only thing separating it from a hand-picked
+follower.
 
 The editor includes an **Exit when L4D2 closes** option. It is enabled by default; turn it
 off if the overlay should remain in the tray between game sessions.

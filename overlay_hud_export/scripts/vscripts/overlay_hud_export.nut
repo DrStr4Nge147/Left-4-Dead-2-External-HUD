@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.1.2"
+::OvlHud.VERSION   <- "2.1.3"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -256,15 +256,25 @@
 // Which kind of survivor this is, for the overlay's roster filter:
 //
 //   survivor  not a Finale Soldiers bot - a real survivor, or another addon's extra bot
-//   follower  a soldier following a player. Always forced mortal while it follows
+//   reinforcement  a soldier called in with help!. Follows its caller, forced mortal
+//   follower  a soldier told to follow a player by hand. Also forced mortal while it follows
 //   soldier   a mortal soldier holding a post
-//   holdout   an immortal team-4 holdout soldier
+//   holdout   any immortal soldier: a team-4 holdout, or a reinforcement whose timeout ran
+//             out and turned it immortal while its body is still on the map
 //
 // Finale Soldiers marks every soldier it spawns with flags on the player entity's script
 // scope, and this addon runs in the same server VM, so they are readable directly:
 // cf_soldier_bot (lifecycle.nut, the addon's own identity boundary), cf_soldier_following
 // (movement.nut ToggleSoldierFollow) and cf_soldier_mortal /
 // cf_soldier_distance_suspended (commands.nut ResolveMortalStateForSoldier).
+//
+// help! reinforcements run ToggleSoldierFollow too, so cf_soldier_following alone cannot
+// separate them from a hand-picked follower. help.nut writes cf_soldier_help_temp at
+// adoption, before the follow toggle, and never clears it - both removal paths guard on it -
+// so it is the identity test and is checked first. cf_soldier_help_active is deliberately
+// not used here: it goes false on a dead reinforcement whose body is still on the map, which
+// would make the card fall back to "follower" mid-round. Mortality is still tested before
+// either of them: an immortal reinforcement is a holdout, and gets no card at all.
 //
 // m_iTeamNum cannot answer this. A mortal soldier is moved to team 4 transiently by the
 // distance dodge and by the progression bypass, and a holdout is on team 4 permanently -
@@ -284,15 +294,20 @@
 	if (scope == null)                    { return "survivor" }
 	if (!("cf_soldier_bot" in scope))     { return "survivor" }
 
+	// Mortality first, for everyone. An immortal soldier is scenery whatever else it is, and
+	// a reinforcement whose timeout has run out is turned immortal well before it despawns -
+	// reading its help marker first would keep drawing a card for something that can no longer
+	// be hurt. A distance-suspended soldier counts as mortal: the team-4 move is a transient
+	// dodge of the engine's bot-catchup teleport, not a change of kind.
+	local mortal = (("cf_soldier_mortal" in scope) && scope.cf_soldier_mortal)
+		|| (("cf_soldier_distance_suspended" in scope) && scope.cf_soldier_distance_suspended)
+
+	if (!mortal) { return "holdout" }
+
+	if (("cf_soldier_help_temp" in scope) && scope.cf_soldier_help_temp) { return "reinforcement" }
 	if (("cf_soldier_following" in scope) && scope.cf_soldier_following) { return "follower" }
-	if (("cf_soldier_mortal" in scope) && scope.cf_soldier_mortal)       { return "soldier"  }
 
-	if (("cf_soldier_distance_suspended" in scope) && scope.cf_soldier_distance_suspended)
-	{
-		return "soldier"
-	}
-
-	return "holdout"
+	return "soldier"
 }
 
 // Temp health from pills/adrenaline. m_healthBuffer is the amount granted and

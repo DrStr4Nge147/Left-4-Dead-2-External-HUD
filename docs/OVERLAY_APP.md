@@ -10,7 +10,8 @@ process — no injection, no memory reading, no DirectX hooking.
 2026-08-18, including the weapon HUD, its ammunition and carried-item row, the incendiary and
 explosive marks, and the two independent rosters. All of the hiding rules - finale outro, end
 credits, chapter-end transition, map-start cinematic, pause menu and console - were confirmed
-in L4D2 on 2026-08-25 with the v2.1.2 pair.
+in L4D2 on 2026-08-25 with the v2.1.2 pair. The v2.1.3 reinforcement badge is not confirmed
+in game yet; it needs a Finale Soldiers build carrying `help!`.
 
 ## Running it
 
@@ -165,7 +166,7 @@ are drawn by the weapon HUD instead, the way vanilla keeps them beside your ammu
 are not shown twice; teammates and Finale Soldiers followers still carry theirs on their cards,
 and the Scoreboard tab shows the whole team's including your own.
   **Show health numbers** can hide the numeric value, and **Black & white theme** switches health,
-  state, and follower colors to grayscale. These options apply only to the Consistent HUD,
+  state, and marker colors to grayscale. These options apply only to the Consistent HUD,
   including its simulated preview and separate You card; the Scoreboard tab is unchanged.
 
 **Holding the scoreboard key puts the Consistent HUD away.** L4D2 hides its own survivor
@@ -305,7 +306,7 @@ is not possible:
 |---|---|
 | **Extra survivors** | Plain survivors from slot 5 onward, plus mortal soldiers and followers |
 | **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
-| **Followers only** | Only soldiers currently following a player |
+| **Followers only** | Only soldiers currently following a player, hand-picked and `help!` reinforcements alike |
 
 **Consistent HUD tab** — the same three, plus:
 
@@ -316,6 +317,12 @@ is not possible:
 A config carried over from an earlier version with `rosterFilter` set to `all` is read by the
 scoreboard as **Extra survivors**; the Consistent HUD's own filter defaults to **All
 survivors**, so nothing disappears from the view that was showing everyone.
+
+A following soldier carries a badge on its card: a blue **FOLLOW** for one you told to follow
+by hand, and a yellow **REINFORCEMENT** for one called in with `help!`. **Followers only** drops
+the FOLLOW badge - every card there is following, so only the reinforcements need saying.
+An exporter older than v2.1.3, or a Finale Soldiers install without the `help!` feature,
+reports every following soldier as a plain follower.
 
 Immortal team-4 holdout soldiers are excluded from every option. In **Extra survivors**, when
 there are four or fewer plain survivors and no soldier/follower cards, holding Tab draws no
