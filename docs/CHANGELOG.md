@@ -14,6 +14,10 @@ Two components, released under one shared version: the exporter addon and overla
   the call will be refused. That is the only question the ring is there to answer.
 - The cooldown does not begin until your squad is done, which is Finale Soldiers' own rule,
   so the ring counts their remaining stay first and only then the cooldown.
+- **The wait for a called squad is not counted down.** The only number for it is the arrival
+  timeout, and a squad normally arrives long before it; counting it down read as "45 seconds
+  of help left" and then jumped back to a full minute when they walked in. The ring stays full
+  and says **COMING** until they are with you.
 - The ring stands on top of your own health card, in the same corner, using the card's
   measured height so it stays clear at any card design or HUD size. Corner, height, and size
   are its own settings, and the editor draws a stand-in ring so it can be positioned outside a

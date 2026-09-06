@@ -379,6 +379,7 @@ internal static class Program
         foreach (var state in new[]
                  {
                      new HelpRing(HelpPhase.Ready, 1.0, HelpRingPolicy.ReadyCaption, true),
+                     new HelpRing(HelpPhase.Calling, 1.0, HelpRingPolicy.CallingCaption, true),
                      new HelpRing(HelpPhase.Active, 0.45, "27", true),
                      new HelpRing(HelpPhase.Cooling, 0.62, "56", false)
                  })
@@ -446,9 +447,7 @@ internal static class Program
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
             FontFamily = new FontFamily("Segoe UI Semibold"),
-            FontSize = ring.CaptionIsWord
-                ? HelpRingPlacement.WordFontSize
-                : HelpRingPlacement.CountFontSize,
+            FontSize = HelpRingPlacement.FontSizeFor(ring.Caption, ring.CaptionIsWord),
             Foreground = new SolidColorBrush(Color.FromArgb(0xF0, 0xFF, 0xFF, 0xFF))
         });
 
@@ -1097,13 +1096,16 @@ internal static class Program
         var ready = policy.Current();
         policy.Observe(new HelpState { Status = "active", Left = 30, Total = 60 });
         var active = policy.Current();
+        // A called squad is drawn full and named rather than counting the arrival timeout
+        // down, so the ring cannot appear to run out and then refill when they walk in.
         policy.Observe(new HelpState { Status = "calling", Left = 20, Total = 45 });
         var calling = policy.Current();
         bool colours = ready is { Phase: HelpPhase.Ready, Available: true, Caption: "READY" }
             && ready.CaptionIsWord
             && Math.Abs(ready.Fraction - 1.0) < 0.001
             && active is { Phase: HelpPhase.Active, Available: true, Caption: "30" }
-            && calling is { Phase: HelpPhase.Calling, Available: true, Caption: "20" };
+            && calling is { Phase: HelpPhase.Calling, Available: true, Caption: "COMING" }
+            && Math.Abs(calling.Fraction - 1.0) < 0.001;
 
         // A window that ran out where the exporter stopped reporting is drawn full and
         // silent: the ring may only say READY when the exporter has said so.

@@ -96,8 +96,9 @@ on (F7 by default) and **Show the help! reinforcement ring** checked.
 2. On an install WITHOUT Finale Soldiers, or with a build that has no `help!`, confirm the ring
    is not drawn at all - no empty circle, no reserved space - whatever the setting says. This
    is the case the field is omitted for, and it is the one worth checking first.
-3. Call `help!`. Confirm the ring goes to a counting-down green while the squad is on its way,
-   and that the number matches the wait before they appear.
+3. Call `help!`. Confirm the ring stays full and green and reads **COMING** while the squad is
+   on its way - it must NOT count the arrival timeout down, or it will appear to run out and
+   then refill when they arrive.
 4. Once the squad is with you, confirm the ring keeps counting down in green and that the
    number tracks their remaining stay - roughly `helpduration` from the moment they joined up.
 5. Watch them withdraw. Confirm the ring turns grey at that moment and counts the cooldown

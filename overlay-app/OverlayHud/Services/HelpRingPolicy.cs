@@ -62,6 +62,12 @@ public sealed class HelpRingPolicy
     /// <summary>What a ready ring says inside it. Short enough to fit the ring at any scale.</summary>
     public const string ReadyCaption = "READY";
 
+    /// <summary>
+    /// What the ring says while a called squad is on its way. A word rather than a count, on
+    /// purpose - see <see cref="Current"/>.
+    /// </summary>
+    public const string CallingCaption = "COMING";
+
     public const string StatusReady   = "ready";
     public const string StatusCalling = "calling";
     public const string StatusActive  = "active";
@@ -120,6 +126,15 @@ public sealed class HelpRingPolicy
             return new HelpRing(ready ? HelpPhase.Ready : phase,
                                 1.0, ready ? ReadyCaption : "", available);
         }
+
+        // A called squad that has not arrived is drawn full and named, never counted down.
+        // The exporter can only report the arrival TIMEOUT here - the window after which the
+        // call is abandoned - and a squad normally walks in within a few seconds of it. Shown
+        // as a countdown it reads as "45 seconds of help left", and then the ring jumps back to
+        // full when the squad arrives and its own minute starts. Full and "COMING" says the one
+        // true thing: help is on its way, and nothing here is running out yet.
+        if (phase == HelpPhase.Calling)
+            return new HelpRing(phase, 1.0, CallingCaption, available);
 
         return new HelpRing(phase, Fraction(left, sample.Total), Caption(left), available);
     }

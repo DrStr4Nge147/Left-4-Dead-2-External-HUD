@@ -248,12 +248,18 @@ reinforcements, or am I waiting?
 | What the ring is doing | Colour | What it says inside |
 |---|---|---|
 | Ready — the call goes through now | Green, full | **READY** |
-| Called; the squad is on its way | Green, emptying | seconds left of the arrival window |
+| Called; the squad is on its way | Green, full | **COMING** |
 | The squad is with you | Green, emptying | seconds left of their stay |
 | Cooling down | Grey, emptying | seconds until you can call again |
 
 The arc runs clockwise from twelve o'clock and empties as its window runs out, so a nearly
 gone ring means "nearly over" whichever colour it is.
+
+**The wait for a called squad is not counted down.** The only number the game can give for it
+is the arrival timeout - the window after which the call is abandoned - and a squad normally
+walks in within a few seconds of a much longer one. Counted down it would read as "45 seconds
+of help left" and then jump back to a full minute when they arrived, so the ring stays full
+and says COMING until they are with you.
 
 **The cooldown does not start until your squad is done.** Finale Soldiers starts the clock at
 the squad's withdrawal, not at the call, so what the ring shows while they are out is their

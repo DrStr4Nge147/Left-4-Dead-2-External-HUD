@@ -45,11 +45,25 @@ internal static class HelpRingPlacement
     public const double Thickness = 5.0;
 
     /// <summary>
-    /// Text size inside the ring. A countdown is at most three digits and gets the larger of
-    /// the two; READY is five letters and has to come down to clear the stroke on both sides.
+    /// Text sizes inside the ring. A countdown is at most three digits and gets the largest;
+    /// a word has to clear the stroke on both sides, and a six-letter one comes down again.
     /// </summary>
     public const double CountFontSize = 15.0;
     public const double WordFontSize = 9.0;
+    public const double LongWordFontSize = 8.0;
+
+    /// <summary>Longest word drawn at <see cref="WordFontSize"/> before it has to shrink.</summary>
+    public const int ShortWordLength = 5;
+
+    /// <summary>
+    /// What size to draw a caption at, so the live ring, the editor's stand-in, and the review
+    /// shot cannot drift apart on it.
+    /// </summary>
+    public static double FontSizeFor(string caption, bool isWord)
+    {
+        if (!isWord) return CountFontSize;
+        return caption.Length > ShortWordLength ? LongWordFontSize : WordFontSize;
+    }
 
     public static string ParseCorner(string? value) => value?.ToLowerInvariant() switch
     {
