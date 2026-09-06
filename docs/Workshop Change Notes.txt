@@ -4,17 +4,21 @@ Steam Workshop change notes, BBCode, newest first. Paste the top block into the
 
 Keep each block to what a player sees. Mechanism detail belongs in CHANGELOG.md.
 
+Use plain "- " lines for bullets rather than [list]/[*]: the Change Note box does not accept
+every BBCode tag the description field does, and a list that is not rendered is worse than no
+list at all. [h1], [b] and [url] are fine.
+
 ================================================================================
 v2.2.0
 ================================================================================
 
 [h1]v2.2.0 - a ring for the help! call[/h1]
 
-[list]
-[*][b]Reinforcement ring[/b] - one dial for your own [b]help![/b] call. Green while a squad is on its way or with you, counting their time down; grey while the cooldown runs; green and full the moment you can call again.
-[*][b]Sits with your own health[/b] - the ring stands on top of your own health card, and moves to whichever bottom corner you put it in.
-[*][b]Sized on its own[/b] - the ring, the weapon panel, and the survivor cards each have their own size slider now and none of them drags the others. A lobby full of extra survivors no longer shrinks your ammo counter.
-[/list]
+- [b]Reinforcement ring[/b] - one dial for your own [b]help![/b] call, on the Consistent HUD. It reads READY when the call will go through, COMING while a called squad is on its way, then counts their stay down in green and the cooldown down in grey.
+- [b]Two colours, one question[/b] - green means help is with you or coming, grey means the call will be refused. The cooldown does not start until your squad is done, so the ring counts their time first.
+- [b]Sits with your own health[/b] - the ring stands on top of your own health card, and moves to whichever bottom corner you put it in.
+- [b]Sized on its own[/b] - the ring, the weapon panel, and the survivor cards each have their own size slider now and none of them drags the others. A lobby full of extra survivors no longer shrinks your ammo counter.
+- [b]Weapon panel defaults[/b] - it now sits higher up the screen and slightly larger, which is where it ends up in use anyway.
 
 Needs Finale Soldiers v1.8.6 or newer, which is where the [b]help![/b] command was added. Without it the ring is simply not drawn.
 

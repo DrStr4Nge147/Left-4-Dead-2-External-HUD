@@ -54,10 +54,10 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 ## Status
 
 **v2.2.0 — a ring for the `help!` call.** The Consistent HUD can now draw one dial for your own
-Finale Soldiers reinforcement call: green and full while the call goes through, green and
-emptying while a squad is on its way or with you, grey and emptying while the cooldown runs,
-with the seconds left in the middle. Two colours, because the question is binary — can I call,
-or am I waiting. It has its own corner, height, and size, and the exporter sends the clock as a
+Finale Soldiers reinforcement call: full and green reading **READY** when the call goes
+through, **COMING** while a called squad is on its way, emptying in green through their stay,
+and emptying in grey through the cooldown, with the seconds left in the middle. Two colours,
+because the question is binary — can I call, or am I waiting. It has its own corner, height, and size, and the exporter sends the clock as a
 new `help` object for the host player. It stands on top of your own health card, and the
 three Consistent HUD elements - cards, weapon panel, ring - are now each sized by their own
 slider alone, so a crowded roster no longer shrinks your ammunition counter. Needs Finale

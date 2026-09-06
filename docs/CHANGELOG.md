@@ -5,11 +5,11 @@ Two components, released under one shared version: the exporter addon and overla
 ## Overlay HUD v2.2.0 - 2026-09-06: a ring for the help! call
 
 - A new **reinforcement ring** draws your own `help!` availability as one dial on the
-  Consistent HUD: green and full while the call goes through, green and emptying while a
-  squad is on its way or with you, grey and emptying while the cooldown runs.
+  Consistent HUD: green and full saying **READY** while the call goes through, green and full
+  saying **COMING** while a called squad is on its way, green and emptying while they are with
+  you, grey and emptying while the cooldown runs.
 - The number inside is the seconds left of whatever is in the way, and the arc empties as
-  that window does - so a nearly gone ring means "nearly over" in either colour. A ring with
-  nothing in the way says **READY** instead of a number.
+  that window does - so a nearly gone ring means "nearly over" in either colour.
 - Two colours for four states on purpose. Green means help is with you or coming; grey means
   the call will be refused. That is the only question the ring is there to answer.
 - The cooldown does not begin until your squad is done, which is Finale Soldiers' own rule,
