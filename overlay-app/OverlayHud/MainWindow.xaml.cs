@@ -867,6 +867,9 @@ public partial class MainWindow : Window
         HelpRingSweep.Stroke = ring.Available ? HelpAvailableBrush : HelpCoolingBrush;
 
         HelpRingSeconds.Text = ring.Caption;
+        HelpRingSeconds.FontSize = ring.CaptionIsWord
+            ? HelpRingPlacement.WordFontSize
+            : HelpRingPlacement.CountFontSize;
         HelpRingCaption.Foreground = ring.Available ? HelpAvailableBrush : HelpCoolingBrush;
 
         HelpRingPanel.Visibility = Visibility.Visible;

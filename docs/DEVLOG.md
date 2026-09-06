@@ -51,6 +51,29 @@ now one slider per element: the roster keeps the fit pass because it is the thin
 overflows, and the weapon panel and the ring carry resolution scaling times their own
 multiplier and nothing else. Three elements, three sliders, no shared arithmetic.
 
+## 2026-09-06 - v2.2.0 follow-up: a setting that saved and did nothing
+
+The ring's sliders moved the editor's preview and wrote correct values into `config.json`,
+and the running overlay ignored all four until it was restarted. `AppConfig.CopyUiFrom` is a
+hand-written property list, and it is what Save & Apply pushes into the live config; a
+setting missing from it is saved, previewed, and dropped. Nothing about that fails loudly -
+the editor is telling the truth and the file on disk is right.
+
+The fix is four lines. The check is the point: `config-apply` walks every AppConfig property
+by reflection, gives the source a value the target does not hold, and demands `CopyUiFrom`
+carry it. Its exclusion list is the deliberate omissions - transport and debug setup, plus
+the seven switches the save handler copies by name BECAUSE Reset UI must not restore them -
+and those are asserted absent from `CopyUiFrom`, so the list cannot quietly grow into a place
+to hide a bug. The next setting added to the editor fails this check until it is wired up.
+
+The ring also says READY rather than sitting empty when the call is available, drawn at a
+smaller size than a countdown so five letters fit the same circle two digits do. Only a phase
+the exporter actually reports as ready says so: a window that ran out where the exporter
+stopped reporting is drawn full and silent, since the app cannot confirm the call would go
+through.
+
+The weapon HUD's defaults moved to 45% height and 1.25x from live use.
+
 ## 2026-08-26 - v2.1.3: telling a reinforcement from a follower
 
 `help!` reinforcements reached the overlay as plain followers, because the exporter classified

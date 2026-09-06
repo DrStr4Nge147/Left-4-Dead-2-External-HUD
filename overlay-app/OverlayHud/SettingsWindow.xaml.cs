@@ -634,6 +634,9 @@ public partial class SettingsWindow : Window
         PreviewHelpRingSweep.Stroke = HelpRingPreviewBrush;
         PreviewHelpRingCaption.Foreground = HelpRingPreviewBrush;
         PreviewHelpRingSeconds.Text = sample.Caption;
+        PreviewHelpRingSeconds.FontSize = sample.CaptionIsWord
+            ? HelpRingPlacement.WordFontSize
+            : HelpRingPlacement.CountFontSize;
         PreviewHelpRingPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
 
         scale *= HelpRingPlacement.ClampScale(_draft.HelpRingScale);

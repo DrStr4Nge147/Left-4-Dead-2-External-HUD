@@ -8,7 +8,8 @@ Two components, released under one shared version: the exporter addon and overla
   Consistent HUD: green and full while the call goes through, green and emptying while a
   squad is on its way or with you, grey and emptying while the cooldown runs.
 - The number inside is the seconds left of whatever is in the way, and the arc empties as
-  that window does - so a nearly gone ring means "nearly over" in either colour.
+  that window does - so a nearly gone ring means "nearly over" in either colour. A ring with
+  nothing in the way says **READY** instead of a number.
 - Two colours for four states on purpose. Green means help is with you or coming; grey means
   the call will be refused. That is the only question the ring is there to answer.
 - The cooldown does not begin until your squad is done, which is Finale Soldiers' own rule,
@@ -27,7 +28,12 @@ Two components, released under one shared version: the exporter addon and overla
 - The exporter now sends a `help` object for the host player. An install without Finale
   Soldiers, or with a build that has no `help!`, sends nothing at all and the ring is absent
   rather than empty.
-- Also fixes a duplicated `won` key in the exported JSON.
+- **The weapon HUD's defaults move up and out**: 45% of the screen height instead of 10%,
+  and 1.25x instead of 1.00x. Where it actually gets used, from live play.
+- Also fixes a duplicated `won` key in the exported JSON, and a bug that left the ring's own
+  four settings doing nothing until the app was restarted - `CopyUiFrom`, which is what
+  Save & Apply pushes into the running overlay, is a hand-written list and they were missing
+  from it. A new check walks every setting and fails on the next one left out.
 
 **Requires** Finale Soldiers v1.8.6 or newer, which is where `help!` was added, and
 exporter 2.2.0. Without both, nothing is drawn.

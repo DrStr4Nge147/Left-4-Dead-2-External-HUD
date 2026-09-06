@@ -29,6 +29,13 @@ public readonly record struct HelpRing(HelpPhase Phase, double Fraction, string 
         new(HelpPhase.Unknown, 0.0, "", false);
 
     public bool IsVisible => Phase != HelpPhase.Unknown;
+
+    /// <summary>
+    /// Whether the caption is a word rather than a count. A word has to be drawn smaller to fit
+    /// inside the same ring a two-digit number sits in comfortably, so the view asks here
+    /// rather than inspecting the text itself.
+    /// </summary>
+    public bool CaptionIsWord => Caption.Length > 0 && !char.IsDigit(Caption[0]);
 }
 
 /// <summary>
@@ -52,6 +59,9 @@ public readonly record struct HelpRing(HelpPhase Phase, double Fraction, string 
 /// </summary>
 public sealed class HelpRingPolicy
 {
+    /// <summary>What a ready ring says inside it. Short enough to fit the ring at any scale.</summary>
+    public const string ReadyCaption = "READY";
+
     public const string StatusReady   = "ready";
     public const string StatusCalling = "calling";
     public const string StatusActive  = "active";
@@ -102,8 +112,13 @@ public sealed class HelpRingPolicy
             // A window that has run out where the game has stopped exporting is not the same
             // as a call the exporter has confirmed is ready, but it is what the player is
             // about to be told either way, and the alternative is a ring stuck at zero.
-            return new HelpRing(phase == HelpPhase.Ready ? HelpPhase.Ready : phase,
-                                1.0, "", available);
+            //
+            // Only a ring the exporter actually calls ready says so. A run-out window whose
+            // next sample never arrived is drawn full and silent rather than promising a call
+            // that nothing has confirmed will go through.
+            bool ready = phase == HelpPhase.Ready;
+            return new HelpRing(ready ? HelpPhase.Ready : phase,
+                                1.0, ready ? ReadyCaption : "", available);
         }
 
         return new HelpRing(phase, Fraction(left, sample.Total), Caption(left), available);

@@ -104,7 +104,7 @@ public sealed class AppConfig
     /// often wants to be larger than the roster it sits beside.
     /// </summary>
     [JsonPropertyName("weaponPanelScale")]
-    public double WeaponPanelScale { get; set; } = 1.0;
+    public double WeaponPanelScale { get; set; } = 1.25;
 
     /// <summary>Slot arrangement: "vertical" stacks them, "horizontal" sets them side by side.</summary>
     [JsonPropertyName("weaponPanelOrientation")]
@@ -116,7 +116,7 @@ public sealed class AppConfig
     /// up near the top.
     /// </summary>
     [JsonPropertyName("weaponPanelVerticalOffset")]
-    public double WeaponPanelVerticalOffset { get; set; } = 0.10;
+    public double WeaponPanelVerticalOffset { get; set; } = 0.45;
 
     /// <summary>
     /// Draw the reinforcement ring: one dial for the host player showing whether Finale
@@ -271,7 +271,15 @@ public sealed class AppConfig
 
     public AppConfig Clone() => (AppConfig)MemberwiseClone();
 
-    /// <summary>Copies settings exposed by the UI editor without touching transport/debug setup.</summary>
+    /// <summary>
+    /// Copies settings exposed by the UI editor without touching transport/debug setup.
+    ///
+    /// EVERY new editor setting belongs in this list. It is what Save &amp; Apply pushes into
+    /// the running overlay and what Reset UI restores, so a setting missing from it saves to
+    /// disk correctly and then does nothing until the app is restarted - which is exactly how
+    /// the reinforcement ring's four settings behaved when they were first added. The
+    /// config-apply check walks the properties and fails on anything left out.
+    /// </summary>
     public void CopyUiFrom(AppConfig source)
     {
         Anchor = source.Anchor;
@@ -291,6 +299,10 @@ public sealed class AppConfig
         WeaponPanelOrientation = source.WeaponPanelOrientation;
         WeaponPanelScale = source.WeaponPanelScale;
         WeaponPanelVerticalOffset = source.WeaponPanelVerticalOffset;
+        ShowHelpRing = source.ShowHelpRing;
+        HelpRingCorner = source.HelpRingCorner;
+        HelpRingScale = source.HelpRingScale;
+        HelpRingVerticalOffset = source.HelpRingVerticalOffset;
         ConsistentVerticalOffset = source.ConsistentVerticalOffset;
         ConsistentHorizontalSpacing = source.ConsistentHorizontalSpacing;
         ConsistentVerticalSpacing = source.ConsistentVerticalSpacing;

@@ -44,6 +44,13 @@ internal static class HelpRingPlacement
     /// <summary>Ring thickness. Wide enough to carry colour at the scales the HUD is used at.</summary>
     public const double Thickness = 5.0;
 
+    /// <summary>
+    /// Text size inside the ring. A countdown is at most three digits and gets the larger of
+    /// the two; READY is five letters and has to come down to clear the stroke on both sides.
+    /// </summary>
+    public const double CountFontSize = 15.0;
+    public const double WordFontSize = 9.0;
+
     public static string ParseCorner(string? value) => value?.ToLowerInvariant() switch
     {
         LowerLeft => LowerLeft,

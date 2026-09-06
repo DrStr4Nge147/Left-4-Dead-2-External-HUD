@@ -121,15 +121,20 @@ on (F7 by default) and **Show the help! reinforcement ring** checked.
     travels the full height of the screen and stays fully on screen at both ends.
 12. Drag **Reinforcement ring size** across its range and confirm the ring grows and shrinks on
     its own, with the roster and the weapon panel untouched.
-13. Confirm the ring sits directly above your own health card in the same corner, and that it
+13. Confirm a ready ring reads **READY** inside it, that the word fits the ring cleanly at
+    0.40x and at 3.00x, and that it becomes a count the moment a call is made.
+14. Confirm the ring sits directly above your own health card in the same corner, and that it
     stays clear of it after changing the card design, the health-numbers setting, and the HUD
     size. Move the ring to the other corner and confirm it drops to the bottom edge there.
-14. **Independence.** Join a session with enough extra survivors to make the roster shrink to
+15. **Independence.** Join a session with enough extra survivors to make the roster shrink to
     fit, and confirm neither the ring nor the weapon panel changes size with it. Drag **HUD
     size** across its range and confirm the same. Only each element's own size slider moves it.
-15. Uncheck **Show the help! reinforcement ring**, Save & Apply, and confirm it disappears
+16. **Every ring setting must take effect on Save & Apply, without restarting the app.** Move
+    the corner, the height, and the size, save, and confirm the running overlay follows each
+    one - this is what shipped broken first time round, and only a restart showed the change.
+17. Uncheck **Show the help! reinforcement ring**, Save & Apply, and confirm it disappears
     entirely.
-16. Confirm the Tab scoreboard never shows the ring, with the setting either way.
+18. Confirm the Tab scoreboard never shows the ring, with the setting either way.
 
 ## Weapon HUD (v2.0.0)
 

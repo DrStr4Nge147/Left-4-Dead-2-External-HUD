@@ -62,6 +62,8 @@ internal static class Program
         return RunAmmoChannelCheck();
     if (args.Length > 0 && string.Equals(args[0], "help-ring", StringComparison.OrdinalIgnoreCase))
         return RunHelpRingCheck();
+    if (args.Length > 0 && string.Equals(args[0], "config-apply", StringComparison.OrdinalIgnoreCase))
+        return RunConfigApplyCheck();
     if (args.Length > 0 && string.Equals(args[0], "shot-editor", StringComparison.OrdinalIgnoreCase))
         return RunEditorShot(args.Length > 1 ? args[1] : "editor.png",
                              args.Length > 2 ? int.Parse(args[2]) : 1,
@@ -376,7 +378,7 @@ internal static class Program
         };
         foreach (var state in new[]
                  {
-                     new HelpRing(HelpPhase.Ready, 1.0, "", true),
+                     new HelpRing(HelpPhase.Ready, 1.0, HelpRingPolicy.ReadyCaption, true),
                      new HelpRing(HelpPhase.Active, 0.45, "27", true),
                      new HelpRing(HelpPhase.Cooling, 0.62, "56", false)
                  })
@@ -444,7 +446,9 @@ internal static class Program
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
             FontFamily = new FontFamily("Segoe UI Semibold"),
-            FontSize = 15,
+            FontSize = ring.CaptionIsWord
+                ? HelpRingPlacement.WordFontSize
+                : HelpRingPlacement.CountFontSize,
             Foreground = new SolidColorBrush(Color.FromArgb(0xF0, 0xFF, 0xFF, 0xFF))
         });
 
@@ -956,6 +960,94 @@ internal static class Program
     }
 
     /// <summary>
+    /// Every editor setting has to survive Save &amp; Apply, which means appearing in
+    /// AppConfig.CopyUiFrom. That method is a hand-written list, and a setting left out of it
+    /// saves to disk correctly and then does nothing until the app is restarted - the
+    /// reinforcement ring shipped that way once.
+    ///
+    /// Rather than pin the list, this walks every property, gives the source a value the
+    /// target does not have, and demands the copy carry it. The exclusions below are the
+    /// deliberate ones: transport and debug setup the editor does not own, and the handful of
+    /// switches the save handler copies separately BECAUSE Reset UI must not restore them -
+    /// those are checked by name, so removing one from the save handler still fails here.
+    /// </summary>
+    private static int RunConfigApplyCheck()
+    {
+        // Not layout, and not the editor's to reset: transport and diagnostics.
+        var transport = new HashSet<string>
+        {
+            "StatePath", "GameProcess", "HoldKey", "EditorKey", "IgnoreForeground",
+            "StaleAfterSeconds", "ExporterProven", "Debug"
+        };
+
+        // Editor settings that are deliberately outside CopyUiFrom because Reset UI restores
+        // visual layout and none of these is layout. The save handler copies them by name.
+        var copiedSeparately = new HashSet<string>
+        {
+            "ExitWhenGameCloses", "AlwaysShow", "HideDuringCinematics", "HideWhenGamePaused",
+            "ConsistentKey", "PreviewMode", "PreviewScoreboard"
+        };
+
+        var source = new AppConfig();
+        var target = new AppConfig();
+        var properties = typeof(AppConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(property => property.CanRead && property.CanWrite)
+            .ToList();
+
+        // A value the target does not already hold, so "copied" cannot pass by coincidence.
+        foreach (var property in properties)
+        {
+            object? current = property.GetValue(source);
+            object? changed = current switch
+            {
+                bool flag     => !flag,
+                double number => number + 7.0,
+                int number    => number + 7,
+                string text   => text + "-changed",
+                _             => null
+            };
+
+            if (changed != null) property.SetValue(source, changed);
+        }
+
+        target.CopyUiFrom(source);
+
+        var missing = new List<string>();
+        foreach (var property in properties)
+        {
+            if (transport.Contains(property.Name) || copiedSeparately.Contains(property.Name))
+                continue;
+
+            if (!Equals(property.GetValue(target), property.GetValue(source)))
+                missing.Add(property.Name);
+        }
+
+        // The separately-copied ones still have to arrive, just by the other route. Proving
+        // they are absent from CopyUiFrom is what makes the exclusion list honest.
+        var notCopiedAtAll = copiedSeparately
+            .Where(name => Equals(properties.First(p => p.Name == name).GetValue(target),
+                                  properties.First(p => p.Name == name).GetValue(source)))
+            .ToList();
+
+        // The ring is the reason this check exists; name it, so a regression says so plainly.
+        bool ringCarried = target.ShowHelpRing == source.ShowHelpRing
+            && target.HelpRingCorner == source.HelpRingCorner
+            && Math.Abs(target.HelpRingScale - source.HelpRingScale) < 0.0001
+            && Math.Abs(target.HelpRingVerticalOffset - source.HelpRingVerticalOffset) < 0.0001;
+
+        bool passed = missing.Count == 0 && notCopiedAtAll.Count == 0 && ringCarried;
+
+        Console.WriteLine($"properties={properties.Count} ring={ringCarried} "
+            + $"missing=[{string.Join(", ", missing)}] "
+            + $"unexpectedlyInCopyUiFrom=[{string.Join(", ", notCopiedAtAll)}]");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: every editor setting must be carried by AppConfig.CopyUiFrom, or listed "
+              + "in this check as one the save handler copies separately");
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
     /// The reinforcement ring: the arithmetic behind it, the arc it draws, and the window
     /// it is drawn in.
     /// </summary>
@@ -1007,10 +1099,17 @@ internal static class Program
         var active = policy.Current();
         policy.Observe(new HelpState { Status = "calling", Left = 20, Total = 45 });
         var calling = policy.Current();
-        bool colours = ready is { Phase: HelpPhase.Ready, Available: true, Caption: "" }
+        bool colours = ready is { Phase: HelpPhase.Ready, Available: true, Caption: "READY" }
+            && ready.CaptionIsWord
             && Math.Abs(ready.Fraction - 1.0) < 0.001
             && active is { Phase: HelpPhase.Active, Available: true, Caption: "30" }
             && calling is { Phase: HelpPhase.Calling, Available: true, Caption: "20" };
+
+        // A window that ran out where the exporter stopped reporting is drawn full and
+        // silent: the ring may only say READY when the exporter has said so.
+        policy.Observe(new HelpState { Status = "cooling", Left = 0, Total = 90 });
+        var runOut = policy.Current();
+        bool onlyReadySaysReady = runOut.Caption == "" && runOut.Phase == HelpPhase.Cooling;
 
         // A window whose length the exporter could not give is drawn full rather than
         // divided by zero, and the last second is shown as "1" for the whole of its length.
@@ -1041,12 +1140,14 @@ internal static class Program
         bool placement = HelpRingPlacementCheck(out string liveDetail);
 
         bool passed = absentIsHidden && unknownIsHidden && coolingFrame && countsDown
-            && stopsAtSampleLifetime && colours && safeArithmetic && geometry && placement;
+            && stopsAtSampleLifetime && colours && onlyReadySaysReady && safeArithmetic
+            && geometry && placement;
 
         Console.WriteLine(
             $"absentHidden={absentIsHidden} unknownHidden={unknownIsHidden} " +
             $"cooling={coolingFrame} countsDown={countsDown} " +
             $"stopsWhenStale={stopsAtSampleLifetime} colours={colours} " +
+            $"onlyReadySaysReady={onlyReadySaysReady} " +
             $"arithmetic={safeArithmetic} geometry={geometry} {liveDetail}");
         Console.WriteLine(passed
             ? "PASS"
@@ -1097,7 +1198,9 @@ internal static class Program
         Invoke(window, "RenderHelpRing", flags);
         var readyBrush = sweep.Stroke;
         bool readyIsAnotherColour = panel.Visibility == Visibility.Visible
-            && seconds.Text == ""
+            && seconds.Text == HelpRingPolicy.ReadyCaption
+            // The word is drawn smaller than a count, or it would not fit the ring.
+            && seconds.FontSize < HelpRingPlacement.CountFontSize
             && !Equals(readyBrush, coolingBrush);
 
         // A squad that is out is the same colour as one that can be called: green means
@@ -1240,6 +1343,9 @@ internal static class Program
         // not take the player's own ammunition down with it, and neither must the HUD size
         // slider that belongs to the roster.
         var weaponScale = (ScaleTransform)GetField(window, "WeaponPanelScale", flags);
+        // Measured from 1.0 rather than the shipped default, so the doubling below is a
+        // doubling rather than a ratio against whatever the default happens to be.
+        config.WeaponPanelScale = 1.0;
         typeof(MainWindow).GetField("_fitScale", flags)?.SetValue(window, 0.5);
         config.ConsistentScale = 0.65;
         Invoke(window, "ApplyLayout", flags);
@@ -1771,7 +1877,10 @@ internal static class Program
             ("ConsistentVerticalSlider", 0.03),
             ("ConsistentHorizontalSpacingSlider", 10.0),
             ("ConsistentVerticalSpacingSlider", 0.0),
-            ("WeaponVerticalSlider", 0.10),
+            ("WeaponVerticalSlider", 0.45),
+            ("WeaponScaleSlider", 1.25),
+            ("HelpRingVerticalSlider", 0.0),
+            ("HelpRingScaleSlider", 1.0),
         };
 
         var resetHost = new SettingsWindow(new AppConfig(), () => { })

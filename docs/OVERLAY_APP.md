@@ -245,9 +245,9 @@ host, like the weapon HUD, and the Scoreboard tab never draws it.
 One ring, two colours, because the question it answers is binary: can I call for
 reinforcements, or am I waiting?
 
-| What the ring is doing | Colour | The number inside |
+| What the ring is doing | Colour | What it says inside |
 |---|---|---|
-| Ready — the call goes through now | Green, full | none |
+| Ready — the call goes through now | Green, full | **READY** |
 | Called; the squad is on its way | Green, emptying | seconds left of the arrival window |
 | The squad is with you | Green, emptying | seconds left of their stay |
 | Cooling down | Grey, emptying | seconds until you can call again |
@@ -406,8 +406,8 @@ Sits next to the exe. Edit and restart the app.
 | `consistentShowWeapons` | `true` | Draw the weapon HUD - your own primary/secondary slots, their ammunition, and your throwable/kit/pills |
 | `weaponPanelCorner` | `lower-right` | Which bottom corner the weapon HUD sits in: `lower-right` or `lower-left` |
 | `weaponPanelOrientation` | `vertical` | Weapon slot arrangement: `vertical` or `horizontal` |
-| `weaponPanelScale` | `1.0` | Weapon HUD size. Independent of `consistentScale` and of the roster's overflow fit; the slider runs `0.50`-`2.00` |
-| `weaponPanelVerticalOffset` | `0.10` | Fraction of the window height kept below the weapon HUD; the slider runs to `0.92` |
+| `weaponPanelScale` | `1.25` | Weapon HUD size. Independent of `consistentScale` and of the roster's overflow fit; the slider runs `0.50`-`2.00` |
+| `weaponPanelVerticalOffset` | `0.45` | Fraction of the window height kept below the weapon HUD; the slider runs to `0.92` |
 | `showHelpRing` | `true` | Draw the reinforcement ring - your own `help!` availability, with the countdown of whatever is in the way |
 | `helpRingCorner` | `lower-right` | Which bottom corner the ring sits in: `lower-right` or `lower-left`. On the You card's corner it stands on top of that card |
 | `helpRingScale` | `1.0` | Ring size. Independent of every other size setting; the slider runs `0.40`-`3.00` |
