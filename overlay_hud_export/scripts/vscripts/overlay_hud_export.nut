@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.1.3"
+::OvlHud.VERSION   <- "2.2.0"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -97,6 +97,7 @@
 ::OvlHud.lastWon     <- -2
 ::OvlHud.lastProbe   <- ""   // last diagnostic probe line, logged only when it changes
 ::OvlHud.hostProbeWarned <- false
+::OvlHud.helpWarned <- false  // one line per failed Finale Soldiers read, not one per tick
 ::OvlHud.ammoWarned <- false
 ::OvlHud.localUid <- -1      // cached listen-server host userid; -1 when unavailable
 ::OvlHud.decayRate <- 0.34   // overwritten from pain_pills_decay_rate at load if readable
@@ -1200,6 +1201,167 @@
 }
 
 // ---------------------------------------------------------------------------
+// help! reinforcement availability
+// ---------------------------------------------------------------------------
+
+// One value, for the host player only: how long until they can call help! again, and how
+// long the squad they already called is staying. Both addons run in the same server VM, so
+// Finale Soldiers' own tables are readable directly - the same access the roster's Classify
+// already makes, one level up: the spawner object rather than a soldier's script scope.
+//
+// Four states, because the caller cannot act on fewer:
+//
+//   ready    no squad, no cooldown - help! goes through right now
+//   calling  called, nobody on the map yet. Counts down the arrival window
+//   active   the squad is out. Counts down what is left of their stay
+//   cooling  the squad is done and the real cooldown is running
+//
+// The cooldown table cannot tell active from cooling on its own. help.nut stamps a
+// worst-case placeholder - arrive timeout + duration + cooldown - at the moment of the call,
+// so a caller is never let through while their own squad is still on the map, and replaces
+// it with the real value only once the squad's job ends. A remaining time larger than
+// help_cooldown is therefore always that placeholder and never a real countdown, which is
+// what separates the two here; the call time it was derived from is recoverable from it, so
+// the arrival window can be counted down as well.
+//
+// The squad's own window comes from help_groups, keyed by the group id its members carry.
+// That is the only honest source for "active": it is the clock help.nut itself withdraws
+// them on.
+//
+// Every read is guarded and every failure returns the empty string, which omits the field
+// entirely. An install without Finale Soldiers, or with a build whose help! feature this
+// pack predates, has to look the same as one whose ring is simply not drawn.
+::OvlHud.HelpJson <- function (localUid)
+{
+	if (localUid < 0) { return "" }
+
+	local fs = null
+
+	try
+	{
+		local root = getroottable()
+		if (!("cf_soldier_spawner" in root)) { return "" }
+		fs = root["cf_soldier_spawner"]
+	}
+	catch (e) { return "" }
+
+	if (fs == null) { return "" }
+
+	// help! ships on its own Finale Soldiers branch. An older install has the spawner but
+	// none of these, and gets no field rather than a ring stuck on "ready".
+	if (!("help_cooldowns" in fs) || !("help_groups" in fs)
+	    || !("help_duration" in fs) || !("help_cooldown" in fs)
+	    || !("help_arrive_timeout" in fs)) { return "" }
+
+	local now      = Time()
+	local duration = 0.0
+	local cooldown = 0.0
+	local arrive   = 0.0
+
+	try
+	{
+		duration = fs.help_duration.tofloat()
+		cooldown = fs.help_cooldown.tofloat()
+		arrive   = fs.help_arrive_timeout.tofloat()
+	}
+	catch (e) { return "" }
+
+	local st    = "ready"
+	local left  = 0.0
+	local total = 0.0
+
+	// The squad first. A five-man squad shares one window, so the longest remaining wins
+	// rather than whichever soldier the list happens to hold first.
+	try
+	{
+		if ("spawned" in fs)
+		{
+			foreach (soldier in fs.spawned)
+			{
+				if (soldier == null || !soldier.IsValid()) { continue }
+
+				local scope = soldier.GetScriptScope()
+				if (scope == null) { continue }
+
+				if (!("cf_soldier_help_owner" in scope)
+				    || scope.cf_soldier_help_owner != localUid) { continue }
+				if (!("cf_soldier_help_active" in scope)
+				    || !scope.cf_soldier_help_active) { continue }
+				if (!("cf_soldier_help_group" in scope)) { continue }
+
+				local group = scope.cf_soldier_help_group
+				if (group == null || !(group in fs.help_groups)) { continue }
+
+				// 0.0 is a squad that has spawned but not joined up yet; its window has not
+				// started, so it is still the arrival window that is running.
+				local expiry = fs.help_groups[group]
+				if (expiry <= 0.0) { continue }
+
+				local remaining = expiry - now
+				if (remaining <= left) { continue }
+
+				st    = "active"
+				left  = remaining
+				total = duration
+			}
+		}
+	}
+	catch (e)
+	{
+		if (!this.helpWarned)
+		{
+			this.helpWarned = true
+			this.Log("help! squad read failed, reporting the cooldown only: " + e)
+		}
+	}
+
+	if (st == "ready")
+	{
+		try
+		{
+			local key = localUid.tostring()
+
+			if (key in fs.help_cooldowns)
+			{
+				local remaining = fs.help_cooldowns[key] - now
+
+				// Anything past a full cooldown is the call-time placeholder, so what is
+				// actually running is the arrival window. Subtracting the two clocks the
+				// placeholder was padded with recovers the moment it ends.
+				if (remaining > cooldown)
+				{
+					st    = "calling"
+					total = arrive
+					left  = remaining - duration - cooldown
+					if (left < 0.0) { left = 0.0 }
+				}
+				else if (remaining > 0.0)
+				{
+					st    = "cooling"
+					total = cooldown
+					left  = remaining
+				}
+			}
+		}
+		catch (e)
+		{
+			if (!this.helpWarned)
+			{
+				this.helpWarned = true
+				this.Log("help! cooldown read failed, reporting ready: " + e)
+			}
+		}
+	}
+
+	// A window the settings shortened mid-session can leave an entry longer than the total
+	// it is now measured against, and a ring drawn from that would overfill.
+	if (total > 0.0 && left > total) { left = total }
+
+	return ",\"help\":{\"st\":\"" + st + "\",\"left\":" + format("%.2f", left)
+	       + ",\"total\":" + format("%.2f", total) + "}"
+}
+
+// ---------------------------------------------------------------------------
 // export tick
 // ---------------------------------------------------------------------------
 
@@ -1320,7 +1482,7 @@
 	json += ",\"view\":" + viewCam
 	json += ",\"frz\":" + frozen
 	json += ",\"won\":" + won
-	json += ",\"won\":" + won
+	json += this.HelpJson(localUid)
 	json += ",\"survivors\":[" + body + "]"
 	json += "}"
 

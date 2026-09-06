@@ -773,6 +773,43 @@
                             </ItemsControl>
                         </StackPanel>
                     </Border>
+
+                    <!-- The simulated reinforcement ring. Drawn mid-cooldown, which is the
+                         state it spends the most time in and the one that shows both the
+                         partial arc and the number at once. -->
+                    <Border x:Name="PreviewHelpRingPanel"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            Visibility="Collapsed">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="PreviewHelpRingScale" ScaleX="1" ScaleY="1" />
+                        </Border.LayoutTransform>
+                        <StackPanel>
+                            <Grid x:Name="PreviewHelpRingBox" HorizontalAlignment="Center">
+                                <Path x:Name="PreviewHelpRingTrack"
+                                      Stroke="#38FFFFFF"
+                                      StrokeThickness="5" />
+                                <Path x:Name="PreviewHelpRingSweep"
+                                      StrokeThickness="5"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round" />
+                                <TextBlock x:Name="PreviewHelpRingSeconds"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{StaticResource HudFont}"
+                                           FontSize="15"
+                                           Foreground="#F0FFFFFF" />
+                            </Grid>
+                            <TextBlock x:Name="PreviewHelpRingCaption"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,3,0,0"
+                                       Text="HELP!"
+                                       FontFamily="{StaticResource HudFont}"
+                                       FontSize="10" />
+                        </StackPanel>
+                    </Border>
                 </Canvas>
             </Viewbox>
         </Border>
@@ -1483,6 +1520,78 @@
                                                                Foreground="#AAB2BE" FontSize="11" />
                                                 </StackPanel>
                                             </Border>
+                    </UniformGrid>
+
+                    <TextBlock Text="REINFORCEMENT RING" Style="{StaticResource SectionHeading}" />
+                    <UniformGrid Columns="3">
+                        <UniformGrid.Resources>
+                            <Style TargetType="{x:Type DockPanel}">
+                                <Setter Property="LastChildFill" Value="False" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource ControlCard}">
+                            <StackPanel>
+                                <CheckBox x:Name="ShowHelpRingCheckBox"
+                                          FontWeight="SemiBold"
+                                          Foreground="#F0F2F5"
+                                          Click="OnOptionChanged">
+                                    <TextBlock Text="Show the help! reinforcement ring"
+                                               Foreground="#F0F2F5"
+                                               FontWeight="SemiBold" />
+                                </CheckBox>
+                                <TextBlock Text="A single dial for your own help! call: green while a squad is with you or on its way, counting down what is left of their stay, then grey while the cooldown runs and green again the moment you can call. Needs exporter 2.2.0 or newer AND a Finale Soldiers build with the help! feature - without both, no reinforcement state is exported and the ring stays hidden. The Scoreboard tab never shows it."
+                                           Margin="22,4,0,0" TextWrapping="Wrap"
+                                           Foreground="#AAB2BE" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                            <StackPanel>
+                                <TextBlock Text="Reinforcement ring corner" FontWeight="SemiBold" />
+                                <ComboBox x:Name="HelpRingCornerCombo"
+                                          Margin="0,7,0,0"
+                                          SelectionChanged="OnHelpRingChanged">
+                                    <ComboBoxItem Tag="lower-left">Lower Left</ComboBoxItem>
+                                    <ComboBoxItem Tag="lower-right">Lower Right</ComboBoxItem>
+                                </ComboBox>
+                                <TextBlock Text="Which bottom corner the ring sits in. It defaults to the opposite corner from the weapon panel, so the two do not overlap until you put them together."
+                                           Margin="0,5,0,0" TextWrapping="Wrap"
+                                           Foreground="#AAB2BE" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock Text="Reinforcement ring size" FontWeight="SemiBold" />
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                            Tag="HelpRingScaleSlider" Click="OnResetSliderClick" />
+                                    <TextBlock x:Name="HelpRingScaleValue" DockPanel.Dock="Right"
+                                               Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                </DockPanel>
+                                <Slider x:Name="HelpRingScaleSlider" Minimum="0.50" Maximum="2.00"
+                                        TickFrequency="0.05" IsMoveToPointEnabled="True"
+                                        ValueChanged="OnSettingChanged" />
+                                <TextBlock Text="Sizes the ring on its own, on top of the HUD size setting. 1.00x matches the rest of the Consistent HUD."
+                                           Margin="0,5,0,0" TextWrapping="Wrap"
+                                           Foreground="#AAB2BE" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource ControlCard}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock Text="Reinforcement ring height" FontWeight="SemiBold" />
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SliderReset}"
+                                            Tag="HelpRingVerticalSlider" Click="OnResetSliderClick" />
+                                    <TextBlock x:Name="HelpRingVerticalValue" DockPanel.Dock="Right"
+                                               Margin="12,0,0,0" Foreground="#8EC5FF" />
+                                </DockPanel>
+                                <Slider x:Name="HelpRingVerticalSlider" Minimum="0" Maximum="0.92"
+                                        TickFrequency="0.01" IsMoveToPointEnabled="True"
+                                        ValueChanged="OnSettingChanged" />
+                                <TextBlock Text="Runs the full height of the screen, exactly as the weapon panel's own height does."
+                                           Margin="0,5,0,0" TextWrapping="Wrap"
+                                           Foreground="#AAB2BE" FontSize="11" />
+                            </StackPanel>
+                        </Border>
                     </UniformGrid>
                 </StackPanel>
             </TabItem>

@@ -295,6 +295,11 @@ public partial class SettingsWindow : Window
         SelectByTag(WeaponCornerCombo, WeaponPanelPolicy.ParseCorner(_draft.WeaponPanelCorner));
         SelectByTag(WeaponOrientationCombo,
                     WeaponPanelPolicy.ParseOrientation(_draft.WeaponPanelOrientation));
+        ShowHelpRingCheckBox.IsChecked = _draft.ShowHelpRing;
+        HelpRingVerticalSlider.Value = HelpRingPlacement.ClampVerticalOffset(
+            _draft.HelpRingVerticalOffset);
+        HelpRingScaleSlider.Value = HelpRingPlacement.ClampScale(_draft.HelpRingScale);
+        SelectByTag(HelpRingCornerCombo, HelpRingPlacement.ParseCorner(_draft.HelpRingCorner));
         ConsistentHotkeyBox.Text = HotkeyDisplay.Name(_draft.ConsistentKey);
         SelectConsistentTemplate(_draft.ConsistentTemplate);
         SelectConsistentDesign(_draft.ConsistentDesign);
@@ -604,6 +609,61 @@ public partial class SettingsWindow : Window
         PreviewWeaponPanel.Visibility = Visibility.Visible;
     }
 
+    /// <summary>
+    /// The simulated reinforcement ring, on the same corner, height, and size relationship
+    /// the live overlay would use. It is always drawn mid-cooldown: the editor is open
+    /// outside a round more often than not, and a ring that only appeared once Finale
+    /// Soldiers happened to be sending state could not be positioned at all.
+    /// </summary>
+    private void RefreshHelpRingPreview(double scale)
+    {
+        if (_draft.ShowHelpRing != true)
+        {
+            PreviewHelpRingPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        double diameter = HelpRingPlacement.Diameter;
+        double thickness = HelpRingPlacement.Thickness;
+        var sample = new HelpRing(HelpPhase.Cooling, 0.62, "44", false);
+
+        PreviewHelpRingBox.Width = PreviewHelpRingBox.Height = diameter;
+        PreviewHelpRingTrack.StrokeThickness = PreviewHelpRingSweep.StrokeThickness = thickness;
+        PreviewHelpRingTrack.Data = HelpRingGeometry.Arc(diameter, thickness, 1.0);
+        PreviewHelpRingSweep.Data = HelpRingGeometry.Arc(diameter, thickness, sample.Fraction);
+        PreviewHelpRingSweep.Stroke = HelpRingPreviewBrush;
+        PreviewHelpRingCaption.Foreground = HelpRingPreviewBrush;
+        PreviewHelpRingSeconds.Text = sample.Caption;
+        PreviewHelpRingPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
+
+        scale *= HelpRingPlacement.ClampScale(_draft.HelpRingScale);
+        PreviewHelpRingScale.ScaleX = PreviewHelpRingScale.ScaleY = scale;
+
+        Size natural = LayoutMeasurement.NaturalSize(PreviewHelpRingPanel);
+        double width = natural.Width * scale;
+        double height = natural.Height * scale;
+        double insetX = PreviewWidth * HelpRingPlacement.HorizontalInset;
+        double insetY = PreviewHeight
+            * HelpRingPlacement.ClampVerticalOffset(_draft.HelpRingVerticalOffset);
+
+        Canvas.SetLeft(PreviewHelpRingPanel,
+                       HelpRingPlacement.IsLeft(_draft.HelpRingCorner)
+                           ? insetX
+                           : PreviewWidth - insetX - width);
+        Canvas.SetTop(PreviewHelpRingPanel, PreviewHeight - insetY - height);
+        PreviewHelpRingPanel.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>The cooling grey the live ring uses. The preview is always mid-cooldown.</summary>
+    private static readonly SolidColorBrush HelpRingPreviewBrush = FrozenPreviewBrush(0x9A, 0xA0, 0xA6);
+
+    private static SolidColorBrush FrozenPreviewBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
     private static ItemsPanelTemplate WeaponSlotPanel(bool horizontal)
     {
         var factory = new FrameworkElementFactory(typeof(StackPanel));
@@ -621,6 +681,15 @@ public partial class SettingsWindow : Window
     {
         if (!_ready || (e.Source != WeaponCornerCombo && e.Source != WeaponOrientationCombo))
             return;
+
+        ReadControls();
+        RefreshPreview();
+        SaveStatus.Text = "Unsaved changes";
+    }
+
+    private void OnHelpRingChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || e.Source != HelpRingCornerCombo) return;
 
         ReadControls();
         RefreshPreview();
@@ -776,6 +845,11 @@ public partial class SettingsWindow : Window
         if (WeaponOrientationCombo.SelectedItem is ComboBoxItem orientation)
             _draft.WeaponPanelOrientation =
                 WeaponPanelPolicy.ParseOrientation(orientation.Tag as string);
+        _draft.ShowHelpRing = ShowHelpRingCheckBox.IsChecked == true;
+        _draft.HelpRingVerticalOffset = HelpRingVerticalSlider.Value;
+        _draft.HelpRingScale = HelpRingScaleSlider.Value;
+        if (HelpRingCornerCombo.SelectedItem is ComboBoxItem helpCorner)
+            _draft.HelpRingCorner = HelpRingPlacement.ParseCorner(helpCorner.Tag as string);
         _draft.OffsetUnits = "percent";
         _draft.OffsetX = OffsetXSlider.Value;
         _draft.OffsetY = OffsetYSlider.Value;
@@ -806,6 +880,8 @@ public partial class SettingsWindow : Window
         ConsistentVerticalSpacingValue.Text = $"{ConsistentVerticalSpacingSlider.Value:0} px";
         WeaponVerticalValue.Text = $"{WeaponVerticalSlider.Value:P1} from bottom";
         WeaponScaleValue.Text = $"{WeaponScaleSlider.Value:0.00}x";
+        HelpRingVerticalValue.Text = $"{HelpRingVerticalSlider.Value:P1} from bottom";
+        HelpRingScaleValue.Text = $"{HelpRingScaleSlider.Value:0.00}x";
         OffsetXValue.Text = $"{OffsetXSlider.Value:P1}";
         OffsetYValue.Text = $"{OffsetYSlider.Value:P0}";
         BottomReserveValue.Text = $"{BottomReserveSlider.Value:P0}";
@@ -853,6 +929,7 @@ public partial class SettingsWindow : Window
         PreviewConsistentYouCards.ItemsSource = null;
         PreviewWeaponPanel.Visibility = Visibility.Collapsed;
         PreviewWeaponSlots.ItemsSource = null;
+        PreviewHelpRingPanel.Visibility = Visibility.Collapsed;
 
         if (consistent)
         {
@@ -950,6 +1027,7 @@ public partial class SettingsWindow : Window
             }
 
             RefreshWeaponPreview(hudBaseScale * hudFit);
+            RefreshHelpRingPreview(hudBaseScale * hudFit);
             return;
         }
 
@@ -1067,6 +1145,8 @@ public partial class SettingsWindow : Window
             "ConsistentVerticalSpacingSlider" => design.VerticalSpacing,
             "WeaponVerticalSlider" => fresh.WeaponPanelVerticalOffset,
             "WeaponScaleSlider" => fresh.WeaponPanelScale,
+            "HelpRingVerticalSlider" => fresh.HelpRingVerticalOffset,
+            "HelpRingScaleSlider" => fresh.HelpRingScale,
             _ => null
         };
 

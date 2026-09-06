@@ -1,5 +1,47 @@
 # Dev log
 
+## 2026-09-06 - v2.2.0: reading another addon's clock
+
+The reinforcement ring needed two numbers Finale Soldiers already keeps: how long the squad
+you called is staying, and how long until you can call again. Both live on the
+`cf_soldier_spawner` root-table object, and both addons run in the same server VM, so the
+exporter reads them directly - the same access `Classify` already makes one level down, on
+each soldier's script scope.
+
+`help_cooldowns[userid]` alone cannot drive a ring. help.nut stamps a worst-case placeholder
+there at the moment of the call - arrive timeout + duration + cooldown - so a caller cannot be
+let through while their own squad is still out, and replaces it with the real value only once
+the squad's job ends (its own 2026-08-27 change: the cooldown must not run while the squad is
+still on the map). A remaining time longer than `help_cooldown` is therefore always that
+placeholder, which is what separates `calling` from `cooling` here; subtracting the two clocks
+it was padded with recovers the call time, so the arrival window counts down from the same
+entry.
+
+`active` comes from `help_groups` instead - the squad's own window, keyed by the group id its
+members carry, which is the clock help.nut withdraws them on. The exporter scans `spawned` for
+a soldier whose `cf_soldier_help_owner` is the host and whose `cf_soldier_help_active` is set,
+takes its group, and reports the longest remaining window: a five-man squad shares one.
+
+Every read is guarded and every failure omits the field. An install without the addon, or with
+a build predating `help!`, has to look identical to one whose ring is simply switched off -
+which is why the ring is absent rather than greyed out there. `HelpJson` returning the empty
+string is the whole mechanism.
+
+App side the ring is a clock, so it is drawn before the dirty gate rather than with the cards,
+and `HelpRingPolicy` counts the last sample down against the wall clock between exports.
+That countdown is capped at one sample's lifetime: a paused game stops advancing `seq`, and a
+ring that kept draining through the pause menu would come back claiming a readiness nothing
+had confirmed.
+
+WPF ships no circular progress control. The arc is a stroked `Path` rebuilt per frame, drawn
+along the stroke's centre line so the ring stays inside its box, and a full ring is an
+`EllipseGeometry` rather than a 360-degree `ArcSegment` - an arc whose end point is its start
+point is ambiguous and WPF resolves it by drawing nothing, which would blank the ring at
+exactly the moment it is meant to be complete.
+
+Not verified in game yet, for the same reason v2.1.3 is not: `help!` only exists on Finale
+Soldiers' `feature/go-command` branch.
+
 ## 2026-08-26 - v2.1.3: telling a reinforcement from a follower
 
 `help!` reinforcements reached the overlay as plain followers, because the exporter classified

@@ -53,6 +53,14 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v2.2.0 — a ring for the `help!` call.** The Consistent HUD can now draw one dial for your own
+Finale Soldiers reinforcement call: green and full while the call goes through, green and
+emptying while a squad is on its way or with you, grey and emptying while the cooldown runs,
+with the seconds left in the middle. Two colours, because the question is binary — can I call,
+or am I waiting. It has its own corner, height, and size, and the exporter sends the clock as a
+new `help` object for the host player. Needs a Finale Soldiers build carrying `help!`; without
+it nothing is exported and the ring is absent rather than empty. Not yet confirmed in game.
+
 **v2.1.3 — reinforcements get their own card badge.** Soldiers called in with Finale
 Soldiers' `help!` now carry a yellow **REINFORCEMENT** badge instead of the blue **FOLLOW** one.
 They follow their caller like any other follower, so the old card said nothing about where
@@ -116,7 +124,7 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.1.3** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.2.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
@@ -124,14 +132,15 @@ has nothing to read.
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.1.3** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.2.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
   The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
   in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair. The
-  v2.1.3 reinforcement badge is not yet confirmed in game: it needs a Finale Soldiers build
-  from `feature/go-command`, which is where `help!` lives.
+  v2.1.3 reinforcement badge and the v2.2.0 reinforcement ring are not yet confirmed in
+  game: both need a Finale Soldiers build from `feature/go-command`, which is where `help!`
+  lives.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 

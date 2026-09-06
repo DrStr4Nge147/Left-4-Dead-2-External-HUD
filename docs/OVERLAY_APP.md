@@ -10,8 +10,9 @@ process — no injection, no memory reading, no DirectX hooking.
 2026-08-18, including the weapon HUD, its ammunition and carried-item row, the incendiary and
 explosive marks, and the two independent rosters. All of the hiding rules - finale outro, end
 credits, chapter-end transition, map-start cinematic, pause menu and console - were confirmed
-in L4D2 on 2026-08-25 with the v2.1.2 pair. The v2.1.3 reinforcement badge is not confirmed
-in game yet; it needs a Finale Soldiers build carrying `help!`.
+in L4D2 on 2026-08-25 with the v2.1.2 pair. The v2.1.3 reinforcement badge and the v2.2.0
+reinforcement ring are not confirmed in game yet; both need a Finale Soldiers build carrying
+`help!`.
 
 ## Running it
 
@@ -230,6 +231,40 @@ the panel stays hidden. A value the exporter could not read prints nothing rathe
 so blank ammo means "no reading", not "empty magazine" — the exporter logs which read route
 answered at load, in `console.log`.
 
+### Reinforcement ring
+
+**Show the help! reinforcement ring** draws a single dial for your own `help!` call — the
+Finale Soldiers command that sends a squad to your position. It follows the listen-server
+host, like the weapon HUD, and the Scoreboard tab never draws it.
+
+One ring, two colours, because the question it answers is binary: can I call for
+reinforcements, or am I waiting?
+
+| What the ring is doing | Colour | The number inside |
+|---|---|---|
+| Ready — the call goes through now | Green, full | none |
+| Called; the squad is on its way | Green, emptying | seconds left of the arrival window |
+| The squad is with you | Green, emptying | seconds left of their stay |
+| Cooling down | Grey, emptying | seconds until you can call again |
+
+The arc runs clockwise from twelve o'clock and empties as its window runs out, so a nearly
+gone ring means "nearly over" whichever colour it is.
+
+**The cooldown does not start until your squad is done.** Finale Soldiers starts the clock at
+the squad's withdrawal, not at the call, so what the ring shows while they are out is their
+remaining stay — the cooldown appears the moment they leave.
+
+It has its own placement, on the same terms as the weapon HUD: **corner** picks Lower Left or
+Lower Right, **height** runs the full screen height, and **size** scales it from half to
+double on top of the Consistent HUD's own size. The default corner is the opposite of the
+weapon HUD's, so the two do not land on each other on a fresh install.
+
+The ring needs exporter v2.2.0 or newer **and** a Finale Soldiers build carrying the `help!`
+feature. Without both, no reinforcement state is exported and the ring is absent rather than
+empty — an install that has no such call has nothing for a dial to be about. The countdown
+holds its last frame while the game is paused or between maps rather than draining to zero
+on a clock nothing is confirming.
+
 ## Reading the panel
 
 | Element | Meaning |
@@ -362,6 +397,10 @@ Sits next to the exe. Edit and restart the app.
 | `weaponPanelOrientation` | `vertical` | Weapon slot arrangement: `vertical` or `horizontal` |
 | `weaponPanelScale` | `1.0` | Weapon HUD size, as a multiplier on `consistentScale`; the slider runs `0.50`-`2.00` |
 | `weaponPanelVerticalOffset` | `0.10` | Fraction of the window height kept below the weapon HUD; the slider runs to `0.92` |
+| `showHelpRing` | `true` | Draw the reinforcement ring - your own `help!` availability, with the countdown of whatever is in the way |
+| `helpRingCorner` | `lower-left` | Which bottom corner the ring sits in: `lower-left` or `lower-right` |
+| `helpRingScale` | `1.0` | Ring size, as a multiplier on `consistentScale`; the slider runs `0.50`-`2.00` |
+| `helpRingVerticalOffset` | `0.10` | Fraction of the window height kept below the ring; the slider runs to `0.92` |
 | `consistentVerticalOffset` | `0.03` | Bottom inset for the consistent HUD; higher values move it upward |
 | `consistentHorizontalSpacing` | `10.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
 | `consistentVerticalSpacing` | `0.0` | Extra vertical card gap in layout pixels; negative values overlap cards |

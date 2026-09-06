@@ -2,6 +2,28 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.2.0 - 2026-09-06: a ring for the help! call
+
+- A new **reinforcement ring** draws your own `help!` availability as one dial on the
+  Consistent HUD: green and full while the call goes through, green and emptying while a
+  squad is on its way or with you, grey and emptying while the cooldown runs.
+- The number inside is the seconds left of whatever is in the way, and the arc empties as
+  that window does - so a nearly gone ring means "nearly over" in either colour.
+- Two colours for four states on purpose. Green means help is with you or coming; grey means
+  the call will be refused. That is the only question the ring is there to answer.
+- The cooldown does not begin until your squad is done, which is Finale Soldiers' own rule,
+  so the ring counts their remaining stay first and only then the cooldown.
+- Its corner, height, and size are its own settings, defaulting to the opposite bottom corner
+  from the weapon panel. The editor draws a stand-in ring so it can be positioned outside a
+  round.
+- The exporter now sends a `help` object for the host player. An install without Finale
+  Soldiers, or with a build that has no `help!`, sends nothing at all and the ring is absent
+  rather than empty.
+- Also fixes a duplicated `won` key in the exported JSON.
+
+**Requires** a Finale Soldiers build with `help!` - the feature lives on its
+`feature/go-command` branch - and exporter 2.2.0. Without both, nothing is drawn.
+
 ## Overlay HUD v2.1.3 - 2026-08-26: reinforcements get their own card badge
 
 - Soldiers called in with Finale Soldiers' `help!` now carry a yellow **REINFORCEMENT** badge

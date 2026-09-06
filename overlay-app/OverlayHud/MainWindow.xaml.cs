@@ -44,6 +44,12 @@ public partial class MainWindow : Window
     private int _lastCardCount = -1;
     private bool _separatedYouVisible;
 
+    /// <summary>
+    /// The host player's help! clock. Holds the last exported sample and counts it down
+    /// against the wall clock, so the ring sweeps rather than stepping at the export rate.
+    /// </summary>
+    private readonly HelpRingPolicy _helpRing = new();
+
     // Live preview. The baseline is what the running overlay looked like before the editor
     // started pushing draft values at it, so Cancel can put it back without a save.
     private AppConfig? _livePreviewBaseline;
@@ -677,6 +683,11 @@ public partial class MainWindow : Window
         double weaponScale = scale * WeaponPanelPolicy.ClampScale(_cfg.WeaponPanelScale);
         WeaponPanelScale.ScaleX = WeaponPanelScale.ScaleY = weaponScale;
 
+        // The ring is read the same way and at the same moments as the ammunition beside it,
+        // so it carries its own multiplier over the consistent HUD's scale in the same way.
+        double helpRingScale = scale * HelpRingPlacement.ClampScale(_cfg.HelpRingScale);
+        HelpRingScaleTransform.ScaleX = HelpRingScaleTransform.ScaleY = helpRingScale;
+
         // The badge and its notice have their own fixed corner: roster anchor settings must
         // not move them.
         StatusStack.Margin = new Thickness(0, _surfaceHeight * 0.025,
@@ -685,6 +696,7 @@ public partial class MainWindow : Window
         ApplyAnchor();
         ApplyYouLayout();
         ApplyWeaponPanelLayout();
+        ApplyHelpRingLayout();
         UpdateGuides();
     }
 
@@ -785,6 +797,61 @@ public partial class MainWindow : Window
         if (_weaponSurvivor == null || WeaponPanel.Visibility != Visibility.Visible) return;
 
         RenderWeaponPanel(_weaponSurvivor);
+    }
+
+    /// <summary>
+    /// Green while help is with you or on its way, grey while the cooldown is running. Two
+    /// colours for four phases, because the question the ring answers is binary: can I call
+    /// for reinforcements, or am I waiting?
+    /// </summary>
+    private static readonly SolidColorBrush HelpAvailableBrush = FrozenBrush(0x6B, 0xE8, 0x6B);
+    private static readonly SolidColorBrush HelpCoolingBrush   = FrozenBrush(0x9A, 0xA0, 0xA6);
+
+    private static SolidColorBrush FrozenBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>
+    /// The reinforcement ring. Drawn from the exporter's help state, which only an install
+    /// running Finale Soldiers with its help! feature sends at all - without it the ring is
+    /// not a disabled control, it is absent, because there is nothing on that install for it
+    /// to be about.
+    ///
+    /// Redrawn on every render rather than only on a state change: this is a clock, and the
+    /// policy counts it down against the wall clock between the exporter's own samples.
+    /// </summary>
+    private void RenderHelpRing()
+    {
+        var ring = _helpRing.Current();
+
+        // The editor has to be able to place the ring on an install that is not in a round,
+        // which is every install while the editor is open. A stand-in mid-cooldown shows both
+        // the arc and the number at the size they will really be.
+        if (LivePreview && !ring.IsVisible)
+            ring = new HelpRing(HelpPhase.Cooling, 0.62, "44", false);
+
+        if (!ConsistentMode || !_cfg.ShowHelpRing || !ring.IsVisible)
+        {
+            HelpRingPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        double diameter = HelpRingPlacement.Diameter;
+        double thickness = HelpRingPlacement.Thickness;
+
+        HelpRingBox.Width = HelpRingBox.Height = diameter;
+        HelpRingTrack.StrokeThickness = HelpRingSweep.StrokeThickness = thickness;
+        HelpRingTrack.Data = HelpRingGeometry.Arc(diameter, thickness, 1.0);
+        HelpRingSweep.Data = HelpRingGeometry.Arc(diameter, thickness, ring.Fraction);
+        HelpRingSweep.Stroke = ring.Available ? HelpAvailableBrush : HelpCoolingBrush;
+
+        HelpRingSeconds.Text = ring.Caption;
+        HelpRingCaption.Foreground = ring.Available ? HelpAvailableBrush : HelpCoolingBrush;
+
+        HelpRingPanel.Visibility = Visibility.Visible;
     }
 
     private Survivor? _weaponSurvivor;
@@ -908,6 +975,7 @@ public partial class MainWindow : Window
         ConsistentContent.Visibility = consistent ? Visibility.Visible : Visibility.Collapsed;
         ConsistentYouPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
         WeaponPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
+        HelpRingPanel.Opacity = Math.Clamp(ActivePanelOpacity(), 0.1, 1.0);
 
         if (!consistent)
         {
@@ -916,6 +984,7 @@ public partial class MainWindow : Window
             ConsistentYouCards.ItemsSource = null;
             WeaponPanel.Visibility = Visibility.Collapsed;
             WeaponSlots.ItemsSource = null;
+            HelpRingPanel.Visibility = Visibility.Collapsed;
         }
 
         if (consistent)
@@ -1010,6 +1079,32 @@ public partial class MainWindow : Window
             0,
             youOnLeft ? 0 : placement.HorizontalInset * _surfaceWidth,
             Math.Clamp(_cfg.ConsistentVerticalOffset, 0.0, 0.90) * _surfaceHeight);
+    }
+
+    /// <summary>
+    /// The reinforcement ring's corner. Same rules as the weapon HUD, and the default is the
+    /// opposite corner so the two do not land on top of each other on a fresh install.
+    /// </summary>
+    private void ApplyHelpRingLayout()
+    {
+        if (!ConsistentMode)
+        {
+            HelpRingScaleTransform.ScaleX = HelpRingScaleTransform.ScaleY = 1.0;
+            return;
+        }
+
+        bool left = HelpRingPlacement.IsLeft(_cfg.HelpRingCorner);
+        double inset = HelpRingPlacement.HorizontalInset * _surfaceWidth;
+
+        HelpRingPanel.HorizontalAlignment = left
+            ? System.Windows.HorizontalAlignment.Left
+            : System.Windows.HorizontalAlignment.Right;
+        HelpRingPanel.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+        HelpRingPanel.Margin = new Thickness(
+            left ? inset : 0,
+            0,
+            left ? 0 : inset,
+            HelpRingPlacement.ClampVerticalOffset(_cfg.HelpRingVerticalOffset) * _surfaceHeight);
     }
 
     /// <summary>
@@ -1140,6 +1235,11 @@ public partial class MainWindow : Window
         // A stale read is last session's roster, or this session's before the map ended.
         // Drawing it is worse than drawing nothing: it is wrong, and it looks authoritative.
         var state = (_reader?.IsStale ?? true) ? null : _reader?.Current;
+
+        // Stamped even when it is null: an install that stops sending help state - the addon
+        // disabled mid-session, or a map change onto a build without it - has to clear the
+        // ring rather than leave the last countdown frozen on screen.
+        _helpRing.Observe(state?.Help);
         var survivors = state?.Survivors ?? new List<Survivor>();
 
         // The exporter's observed roster order is preserved; RosterPolicy decides which of
@@ -1207,6 +1307,7 @@ public partial class MainWindow : Window
             ConsistentYouCards.ItemsSource = null;
             WeaponPanel.Visibility = Visibility.Collapsed;
             WeaponSlots.ItemsSource = null;
+            HelpRingPanel.Visibility = Visibility.Collapsed;
             _dirty = true;
         }
 
@@ -1227,6 +1328,10 @@ public partial class MainWindow : Window
                 : "hidden - nothing to draw for the current roster filter");
 
         if (!show) return;
+
+        // Before the dirty gate: the ring is a clock, and it has to keep moving on renders
+        // where no card has changed.
+        RenderHelpRing();
 
         // Live preview redraws on every slider move, and those do not touch the reader.
         if (!_dirty && !LivePreview) return;

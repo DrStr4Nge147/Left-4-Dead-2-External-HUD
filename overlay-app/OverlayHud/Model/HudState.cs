@@ -43,6 +43,13 @@ public sealed class HudState
     /// player-side read is honestly reporting ordinary play while the credits roll.
     /// </summary>
     [JsonPropertyName("won")]       public int FinaleWon { get; set; } = -1;
+
+    /// <summary>
+    /// The host player's help! reinforcement clock, or null from an install without Finale
+    /// Soldiers, without its help! feature, or with an exporter older than 2.2.0.
+    /// </summary>
+    [JsonPropertyName("help")]      public HelpState? Help { get; set; }
+
     [JsonPropertyName("survivors")] public List<Survivor> Survivors { get; set; } = new();
 }
 
@@ -118,4 +125,26 @@ public sealed class Survivor
     /// know. Empty from an exporter older than 2.0.0, which simply highlights nothing.
     /// </summary>
     [JsonPropertyName("slot")]    public string ActiveSlot { get; set; } = "";
+}
+
+/// <summary>
+/// How the host player's <c>help!</c> reinforcement call stands: whether it can be made
+/// right now, and how long is left of whatever is in the way. Written only when Finale
+/// Soldiers is installed with its help! feature; every other install omits the object and
+/// leaves this null, which is what keeps the ring off screen.
+/// </summary>
+public sealed class HelpState
+{
+    /// <summary>ready / calling / active / cooling. Anything else is treated as unknown.</summary>
+    [JsonPropertyName("st")]    public string Status { get; set; } = "";
+
+    /// <summary>Seconds left of whatever <see cref="Status"/> names. Zero when ready.</summary>
+    [JsonPropertyName("left")]  public double Left { get; set; }
+
+    /// <summary>
+    /// The full length of that window, so the ring can be drawn as a fraction without the
+    /// app having to know Finale Soldiers' settings. Zero when ready, and zero is never
+    /// divided by - see HelpRingPolicy.
+    /// </summary>
+    [JsonPropertyName("total")] public double Total { get; set; }
 }

@@ -234,5 +234,47 @@
                 </ItemsControl>
             </StackPanel>
         </Border>
+
+        <!-- The reinforcement ring: whether help! can be called, and how long until it can.
+             One dial rather than a card, because it belongs to the player rather than to any
+             survivor in the roster, and because the answer is a single clock. Both the arc
+             and the track are drawn in code - WPF ships no circular progress control, and the
+             geometry has to be rebuilt as the fraction changes anyway. -->
+        <Border x:Name="HelpRingPanel"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Padding="0"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="0"
+                Visibility="Collapsed">
+            <Border.LayoutTransform>
+                <ScaleTransform x:Name="HelpRingScaleTransform" ScaleX="1" ScaleY="1" />
+            </Border.LayoutTransform>
+            <StackPanel>
+                <Grid x:Name="HelpRingBox" HorizontalAlignment="Center">
+                    <Path x:Name="HelpRingTrack"
+                          Stroke="#38FFFFFF"
+                          StrokeThickness="5" />
+                    <Path x:Name="HelpRingSweep"
+                          StrokeThickness="5"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" />
+                    <TextBlock x:Name="HelpRingSeconds"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontFamily="{StaticResource HudFont}"
+                               FontSize="15"
+                               Foreground="#F0FFFFFF" />
+                </Grid>
+                <TextBlock x:Name="HelpRingCaption"
+                           HorizontalAlignment="Center"
+                           Margin="0,3,0,0"
+                           Text="HELP!"
+                           FontFamily="{StaticResource HudFont}"
+                           FontSize="10"
+                           Foreground="#B4FFFFFF" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

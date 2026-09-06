@@ -1,8 +1,8 @@
-# Testing — exporter v2.1.3 + overlay app v2.1.3
+# Testing — exporter v2.2.0 + overlay app v2.2.0
 
-The v2.1.3 pair is built but not live-tested: its one change, the REINFORCEMENT badge, needs a
-Finale Soldiers build from `feature/go-command`, where `help!` lives. Everything else is
-unchanged from v2.1.2.
+The v2.2.0 pair is built but not live-tested, and neither is v2.1.3 before it. Both changes -
+the REINFORCEMENT badge and the reinforcement ring - need a Finale Soldiers build from
+`feature/go-command`, where `help!` lives. Everything else is unchanged from v2.1.2.
 
 The v2.1.2 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
 the chapter-end transition, the end credits, and the pause menu and console all take the
@@ -84,6 +84,45 @@ them are worth running after any change to the detector.
    the cause.
 5. Launch the overlay with L4D2 closed and confirm the empty panel still draws, so it can be
    positioned before a session — never having exported is not the same as having stopped.
+
+## Reinforcement ring (v2.2.0)
+
+Needs a Finale Soldiers build carrying `help!`. Run the whole section with the Consistent HUD
+on (F7 by default) and **Show the help! reinforcement ring** checked.
+
+1. Load a map with no reinforcements called. Confirm the ring is drawn full and green in the
+   lower left, with nothing in the middle.
+2. On an install WITHOUT Finale Soldiers, or with a build that has no `help!`, confirm the ring
+   is not drawn at all - no empty circle, no reserved space - whatever the setting says. This
+   is the case the field is omitted for, and it is the one worth checking first.
+3. Call `help!`. Confirm the ring goes to a counting-down green while the squad is on its way,
+   and that the number matches the wait before they appear.
+4. Once the squad is with you, confirm the ring keeps counting down in green and that the
+   number tracks their remaining stay - roughly `helpduration` from the moment they joined up.
+5. Watch them withdraw. Confirm the ring turns grey at that moment and counts the cooldown
+   down from roughly `helpcooldown`, NOT from the moment you called. This is the whole point
+   of the exporter's placeholder handling; a cooldown that starts early means the placeholder
+   is being read as a real countdown.
+6. Confirm the ring turns green and full the moment the cooldown ends, and that `help!` is in
+   fact accepted at that point.
+7. Call `help!` and let the whole squad be killed rather than withdrawing. Confirm the ring
+   still moves to the grey cooldown rather than staying green or sticking at the squad's
+   window.
+8. Pause the game mid-cooldown for ten seconds. Confirm the ring holds where it was rather
+   than draining while paused, and resumes correctly when the game does.
+9. Change `helpduration` and `helpcooldown` in Finale Soldiers' own settings and confirm the
+   ring's fractions follow them - the app takes the window length from the exporter rather
+   than assuming the defaults.
+10. Switch **Reinforcement ring corner** to Lower Right and confirm it moves without disturbing
+    the weapon panel; put both in the same corner and confirm the overlap is at least
+    predictable.
+11. Drag **Reinforcement ring height** from 0% to the top of its range and confirm the ring
+    travels the full height of the screen and stays fully on screen at both ends.
+12. Drag **Reinforcement ring size** across its range and confirm the ring grows and shrinks on
+    its own, with the roster and the weapon panel untouched.
+13. Uncheck **Show the help! reinforcement ring**, Save & Apply, and confirm it disappears
+    entirely.
+14. Confirm the Tab scoreboard never shows the ring, with the setting either way.
 
 ## Weapon HUD (v2.0.0)
 
@@ -182,7 +221,7 @@ them are worth running after any change to the detector.
    draw over the game. Keep `-condebug`.
 5. Delete `left4dead2\console.log`.
 6. Start L4D2, and confirm `console.log` carries
-   `[OVLHUD] Overlay HUD Export 2.1.3 loaded - exporting to ems/overlay_hud/state.json`. If
+   `[OVLHUD] Overlay HUD Export 2.2.0 loaded - exporting to ems/overlay_hud/state.json`. If
    that line is absent, the addon is not mounted and nothing below will work.
 7. Once the new exporter has written `ems\overlay_hud\state.json`, delete the three files
    the older builds left loose at the top of `ems\`: `overlay_hud_state.json`,
@@ -324,7 +363,7 @@ Before starting the campaign, open **Customize UI...** from the tray menu:
 Start a campaign with the soldiers spawning, then:
 
 - At the main menu or in a lobby, confirm
-  `Left 4 Dead 2 Customized Overlay HUD - External v2.1.3` appears at the top right
+  `Left 4 Dead 2 Customized Overlay HUD - External v2.2.0` appears at the top right
   without holding Tab. It should disappear shortly after the round begins exporting and
   disappear immediately when L4D2 loses focus.
 - **Hold Tab at the main menu, after having played at least one round this session.**

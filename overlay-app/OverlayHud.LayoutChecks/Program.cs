@@ -60,6 +60,8 @@ internal static class Program
         return RunWeaponCheck();
     if (args.Length > 0 && string.Equals(args[0], "ammo-channel", StringComparison.OrdinalIgnoreCase))
         return RunAmmoChannelCheck();
+    if (args.Length > 0 && string.Equals(args[0], "help-ring", StringComparison.OrdinalIgnoreCase))
+        return RunHelpRingCheck();
     if (args.Length > 0 && string.Equals(args[0], "shot-editor", StringComparison.OrdinalIgnoreCase))
         return RunEditorShot(args.Length > 1 ? args[1] : "editor.png",
                              args.Length > 2 ? int.Parse(args[2]) : 1,
@@ -364,6 +366,25 @@ internal static class Program
         });
         canvas.Children.Add(weapons);
 
+        // The reinforcement ring, in its three drawn states at once, so the colours and the
+        // arc can be compared against each other rather than one round at a time - the same
+        // reason the upgraded-ammunition shot puts all three cartridges side by side.
+        var rings = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            LayoutTransform = new ScaleTransform(scale, scale)
+        };
+        foreach (var state in new[]
+                 {
+                     new HelpRing(HelpPhase.Ready, 1.0, "", true),
+                     new HelpRing(HelpPhase.Active, 0.45, "27", true),
+                     new HelpRing(HelpPhase.Cooling, 0.62, "56", false)
+                 })
+        {
+            rings.Children.Add(HelpRingVisual(state));
+        }
+        canvas.Children.Add(rings);
+
         canvas.Measure(new Size(width, height));
         canvas.Arrange(new Rect(0, 0, width, height));
         canvas.UpdateLayout();
@@ -372,6 +393,8 @@ internal static class Program
         Canvas.SetTop(roster, height - height * 0.035 - roster.DesiredSize.Height);
         Canvas.SetLeft(weapons, width - width * 0.02 - weapons.DesiredSize.Width);
         Canvas.SetTop(weapons, height - height * 0.10 - weapons.DesiredSize.Height);
+        Canvas.SetLeft(rings, width * 0.02);
+        Canvas.SetTop(rings, height - height * 0.10 - rings.DesiredSize.Height);
         canvas.UpdateLayout();
 
         var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
@@ -385,6 +408,58 @@ internal static class Program
         app.Shutdown();
         Console.WriteLine($"wrote {System.IO.Path.GetFullPath(outputPath)}");
         return 0;
+    }
+
+    /// <summary>
+    /// One reinforcement ring, built the way MainWindow builds it: the same geometry helper,
+    /// the same colours, the same caption under it. A mock rather than the real element,
+    /// because the shot is a composed picture and not a running window.
+    /// </summary>
+    private static FrameworkElement HelpRingVisual(HelpRing ring)
+    {
+        double diameter = HelpRingPlacement.Diameter;
+        double thickness = HelpRingPlacement.Thickness;
+        var colour = new SolidColorBrush(ring.Available
+            ? Color.FromRgb(0x6B, 0xE8, 0x6B)
+            : Color.FromRgb(0x9A, 0xA0, 0xA6));
+
+        var box = new Grid { Width = diameter, Height = diameter };
+        box.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = HelpRingGeometry.Arc(diameter, thickness, 1.0),
+            Stroke = new SolidColorBrush(Color.FromArgb(0x38, 0xFF, 0xFF, 0xFF)),
+            StrokeThickness = thickness
+        });
+        box.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = HelpRingGeometry.Arc(diameter, thickness, ring.Fraction),
+            Stroke = colour,
+            StrokeThickness = thickness,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round
+        });
+        box.Children.Add(new TextBlock
+        {
+            Text = ring.Caption,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            FontFamily = new FontFamily("Segoe UI Semibold"),
+            FontSize = 15,
+            Foreground = new SolidColorBrush(Color.FromArgb(0xF0, 0xFF, 0xFF, 0xFF))
+        });
+
+        var stack = new StackPanel { Margin = new Thickness(0, 0, 14, 0) };
+        stack.Children.Add(box);
+        stack.Children.Add(new TextBlock
+        {
+            Text = "HELP!",
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            Margin = new Thickness(0, 3, 0, 0),
+            FontFamily = new FontFamily("Segoe UI Semibold"),
+            FontSize = 10,
+            Foreground = colour
+        });
+        return stack;
     }
 
     private static ItemsPanelTemplate HorizontalPanel() =>
@@ -878,6 +953,186 @@ internal static class Program
             : "FAIL: the weapon HUD must draw the local player's slots in the configured "
               + "corner, with ammo only when the exporter could read it");
         return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The reinforcement ring: the arithmetic behind it, the arc it draws, and the window
+    /// it is drawn in.
+    /// </summary>
+    private static int RunHelpRingCheck()
+    {
+        var app = new App();
+        app.InitializeComponent();
+
+        // The clock is injected so the countdown can be checked without sleeping.
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var policy = new HelpRingPolicy(() => now);
+
+        // No exporter field at all - an install without Finale Soldiers, or with a build
+        // whose help! feature this app predates. Nothing is drawn, and nothing is guessed.
+        policy.Observe(null);
+        bool absentIsHidden = !policy.Current().IsVisible;
+
+        // A status this build does not know is treated the same way, rather than being
+        // rounded to the nearest phase it does know.
+        policy.Observe(new HelpState { Status = "recalled", Left = 12, Total = 60 });
+        bool unknownIsHidden = !policy.Current().IsVisible;
+
+        policy.Observe(new HelpState { Status = "cooling", Left = 45, Total = 90 });
+        var cooling = policy.Current();
+        bool coolingFrame = cooling is { Phase: HelpPhase.Cooling, Available: false }
+            && Math.Abs(cooling.Fraction - 0.5) < 0.001
+            && cooling.Caption == "45";
+
+        // Counted down against the wall clock between samples: the exporter writes at 5 Hz
+        // and the ring is redrawn more often than that.
+        now = now.AddSeconds(1.5);
+        var later = policy.Current();
+        bool countsDown = later.Caption == "44"
+            && Math.Abs(later.Fraction - 43.5 / 90.0) < 0.001;
+
+        // ... but never further than one sample is worth. A paused game stops exporting, and
+        // a ring that kept draining through the pause menu would come back claiming a
+        // readiness nothing had confirmed.
+        now = now.AddSeconds(600);
+        var stalled = policy.Current();
+        bool stopsAtSampleLifetime = stalled.Caption == "43"
+            && Math.Abs(stalled.Fraction - 43.0 / 90.0) < 0.001;
+
+        // Green while help is with you or on its way; grey only while the cooldown runs.
+        now = now.AddSeconds(-601.5);
+        policy.Observe(new HelpState { Status = "ready" });
+        var ready = policy.Current();
+        policy.Observe(new HelpState { Status = "active", Left = 30, Total = 60 });
+        var active = policy.Current();
+        policy.Observe(new HelpState { Status = "calling", Left = 20, Total = 45 });
+        var calling = policy.Current();
+        bool colours = ready is { Phase: HelpPhase.Ready, Available: true, Caption: "" }
+            && Math.Abs(ready.Fraction - 1.0) < 0.001
+            && active is { Phase: HelpPhase.Active, Available: true, Caption: "30" }
+            && calling is { Phase: HelpPhase.Calling, Available: true, Caption: "20" };
+
+        // A window whose length the exporter could not give is drawn full rather than
+        // divided by zero, and the last second is shown as "1" for the whole of its length.
+        bool safeArithmetic = Math.Abs(HelpRingPolicy.Fraction(12, 0) - 1.0) < 0.001
+            && Math.Abs(HelpRingPolicy.Fraction(120, 60) - 1.0) < 0.001
+            && HelpRingPolicy.Caption(0.4) == "1"
+            && HelpRingPolicy.Caption(0) == "";
+
+        // The arc. A full ring is a circle, because a 360-degree arc ends where it starts
+        // and WPF draws nothing for it - which would blank the ring at exactly the moment
+        // it is meant to be complete.
+        double diameter = HelpRingPlacement.Diameter;
+        double thickness = HelpRingPlacement.Thickness;
+        var full = HelpRingGeometry.Arc(diameter, thickness, 1.0);
+        var half = HelpRingGeometry.Arc(diameter, thickness, 0.5);
+        var none = HelpRingGeometry.Arc(diameter, thickness, 0.0);
+        var quarter = HelpRingGeometry.Arc(diameter, thickness, 0.25);
+        bool geometry = full is EllipseGeometry
+            && ReferenceEquals(none, Geometry.Empty)
+            && half is PathGeometry
+            // Stroked along the centre line, so the ring stays inside its own box.
+            && full.Bounds.Left >= thickness / 2 - 0.01
+            && full.Bounds.Right <= diameter - thickness / 2 + 0.01
+            // Clockwise from twelve o'clock: a quarter turn ends on the right-hand side.
+            && Math.Abs(quarter.Bounds.Right - (diameter - thickness / 2)) < 0.01
+            && Math.Abs(quarter.Bounds.Top - thickness / 2) < 0.01;
+
+        bool placement = HelpRingPlacementCheck(out string liveDetail);
+
+        bool passed = absentIsHidden && unknownIsHidden && coolingFrame && countsDown
+            && stopsAtSampleLifetime && colours && safeArithmetic && geometry && placement;
+
+        Console.WriteLine(
+            $"absentHidden={absentIsHidden} unknownHidden={unknownIsHidden} " +
+            $"cooling={coolingFrame} countsDown={countsDown} " +
+            $"stopsWhenStale={stopsAtSampleLifetime} colours={colours} " +
+            $"arithmetic={safeArithmetic} geometry={geometry} {liveDetail}");
+        Console.WriteLine(passed
+            ? "PASS"
+            : "FAIL: the reinforcement ring must count down its own window, stay green "
+              + "until the cooldown, and be absent on an install that exports no help state");
+        return passed ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Drives the real window: the ring has to appear once help state arrives, take its
+    /// colour from the phase, move between corners, follow its height slider, honour its own
+    /// setting, and stay out of the scoreboard view entirely.
+    /// </summary>
+    private static bool HelpRingPlacementCheck(out string detail)
+    {
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var window = new MainWindow { Width = 1920, Height = 1080 };
+        var config = (AppConfig)GetField(window, "_cfg", flags);
+        config.GameProcess = "OverlayHudHelpRingCheckNoSuchGame";
+        config.IgnoreForeground = true;
+        config.ShowHelpRing = true;
+        config.HelpRingCorner = HelpRingPlacement.LowerLeft;
+        config.HelpRingVerticalOffset = 0.10;
+        config.HelpRingScale = 1.0;
+
+        Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
+
+        var panel = (Border)GetField(window, "HelpRingPanel", flags);
+        var sweep = (System.Windows.Shapes.Path)GetField(window, "HelpRingSweep", flags);
+        var seconds = (TextBlock)GetField(window, "HelpRingSeconds", flags);
+        var ring = (HelpRingPolicy)GetField(window, "_helpRing", flags);
+
+        typeof(MainWindow).GetField("_livePreviewConsistent", flags)?.SetValue(window, true);
+
+        // Nothing exported yet: absent, not empty.
+        Invoke(window, "RenderHelpRing", flags);
+        bool hiddenWithoutState = panel.Visibility == Visibility.Collapsed;
+
+        ring.Observe(new HelpState { Status = "cooling", Left = 45, Total = 90 });
+        Invoke(window, "RenderHelpRing", flags);
+        Invoke(window, "ApplyLayout", flags);
+        var coolingBrush = sweep.Stroke;
+        bool drawnCooling = panel.Visibility == Visibility.Visible && seconds.Text == "45";
+
+        ring.Observe(new HelpState { Status = "ready" });
+        Invoke(window, "RenderHelpRing", flags);
+        var readyBrush = sweep.Stroke;
+        bool readyIsAnotherColour = panel.Visibility == Visibility.Visible
+            && seconds.Text == ""
+            && !Equals(readyBrush, coolingBrush);
+
+        // A squad that is out is the same colour as one that can be called: green means
+        // help is with you or on its way.
+        ring.Observe(new HelpState { Status = "active", Left = 30, Total = 60 });
+        Invoke(window, "RenderHelpRing", flags);
+        bool activeMatchesReady = Equals(sweep.Stroke, readyBrush) && seconds.Text == "30";
+
+        bool leftCorner = panel.HorizontalAlignment == System.Windows.HorizontalAlignment.Left
+            && Math.Abs(panel.Margin.Left - 1920 * HelpRingPlacement.HorizontalInset) < 0.01
+            && Math.Abs(panel.Margin.Bottom - 108) < 0.01;
+
+        config.HelpRingCorner = HelpRingPlacement.LowerRight;
+        config.HelpRingVerticalOffset = 0.50;
+        Invoke(window, "ApplyLayout", flags);
+        bool rightCorner = panel.HorizontalAlignment == System.Windows.HorizontalAlignment.Right
+            && Math.Abs(panel.Margin.Right - 1920 * HelpRingPlacement.HorizontalInset) < 0.01
+            && Math.Abs(panel.Margin.Bottom - 540) < 0.01;
+
+        config.ShowHelpRing = false;
+        Invoke(window, "RenderHelpRing", flags);
+        bool respectsSetting = panel.Visibility == Visibility.Collapsed;
+
+        // Scoreboard mode never draws it, exactly as it never draws the weapon HUD.
+        config.ShowHelpRing = true;
+        typeof(MainWindow).GetField("_livePreviewConsistent", flags)?.SetValue(window, false);
+        Invoke(window, "RenderHelpRing", flags);
+        bool scoreboardClean = panel.Visibility == Visibility.Collapsed;
+
+        window.Close();
+
+        detail = $"hiddenWithoutState={hiddenWithoutState} cooling={drawnCooling} "
+               + $"ready={readyIsAnotherColour} active={activeMatchesReady} "
+               + $"leftCorner={leftCorner} rightCorner={rightCorner} "
+               + $"setting={respectsSetting} scoreboardClean={scoreboardClean}";
+        return hiddenWithoutState && drawnCooling && readyIsAnotherColour && activeMatchesReady
+            && leftCorner && rightCorner && respectsSetting && scoreboardClean;
     }
 
     /// <summary>

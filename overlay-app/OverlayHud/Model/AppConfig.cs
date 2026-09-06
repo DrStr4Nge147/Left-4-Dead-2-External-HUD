@@ -119,6 +119,31 @@ public sealed class AppConfig
     public double WeaponPanelVerticalOffset { get; set; } = 0.10;
 
     /// <summary>
+    /// Draw the reinforcement ring: one dial for the host player showing whether Finale
+    /// Soldiers' <c>help!</c> call is available and how long until it is. Needs exporter
+    /// 2.2.0 or newer AND a Finale Soldiers build with the help! feature; without both, no
+    /// help state is exported and the ring stays hidden whatever this is set to. Consistent
+    /// HUD only, like the weapon panel.
+    /// </summary>
+    [JsonPropertyName("showHelpRing")]
+    public bool ShowHelpRing { get; set; } = true;
+
+    /// <summary>Which bottom corner the reinforcement ring sits in: "lower-left" or "lower-right".</summary>
+    [JsonPropertyName("helpRingCorner")]
+    public string HelpRingCorner { get; set; } = "lower-left";
+
+    /// <summary>Size of the ring, as a multiplier on top of the consistent HUD's own scale.</summary>
+    [JsonPropertyName("helpRingScale")]
+    public double HelpRingScale { get; set; } = 1.0;
+
+    /// <summary>
+    /// Fraction of the window height kept below the reinforcement ring, on the same terms as
+    /// the weapon HUD's own offset.
+    /// </summary>
+    [JsonPropertyName("helpRingVerticalOffset")]
+    public double HelpRingVerticalOffset { get; set; } = 0.10;
+
+    /// <summary>
     /// Fraction of the game window kept below the consistent HUD. Zero touches the bottom
     /// edge; higher values move the HUD upward. This is independent of the scoreboard offset.
     /// </summary>

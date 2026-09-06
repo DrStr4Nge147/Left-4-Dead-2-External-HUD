@@ -21,7 +21,7 @@ under the old name too, because that is the only name an older addon reads.
 
 ```json
 {
-  "v": "2.1.3",
+  "v": "2.2.0",
   "seq": 412,
   "time": 183.40,
   "count": 8,
@@ -30,6 +30,7 @@ under the old name too, because that is the only name an older addon reads.
   "view": 0,
   "frz": 0,
   "won": 0,
+  "help": { "st": "cooling", "left": 42.50, "total": 90.00 },
   "survivors": [
     {
       "uid": 2,
@@ -75,6 +76,7 @@ under the old name too, because that is the only name an older addon reads.
 | `view` | `1` while the host's view is bound to a camera entity, `0` for their own eyes, `-1` when unreadable. Diagnostic |
 | `frz` | `1` while the server has the host player frozen for a scene it is running, `0` when they have control, `-1` when unreadable. This is the read that answers at the chapter end. Diagnostic |
 | `won` | `1` once the finale has been won, `0` before that, `-1` when unreadable. `Director.IsFinaleWon()`. This is the read that answers for the end credits |
+| `help` | The host player's `help!` reinforcement clock, or **absent** on an install that has no such call. Added in 2.2.0 (see the reinforcement field below) |
 | `uid` | Player user id. Stable within a session; **not** stable across map changes |
 | `name` | Display name — "Cpl. Blake", "Louis", or the human's Steam name |
 | `team` | 2 or 4. Both are survivors (see below) |
@@ -196,6 +198,50 @@ panel can be diagnosed rather than guessed at.
 app deliberately honours the last value it read even after the file goes stale: the outro is
 the last thing exported before the map ends, and the panel has to stay away for the report
 screen and the load that follow. The next map's first export clears it.
+
+## Reinforcement field
+
+`help` is the host player's `help!` clock, and it is written only when Finale Soldiers is
+installed **and** its build carries the `help!` feature. Every other install omits the object
+entirely rather than sending a placeholder, so the overlay can tell "no such call on this
+install" from "the call is ready".
+
+```json
+"help": { "st": "cooling", "left": 42.50, "total": 90.00 }
+```
+
+| Field | Meaning |
+|---|---|
+| `st` | `ready`, `calling`, `active`, or `cooling` |
+| `left` | Seconds left of whatever `st` names. `0` when ready |
+| `total` | The full length of that window, so the app can draw a fraction without knowing Finale Soldiers' settings. `0` when ready, and never divided by |
+
+| `st` | What is happening |
+|---|---|
+| `ready` | No squad and no cooldown: the call goes through now |
+| `calling` | Called, and nobody is on the map yet. Counts down the arrival window |
+| `active` | The squad is out. Counts down what is left of their stay |
+| `cooling` | The squad is done and the real cooldown is running |
+
+Both addons run in the same server VM, so the exporter reads Finale Soldiers' own
+`cf_soldier_spawner` object off the root table - the same access the roster's class test
+makes one level down, on each soldier's script scope.
+
+**The cooldown table alone cannot tell `active` from `cooling`.** `help.nut` stamps a
+worst-case placeholder - arrive timeout + duration + cooldown - at the moment of the call, so
+a caller is never let through while their own squad is still on the map, and replaces it with
+the real value only once the squad's job ends. A remaining time longer than `help_cooldown`
+is therefore always that placeholder and never a real countdown, which is what separates the
+two; the call time it was padded from is recoverable, so the arrival window can be counted
+down from the same entry.
+
+`active` comes from `help_groups` instead, keyed by the group id the squad's members carry.
+That is the clock `help.nut` itself withdraws them on, and a five-man squad shares one window,
+so the longest remaining wins.
+
+Every read is guarded, and any failure omits the field rather than reporting a state it could
+not confirm. Windows are clamped to their own total, since a duration shortened mid-session
+can leave an entry longer than the total it is now measured against.
 
 ## Notes for the overlay app
 
