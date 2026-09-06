@@ -39,8 +39,17 @@ along the stroke's centre line so the ring stays inside its box, and a full ring
 point is ambiguous and WPF resolves it by drawing nothing, which would blank the ring at
 exactly the moment it is meant to be complete.
 
-Not verified in game yet, for the same reason v2.1.3 is not: it needs a live round with a
-`help!` squad in it.
+Seen in game on 2026-09-06 with a six-soldier `help!` squad on the map, which also confirmed
+the v2.1.3 badge for the first time. That capture is what moved the ring: it was drawn in the
+far corner from the player's own health card, and it is the player's own state, so it now
+stands on top of that card and takes the card's measured height as its floor.
+
+The same screenshot showed the second half of this. The weapon panel carried the roster's
+scale - base scale times the overflow fit pass - so a lobby with six extra soldiers in it
+shrank the player's own ammunition counter to make room for other people's cards. Sizing is
+now one slider per element: the roster keeps the fit pass because it is the thing that
+overflows, and the weapon panel and the ring carry resolution scaling times their own
+multiplier and nothing else. Three elements, three sliders, no shared arithmetic.
 
 ## 2026-08-26 - v2.1.3: telling a reinforcement from a follower
 

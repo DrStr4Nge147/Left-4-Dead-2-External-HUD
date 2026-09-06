@@ -1,7 +1,8 @@
 # Testing — exporter v2.2.0 + overlay app v2.2.0
 
-The v2.2.0 pair is built but not live-tested, and neither is v2.1.3 before it. Both changes -
-the REINFORCEMENT badge and the reinforcement ring - need Finale Soldiers v1.8.6 or newer
+The v2.2.0 ring and the v2.1.3 REINFORCEMENT badge were both seen working in game on
+2026-09-06, with a six-soldier `help!` squad on the map. The section below is still the
+procedure that has not been run end to end. Both need Finale Soldiers v1.8.6 or newer
 installed, which is where `help!` was added. Everything else is unchanged from v2.1.2.
 
 The v2.1.2 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
@@ -120,9 +121,15 @@ on (F7 by default) and **Show the help! reinforcement ring** checked.
     travels the full height of the screen and stays fully on screen at both ends.
 12. Drag **Reinforcement ring size** across its range and confirm the ring grows and shrinks on
     its own, with the roster and the weapon panel untouched.
-13. Uncheck **Show the help! reinforcement ring**, Save & Apply, and confirm it disappears
+13. Confirm the ring sits directly above your own health card in the same corner, and that it
+    stays clear of it after changing the card design, the health-numbers setting, and the HUD
+    size. Move the ring to the other corner and confirm it drops to the bottom edge there.
+14. **Independence.** Join a session with enough extra survivors to make the roster shrink to
+    fit, and confirm neither the ring nor the weapon panel changes size with it. Drag **HUD
+    size** across its range and confirm the same. Only each element's own size slider moves it.
+15. Uncheck **Show the help! reinforcement ring**, Save & Apply, and confirm it disappears
     entirely.
-14. Confirm the Tab scoreboard never shows the ring, with the setting either way.
+16. Confirm the Tab scoreboard never shows the ring, with the setting either way.
 
 ## Weapon HUD (v2.0.0)
 

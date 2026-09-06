@@ -677,15 +677,20 @@ public partial class MainWindow : Window
         // remain readable and must not change size with either layout.
         MenuBadgeScale.ScaleX = MenuBadgeScale.ScaleY = 1.0;
         ConsistentYouPanelScale.ScaleX = ConsistentYouPanelScale.ScaleY = scale;
-        // The weapon HUD carries the consistent HUD's scale times its own multiplier: it
-        // belongs to that presentation, but ammunition is read mid-fight and often wants
-        // to be a different size from the roster beside it.
-        double weaponScale = scale * WeaponPanelPolicy.ClampScale(_cfg.WeaponPanelScale);
+        // The weapon HUD is sized on its own, like the ring: resolution scaling so it looks
+        // the same at any window size, and its own multiplier, and nothing else. It used to
+        // carry the roster's scale, which meant a full lobby of extra survivors shrank the
+        // ammunition counter - the roster grew wide, the overflow fit pass shrank everything
+        // wearing that scale, and the player's own weapon numbers paid for other people's cards.
+        // The three HUD elements now size independently: roster, weapons, ring.
+        double weaponScale = ResolutionScale * WeaponPanelPolicy.ClampScale(_cfg.WeaponPanelScale);
         WeaponPanelScale.ScaleX = WeaponPanelScale.ScaleY = weaponScale;
 
-        // The ring is read the same way and at the same moments as the ammunition beside it,
-        // so it carries its own multiplier over the consistent HUD's scale in the same way.
-        double helpRingScale = scale * HelpRingPlacement.ClampScale(_cfg.HelpRingScale);
+        // The ring is sized on its own. It carries the resolution scaling every element gets,
+        // so it looks the same at any window size, but NOT the HUD size slider: it is one dial
+        // with one number in it, and how big that wants to be has nothing to do with how many
+        // survivor cards are on screen or how big they are.
+        double helpRingScale = ResolutionScale * HelpRingPlacement.ClampScale(_cfg.HelpRingScale);
         HelpRingScaleTransform.ScaleX = HelpRingScaleTransform.ScaleY = helpRingScale;
 
         // The badge and its notice have their own fixed corner: roster anchor settings must
@@ -759,6 +764,19 @@ public partial class MainWindow : Window
         Canvas.SetTop(GuideSidebarLabel, top + 4);
         Canvas.SetLeft(GuideTopLabel, 6);
         Canvas.SetTop(GuideTopLabel, Math.Max(0, top - 16));
+    }
+
+    /// <summary>
+    /// Resolution scaling on its own, without the user's HUD size. What an element carries when
+    /// it should look the same at 1080p and 4K but is not part of the roster's own sizing.
+    /// </summary>
+    private double ResolutionScale
+    {
+        get
+        {
+            double baseline = _cfg.BaselineHeight > 0 ? _cfg.BaselineHeight : 1080;
+            return _cfg.AutoScale ? _surfaceHeight / baseline : 1.0;
+        }
     }
 
     private double BaseScale
@@ -1067,9 +1085,7 @@ public partial class MainWindow : Window
         }
 
         var placement = ConsistentHudPolicy.For(_cfg.ConsistentTemplate);
-        bool youOnLeft = _separatedYouVisible
-            && ConsistentHudPolicy.Parse(_cfg.ConsistentTemplate)
-                == ConsistentHudPolicy.LowerRightVertical;
+        bool youOnLeft = _separatedYouVisible && YouCardIsLeft();
         ConsistentYouPanel.HorizontalAlignment = youOnLeft
             ? System.Windows.HorizontalAlignment.Left
             : System.Windows.HorizontalAlignment.Right;
@@ -1082,8 +1098,13 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The reinforcement ring's corner. Same rules as the weapon HUD, and the default is the
-    /// opposite corner so the two do not land on top of each other on a fresh install.
+    /// The reinforcement ring's corner, and the clearance that keeps it off the card below it.
+    ///
+    /// The ring belongs with the player's own health, so by default it stands directly on top
+    /// of the separated You card rather than at a fixed height that happens to look right on
+    /// one layout. When the two share a side, the card's own height is added to the ring's
+    /// bottom margin, measured rather than assumed - the card changes height with its design,
+    /// its health numbers, and the HUD size - and the height slider then runs from there.
     /// </summary>
     private void ApplyHelpRingLayout()
     {
@@ -1095,17 +1116,30 @@ public partial class MainWindow : Window
 
         bool left = HelpRingPlacement.IsLeft(_cfg.HelpRingCorner);
         double inset = HelpRingPlacement.HorizontalInset * _surfaceWidth;
+        double bottom = HelpRingPlacement.ClampVerticalOffset(_cfg.HelpRingVerticalOffset)
+                        * _surfaceHeight;
+
+        if (ConsistentYouPanel.Visibility == Visibility.Visible && YouCardIsLeft() == left)
+        {
+            double youHeight = ViewModel.LayoutMeasurement.NaturalSize(ConsistentYouPanel).Height
+                               * Math.Max(0.0, ConsistentYouPanelScale.ScaleY);
+            bottom += ConsistentYouPanel.Margin.Bottom + youHeight + HelpRingPlacement.StackGap;
+        }
 
         HelpRingPanel.HorizontalAlignment = left
             ? System.Windows.HorizontalAlignment.Left
             : System.Windows.HorizontalAlignment.Right;
         HelpRingPanel.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
-        HelpRingPanel.Margin = new Thickness(
-            left ? inset : 0,
-            0,
-            left ? 0 : inset,
-            HelpRingPlacement.ClampVerticalOffset(_cfg.HelpRingVerticalOffset) * _surfaceHeight);
+        HelpRingPanel.Margin = new Thickness(left ? inset : 0, 0, left ? 0 : inset, bottom);
     }
+
+    /// <summary>
+    /// Which side the separated You card is on. The lower-right roster template pushes it to
+    /// the left so the two do not stack; every other template leaves it on the right.
+    /// </summary>
+    private bool YouCardIsLeft() =>
+        ConsistentHudPolicy.Parse(_cfg.ConsistentTemplate)
+            == ConsistentHudPolicy.LowerRightVertical;
 
     /// <summary>
     /// The weapon HUD's own corner. It shares the consistent HUD's scale and opacity - it

@@ -130,18 +130,23 @@ public sealed class AppConfig
 
     /// <summary>Which bottom corner the reinforcement ring sits in: "lower-left" or "lower-right".</summary>
     [JsonPropertyName("helpRingCorner")]
-    public string HelpRingCorner { get; set; } = "lower-left";
+    public string HelpRingCorner { get; set; } = "lower-right";
 
-    /// <summary>Size of the ring, as a multiplier on top of the consistent HUD's own scale.</summary>
+    /// <summary>
+    /// Size of the ring. Independent of every other size setting: it carries resolution
+    /// scaling so it looks the same at any window size, but the HUD size slider does not move
+    /// it. One dial with one number in it has nothing to do with how big the roster is.
+    /// </summary>
     [JsonPropertyName("helpRingScale")]
     public double HelpRingScale { get; set; } = 1.0;
 
     /// <summary>
-    /// Fraction of the window height kept below the reinforcement ring, on the same terms as
-    /// the weapon HUD's own offset.
+    /// Extra height above the ring's resting place, as a fraction of the window height. Zero
+    /// stands it directly on the separated You card when they share a corner, or on the bottom
+    /// edge when they do not; the slider lifts it from there.
     /// </summary>
     [JsonPropertyName("helpRingVerticalOffset")]
-    public double HelpRingVerticalOffset { get; set; } = 0.10;
+    public double HelpRingVerticalOffset { get; set; }
 
     /// <summary>
     /// Fraction of the game window kept below the consistent HUD. Zero touches the bottom

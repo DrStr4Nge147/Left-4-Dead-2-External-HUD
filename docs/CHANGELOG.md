@@ -13,9 +13,17 @@ Two components, released under one shared version: the exporter addon and overla
   the call will be refused. That is the only question the ring is there to answer.
 - The cooldown does not begin until your squad is done, which is Finale Soldiers' own rule,
   so the ring counts their remaining stay first and only then the cooldown.
-- Its corner, height, and size are its own settings, defaulting to the opposite bottom corner
-  from the weapon panel. The editor draws a stand-in ring so it can be positioned outside a
+- The ring stands on top of your own health card, in the same corner, using the card's
+  measured height so it stays clear at any card design or HUD size. Corner, height, and size
+  are its own settings, and the editor draws a stand-in ring so it can be positioned outside a
   round.
+- **The three Consistent HUD elements are now sized independently of each other**: the
+  survivor cards, the weapon panel, and the ring. Each follows its own slider and the screen
+  resolution, and nothing else.
+- **Fixes the weapon panel shrinking when the roster grew.** A lobby full of extra survivors
+  makes the roster too wide for the screen, the overflow pass shrinks it to fit, and the
+  weapon panel used to carry that same scale - so other people's cards were shrinking the
+  player's own ammunition counter. It no longer follows the HUD size slider either.
 - The exporter now sends a `help` object for the host player. An install without Finale
   Soldiers, or with a build that has no `help!`, sends nothing at all and the ring is absent
   rather than empty.
@@ -23,6 +31,10 @@ Two components, released under one shared version: the exporter addon and overla
 
 **Requires** Finale Soldiers v1.8.6 or newer, which is where `help!` was added, and
 exporter 2.2.0. Without both, nothing is drawn.
+
+**Seen in game on 2026-09-06** with a six-soldier `help!` squad on the map: the ring drawn
+green and counting the squad's stay down, and the v2.1.3 REINFORCEMENT badges on every one of
+their cards.
 
 ## Overlay HUD v2.1.3 - 2026-08-26: reinforcements get their own card badge
 

@@ -6,8 +6,9 @@ namespace OverlayHud.Services;
 ///
 /// It follows the weapon HUD's placement rules rather than the roster's: a single fixed
 /// element whose only real questions are which side it sits on, how far up from the bottom
-/// edge, and how big. The default corner is the opposite of the weapon HUD's, so a player
-/// who has changed neither setting gets the two of them in different corners.
+/// edge, and how big. It defaults to the corner the separated You card is in and stands on
+/// top of it, because it is the player's own state and belongs beside their own health
+/// rather than off in the roster's half of the screen.
 /// </summary>
 internal static class HelpRingPlacement
 {
@@ -20,8 +21,19 @@ internal static class HelpRingPlacement
     /// <summary>As the weapon HUD: short of 1.0, so it cannot be pushed off the top edge.</summary>
     public const double MaximumVerticalOffset = 0.92;
 
-    public const double MinimumScale = 0.50;
-    public const double MaximumScale = 2.00;
+    /// <summary>
+    /// The ring's own size range, and it is deliberately wider than the weapon HUD's. This is
+    /// one dial carrying one number, sized independently of the HUD size slider, so the useful
+    /// range runs from a small marker in the corner to something readable across the room.
+    /// </summary>
+    public const double MinimumScale = 0.40;
+    public const double MaximumScale = 3.00;
+
+    /// <summary>
+    /// Gap in layout pixels between the ring and the card it stands on, when the two share a
+    /// corner. Small enough to read as one stack, wide enough not to touch.
+    /// </summary>
+    public const double StackGap = 6.0;
 
     /// <summary>
     /// Ring size in layout pixels, before any scale. Sized against the weapon HUD's slot
@@ -34,8 +46,8 @@ internal static class HelpRingPlacement
 
     public static string ParseCorner(string? value) => value?.ToLowerInvariant() switch
     {
-        LowerRight => LowerRight,
-        _ => LowerLeft
+        LowerLeft => LowerLeft,
+        _ => LowerRight
     };
 
     public static bool IsLeft(string? corner) => ParseCorner(corner) == LowerLeft;

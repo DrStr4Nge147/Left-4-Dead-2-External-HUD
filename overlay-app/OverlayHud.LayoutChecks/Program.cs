@@ -1071,6 +1071,8 @@ internal static class Program
         config.HelpRingCorner = HelpRingPlacement.LowerLeft;
         config.HelpRingVerticalOffset = 0.10;
         config.HelpRingScale = 1.0;
+        // No You card for the corner arithmetic below: the stacking case is checked on its own.
+        config.ConsistentSeparateYou = false;
 
         Invoke(window, "SetSurface", flags, 1920.0, 1080.0);
 
@@ -1115,6 +1117,45 @@ internal static class Program
             && Math.Abs(panel.Margin.Right - 1920 * HelpRingPlacement.HorizontalInset) < 0.01
             && Math.Abs(panel.Margin.Bottom - 540) < 0.01;
 
+        // Sized on its own. The HUD size slider moves the roster and the weapon panel; it must
+        // not move the ring, which is one dial carrying one number.
+        var ringScale = (ScaleTransform)GetField(window, "HelpRingScaleTransform", flags);
+        config.ConsistentScale = 0.65;
+        Invoke(window, "ApplyLayout", flags);
+        double atSmallHud = ringScale.ScaleX;
+        config.ConsistentScale = 1.0;
+        Invoke(window, "ApplyLayout", flags);
+        double atLargeHud = ringScale.ScaleX;
+        config.HelpRingScale = 2.0;
+        Invoke(window, "ApplyLayout", flags);
+        double atDoubleRing = ringScale.ScaleX;
+        bool sizeIsIndependent = Math.Abs(atSmallHud - atLargeHud) < 0.0001
+            && Math.Abs(atDoubleRing - atLargeHud * 2) < 0.0001;
+        config.HelpRingScale = 1.0;
+
+        // On the corner the You card is in, the ring stands on top of that card rather than
+        // behind it - the card's measured height, not a guess.
+        var youPanel = (Border)GetField(window, "ConsistentYouPanel", flags);
+        var youCards = (ItemsControl)GetField(window, "ConsistentYouCards", flags);
+        youCards.ItemsSource = new[]
+        {
+            SurvivorCard.From(new Survivor { Name = "You", Hp = 100, MaxHp = 100, IsLocal = true })
+        };
+        youPanel.Visibility = Visibility.Visible;
+        typeof(MainWindow).GetField("_separatedYouVisible", flags)?.SetValue(window, true);
+        config.HelpRingVerticalOffset = 0.0;
+        Invoke(window, "ApplyLayout", flags);
+        bool standsOnYouCard = panel.Margin.Bottom > youPanel.Margin.Bottom + 1;
+
+        // ... and only on that corner. Moved to the other side it goes back to the floor.
+        config.HelpRingCorner = HelpRingPlacement.LowerLeft;
+        Invoke(window, "ApplyLayout", flags);
+        bool freeOnTheOtherSide = Math.Abs(panel.Margin.Bottom) < 0.01;
+
+        youPanel.Visibility = Visibility.Collapsed;
+        youCards.ItemsSource = null;
+        typeof(MainWindow).GetField("_separatedYouVisible", flags)?.SetValue(window, false);
+
         config.ShowHelpRing = false;
         Invoke(window, "RenderHelpRing", flags);
         bool respectsSetting = panel.Visibility == Visibility.Collapsed;
@@ -1130,9 +1171,12 @@ internal static class Program
         detail = $"hiddenWithoutState={hiddenWithoutState} cooling={drawnCooling} "
                + $"ready={readyIsAnotherColour} active={activeMatchesReady} "
                + $"leftCorner={leftCorner} rightCorner={rightCorner} "
+               + $"sizeIndependent={sizeIsIndependent} onYouCard={standsOnYouCard} "
+               + $"freeOtherSide={freeOnTheOtherSide} "
                + $"setting={respectsSetting} scoreboardClean={scoreboardClean}";
         return hiddenWithoutState && drawnCooling && readyIsAnotherColour && activeMatchesReady
-            && leftCorner && rightCorner && respectsSetting && scoreboardClean;
+            && leftCorner && rightCorner && sizeIsIndependent && standsOnYouCard
+            && freeOnTheOtherSide && respectsSetting && scoreboardClean;
     }
 
     /// <summary>
@@ -1192,6 +1236,25 @@ internal static class Program
             && Math.Abs(panel.Margin.Left - 1920 * WeaponPanelPolicy.HorizontalInset) < 0.01
             && Math.Abs(panel.Margin.Bottom - 540) < 0.01;
 
+        // Sized on its own. A lobby full of extra survivors shrinks the roster to fit; it must
+        // not take the player's own ammunition down with it, and neither must the HUD size
+        // slider that belongs to the roster.
+        var weaponScale = (ScaleTransform)GetField(window, "WeaponPanelScale", flags);
+        typeof(MainWindow).GetField("_fitScale", flags)?.SetValue(window, 0.5);
+        config.ConsistentScale = 0.65;
+        Invoke(window, "ApplyLayout", flags);
+        double crowded = weaponScale.ScaleX;
+        typeof(MainWindow).GetField("_fitScale", flags)?.SetValue(window, 1.0);
+        config.ConsistentScale = 1.0;
+        Invoke(window, "ApplyLayout", flags);
+        double roomy = weaponScale.ScaleX;
+        config.WeaponPanelScale = 2.0;
+        Invoke(window, "ApplyLayout", flags);
+        double doubled = weaponScale.ScaleX;
+        bool sizeIsIndependent = Math.Abs(crowded - roomy) < 0.0001
+            && Math.Abs(doubled - roomy * 2) < 0.0001;
+        config.WeaponPanelScale = 1.0;
+
         // Turned off, and with no local survivor, the panel is hidden rather than empty.
         config.ConsistentShowWeapons = false;
         Invoke(window, "RenderWeaponPanel", flags, survivor);
@@ -1209,11 +1272,12 @@ internal static class Program
         window.Close();
 
         detail = $"drawn={drawn} rightCorner={rightCorner} leftCorner={leftCorner} "
+               + $"sizeIndependent={sizeIsIndependent} "
                + $"setting={respectsSetting} noLocal={hiddenWithoutLocal} "
                + $"itemsAlone={itemsWithoutWeapons} emptyHidden={emptyHidesPanel} "
                + $"scoreboardClean={scoreboardClean}";
-        return drawn && rightCorner && leftCorner && respectsSetting && hiddenWithoutLocal
-            && itemsWithoutWeapons && emptyHidesPanel && scoreboardClean;
+        return drawn && rightCorner && leftCorner && sizeIsIndependent && respectsSetting
+            && hiddenWithoutLocal && itemsWithoutWeapons && emptyHidesPanel && scoreboardClean;
     }
 
     /// <summary>Whether a weapon slot rendered its ammunition mark, filled as configured.</summary>

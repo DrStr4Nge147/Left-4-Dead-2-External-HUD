@@ -1550,10 +1550,10 @@
                                 <ComboBox x:Name="HelpRingCornerCombo"
                                           Margin="0,7,0,0"
                                           SelectionChanged="OnHelpRingChanged">
-                                    <ComboBoxItem Tag="lower-left">Lower Left</ComboBoxItem>
                                     <ComboBoxItem Tag="lower-right">Lower Right</ComboBoxItem>
+                                    <ComboBoxItem Tag="lower-left">Lower Left</ComboBoxItem>
                                 </ComboBox>
-                                <TextBlock Text="Which bottom corner the ring sits in. It defaults to the opposite corner from the weapon panel, so the two do not overlap until you put them together."
+                                <TextBlock Text="Which bottom corner the ring sits in. In the corner your own health card is in, the ring stands on top of that card instead of behind it."
                                            Margin="0,5,0,0" TextWrapping="Wrap"
                                            Foreground="#AAB2BE" FontSize="11" />
                             </StackPanel>
@@ -1567,10 +1567,10 @@
                                     <TextBlock x:Name="HelpRingScaleValue" DockPanel.Dock="Right"
                                                Margin="12,0,0,0" Foreground="#8EC5FF" />
                                 </DockPanel>
-                                <Slider x:Name="HelpRingScaleSlider" Minimum="0.50" Maximum="2.00"
+                                <Slider x:Name="HelpRingScaleSlider" Minimum="0.40" Maximum="3.00"
                                         TickFrequency="0.05" IsMoveToPointEnabled="True"
                                         ValueChanged="OnSettingChanged" />
-                                <TextBlock Text="Sizes the ring on its own, on top of the HUD size setting. 1.00x matches the rest of the Consistent HUD."
+                                <TextBlock Text="Sizes the ring and nothing else. This one is fully independent: the HUD size slider does not move it, so the ring can be large beside a small roster or small beside a large one. It still scales with your resolution."
                                            Margin="0,5,0,0" TextWrapping="Wrap"
                                            Foreground="#AAB2BE" FontSize="11" />
                             </StackPanel>
@@ -1587,7 +1587,7 @@
                                 <Slider x:Name="HelpRingVerticalSlider" Minimum="0" Maximum="0.92"
                                         TickFrequency="0.01" IsMoveToPointEnabled="True"
                                         ValueChanged="OnSettingChanged" />
-                                <TextBlock Text="Runs the full height of the screen, exactly as the weapon panel's own height does."
+                                <TextBlock Text="Lifts the ring from where it rests. Zero stands it directly on your own health card when they share a corner, or on the bottom edge when they do not; the top of the range puts it near the top of the view."
                                            Margin="0,5,0,0" TextWrapping="Wrap"
                                            Foreground="#AAB2BE" FontSize="11" />
                             </StackPanel>

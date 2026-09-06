@@ -11,8 +11,8 @@ process — no injection, no memory reading, no DirectX hooking.
 explosive marks, and the two independent rosters. All of the hiding rules - finale outro, end
 credits, chapter-end transition, map-start cinematic, pause menu and console - were confirmed
 in L4D2 on 2026-08-25 with the v2.1.2 pair. The v2.1.3 reinforcement badge and the v2.2.0
-reinforcement ring are not confirmed in game yet; both need Finale Soldiers v1.8.6 or newer
-installed, which is where `help!` was added.
+reinforcement ring were both seen working in game on 2026-09-06 with a six-soldier `help!`
+squad on the map; the rest of their checklist in `docs/TESTING.md` has not been run.
 
 ## Running it
 
@@ -210,8 +210,13 @@ unshown until Tab is held.
 It has its own placement, independent of the roster: **corner** picks Lower Right or Lower
 Left, **arrangement** stacks the slots vertically or sets them side by side, and **height**
 runs the full screen height, from sitting on the bottom edge to up near the top. **Weapon
-HUD size** scales it on its own, from half to double, on top of the Consistent HUD's size;
-opacity comes from the Consistent HUD settings, so the two panels stay visually related.
+HUD size** scales it on its own, from half to double; opacity comes from the Consistent HUD
+settings, so the two panels stay visually related.
+
+**Its size is its own.** It carries resolution scaling and its own slider, and nothing else -
+the HUD size setting does not move it, and neither does a lobby full of extra survivors. The
+roster shrinks itself to fit when it grows too wide for the screen, and that shrink used to
+take the player's own ammunition counter down with it.
 
 Weapons draw with L4D2's own HUD icons, kept in the proportions the game gives them, so a
 Magnum is visibly smaller than an M60. The secondary slot is the exception: everything that
@@ -254,10 +259,16 @@ gone ring means "nearly over" whichever colour it is.
 the squad's withdrawal, not at the call, so what the ring shows while they are out is their
 remaining stay — the cooldown appears the moment they leave.
 
-It has its own placement, on the same terms as the weapon HUD: **corner** picks Lower Left or
-Lower Right, **height** runs the full screen height, and **size** scales it from half to
-double on top of the Consistent HUD's own size. The default corner is the opposite of the
-weapon HUD's, so the two do not land on each other on a fresh install.
+It stands on top of your own health card. **Corner** picks Lower Right or Lower Left; in the
+corner the separated You card is in, the ring sits directly above that card rather than behind
+it, using the card's measured height so it stays clear whatever design, health numbers, or HUD
+size the card is drawn at. **Height** lifts it from there, up to the top of the screen, and
+**size** scales it from 0.40x to 3.00x.
+
+**Its size is independent of everything else.** The ring carries resolution scaling, so it
+looks the same at 1080p and 4K, but the HUD size slider does not move it and neither does a
+crowded roster. The three Consistent HUD elements - the survivor cards, the weapon panel, and
+the ring - are each sized by their own slider alone.
 
 The ring needs exporter v2.2.0 or newer **and** Finale Soldiers v1.8.6 or newer, which is
 where `help!` was added. Without both, no reinforcement state is exported and the ring is absent rather than
@@ -395,12 +406,12 @@ Sits next to the exe. Edit and restart the app.
 | `consistentShowWeapons` | `true` | Draw the weapon HUD - your own primary/secondary slots, their ammunition, and your throwable/kit/pills |
 | `weaponPanelCorner` | `lower-right` | Which bottom corner the weapon HUD sits in: `lower-right` or `lower-left` |
 | `weaponPanelOrientation` | `vertical` | Weapon slot arrangement: `vertical` or `horizontal` |
-| `weaponPanelScale` | `1.0` | Weapon HUD size, as a multiplier on `consistentScale`; the slider runs `0.50`-`2.00` |
+| `weaponPanelScale` | `1.0` | Weapon HUD size. Independent of `consistentScale` and of the roster's overflow fit; the slider runs `0.50`-`2.00` |
 | `weaponPanelVerticalOffset` | `0.10` | Fraction of the window height kept below the weapon HUD; the slider runs to `0.92` |
 | `showHelpRing` | `true` | Draw the reinforcement ring - your own `help!` availability, with the countdown of whatever is in the way |
-| `helpRingCorner` | `lower-left` | Which bottom corner the ring sits in: `lower-left` or `lower-right` |
-| `helpRingScale` | `1.0` | Ring size, as a multiplier on `consistentScale`; the slider runs `0.50`-`2.00` |
-| `helpRingVerticalOffset` | `0.10` | Fraction of the window height kept below the ring; the slider runs to `0.92` |
+| `helpRingCorner` | `lower-right` | Which bottom corner the ring sits in: `lower-right` or `lower-left`. On the You card's corner it stands on top of that card |
+| `helpRingScale` | `1.0` | Ring size. Independent of every other size setting; the slider runs `0.40`-`3.00` |
+| `helpRingVerticalOffset` | `0.0` | Extra height above the ring's resting place, as a fraction of the window height; the slider runs to `0.92` |
 | `consistentVerticalOffset` | `0.03` | Bottom inset for the consistent HUD; higher values move it upward |
 | `consistentHorizontalSpacing` | `10.0` | Extra horizontal card gap in layout pixels; negative values overlap cards |
 | `consistentVerticalSpacing` | `0.0` | Extra vertical card gap in layout pixels; negative values overlap cards |

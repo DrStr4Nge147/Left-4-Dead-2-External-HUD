@@ -589,8 +589,8 @@ public partial class SettingsWindow : Window
                 : System.Windows.HorizontalAlignment.Right;
         PreviewWeaponPanel.Opacity = Math.Clamp(_draft.ConsistentOpacity, 0.1, 1.0);
 
-        // Same relationship the live overlay uses: the consistent HUD's scale times the
-        // weapon panel's own multiplier.
+        // Same relationship the live overlay uses: resolution scaling times the weapon
+        // panel's own multiplier, independent of the roster's size.
         scale *= WeaponPanelPolicy.ClampScale(_draft.WeaponPanelScale);
         PreviewWeaponPanelScale.ScaleX = PreviewWeaponPanelScale.ScaleY = scale;
 
@@ -615,7 +615,7 @@ public partial class SettingsWindow : Window
     /// outside a round more often than not, and a ring that only appeared once Finale
     /// Soldiers happened to be sending state could not be positioned at all.
     /// </summary>
-    private void RefreshHelpRingPreview(double scale)
+    private void RefreshHelpRingPreview(double scale, double youCardTop)
     {
         if (_draft.ShowHelpRing != true)
         {
@@ -646,11 +646,17 @@ public partial class SettingsWindow : Window
         double insetY = PreviewHeight
             * HelpRingPlacement.ClampVerticalOffset(_draft.HelpRingVerticalOffset);
 
+        // Stands on the You card when the two share a corner, exactly as the live overlay
+        // does, so the height slider is tuned against the same starting point.
+        double floor = double.IsNaN(youCardTop)
+            ? PreviewHeight
+            : youCardTop - HelpRingPlacement.StackGap * scale;
+
         Canvas.SetLeft(PreviewHelpRingPanel,
                        HelpRingPlacement.IsLeft(_draft.HelpRingCorner)
                            ? insetX
                            : PreviewWidth - insetX - width);
-        Canvas.SetTop(PreviewHelpRingPanel, PreviewHeight - insetY - height);
+        Canvas.SetTop(PreviewHelpRingPanel, floor - insetY - height);
         PreviewHelpRingPanel.Visibility = Visibility.Visible;
     }
 
@@ -978,6 +984,7 @@ public partial class SettingsWindow : Window
             double hudRenderedHeight = hudNatural.Height * hudBaseScale;
             double hudRoomWidth;
             double hudWidthForFit = hudRenderedWidth;
+            double youTop = double.NaN;
             if (youCards.Count > 0)
             {
                 Size youNaturalForFit = LayoutMeasurement.NaturalSize(PreviewYouPanel);
@@ -1024,10 +1031,16 @@ public partial class SettingsWindow : Window
                     : PreviewWidth - insetX - youRenderedWidth);
                 Canvas.SetTop(PreviewYouPanel, PreviewHeight - insetY - youRenderedHeight);
                 PreviewYouPanel.Visibility = Visibility.Visible;
+                if (youOnLeft == HelpRingPlacement.IsLeft(_draft.HelpRingCorner))
+                    youTop = PreviewHeight - insetY - youRenderedHeight;
             }
 
-            RefreshWeaponPreview(hudBaseScale * hudFit);
-            RefreshHelpRingPreview(hudBaseScale * hudFit);
+            // Resolution scaling only. The weapon HUD is sized independently of the roster,
+            // so a preview that shrank it with the roster would be lying about the live layout.
+            RefreshWeaponPreview(PreviewHeight / PreviewBaselineHeight);
+            // Resolution scaling only, and the You card's top edge to stand on: the ring is sized
+            // and placed independently of the roster, so the preview has to be too.
+            RefreshHelpRingPreview(PreviewHeight / PreviewBaselineHeight, youTop);
             return;
         }
 

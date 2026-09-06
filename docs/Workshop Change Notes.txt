@@ -12,7 +12,8 @@ v2.2.0
 
 [list]
 [*][b]Reinforcement ring[/b] - one dial for your own [b]help![/b] call. Green while a squad is on its way or with you, counting their time down; grey while the cooldown runs; green and full the moment you can call again.
-[*][b]Place it where you want it[/b] - the ring has its own corner, height, and size in the overlay's editor, on the [b]Consistent HUD[/b] tab.
+[*][b]Sits with your own health[/b] - the ring stands on top of your own health card, and moves to whichever bottom corner you put it in.
+[*][b]Sized on its own[/b] - the ring, the weapon panel, and the survivor cards each have their own size slider now and none of them drags the others. A lobby full of extra survivors no longer shrinks your ammo counter.
 [/list]
 
 Needs Finale Soldiers v1.8.6 or newer, which is where the [b]help![/b] command was added. Without it the ring is simply not drawn.
