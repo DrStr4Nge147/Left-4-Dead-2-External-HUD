@@ -39,8 +39,8 @@ along the stroke's centre line so the ring stays inside its box, and a full ring
 point is ambiguous and WPF resolves it by drawing nothing, which would blank the ring at
 exactly the moment it is meant to be complete.
 
-Not verified in game yet, for the same reason v2.1.3 is not: `help!` only exists on Finale
-Soldiers' `feature/go-command` branch.
+Not verified in game yet, for the same reason v2.1.3 is not: it needs a live round with a
+`help!` squad in it.
 
 ## 2026-08-26 - v2.1.3: telling a reinforcement from a follower
 
@@ -71,8 +71,8 @@ per card with two values, rather than a second bool and a second TextBlock in al
 templates. The roster filters were left alone - a reinforcement follows, so it belongs
 wherever a follower belongs.
 
-Not verified in game yet: the feature only exists on Finale Soldiers' `feature/go-command`
-branch, so the live confirmation has to be run against that build.
+Not verified in game yet: the live confirmation has to be run with Finale Soldiers v1.8.6 or
+newer installed, which is where `help!` was added.
 
 ## 2026-08-25 - v2.1.2: the credits are a Director question, not a player one
 

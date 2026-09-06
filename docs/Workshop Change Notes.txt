@@ -15,7 +15,7 @@ v2.2.0
 [*][b]Place it where you want it[/b] - the ring has its own corner, height, and size in the overlay's editor, on the [b]Consistent HUD[/b] tab.
 [/list]
 
-Needs a Finale Soldiers build with the [b]help![/b] command. Without it the ring is simply not drawn.
+Needs Finale Soldiers v1.8.6 or newer, which is where the [b]help![/b] command was added. Without it the ring is simply not drawn.
 
 Both halves advance to v2.2.0 - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url], and close L4D2 before the addon updates.
 

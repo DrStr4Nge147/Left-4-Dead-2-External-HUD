@@ -1,8 +1,8 @@
 # Testing — exporter v2.2.0 + overlay app v2.2.0
 
 The v2.2.0 pair is built but not live-tested, and neither is v2.1.3 before it. Both changes -
-the REINFORCEMENT badge and the reinforcement ring - need a Finale Soldiers build from
-`feature/go-command`, where `help!` lives. Everything else is unchanged from v2.1.2.
+the REINFORCEMENT badge and the reinforcement ring - need Finale Soldiers v1.8.6 or newer
+installed, which is where `help!` was added. Everything else is unchanged from v2.1.2.
 
 The v2.1.2 exporter and overlay app were live-tested in L4D2 on 2026-08-25: the finale outro,
 the chapter-end transition, the end credits, and the pause menu and console all take the
@@ -87,7 +87,7 @@ them are worth running after any change to the detector.
 
 ## Reinforcement ring (v2.2.0)
 
-Needs a Finale Soldiers build carrying `help!`. Run the whole section with the Consistent HUD
+Needs Finale Soldiers v1.8.6 or newer, which is where `help!` was added. Run the whole section with the Consistent HUD
 on (F7 by default) and **Show the help! reinforcement ring** checked.
 
 1. Load a map with no reinforcements called. Confirm the ring is drawn full and green in the
@@ -443,7 +443,7 @@ Start a campaign with the soldiers spawning, then:
   - The hand-picked follower's card should show a blue **FOLLOW** marker in the first two
     options and no marker in **Followers only**. It must appear and disappear as you toggle
     follow, alongside `DOWN` / `B&W` rather than replacing it.
-- **Reinforcements.** On a Finale Soldiers build from `feature/go-command`, type `help!` and
+- **Reinforcements.** With Finale Soldiers v1.8.6 or newer installed, type `help!` and
   let the reinforcements arrive. Each one's card should carry a yellow **REINFORCEMENT** marker
   instead of the blue FOLLOW, in every filter including **Followers only**, and should keep it
   after it is killed while its body is still on the map. A soldier you then tell to follow by

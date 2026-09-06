@@ -11,8 +11,8 @@ process — no injection, no memory reading, no DirectX hooking.
 explosive marks, and the two independent rosters. All of the hiding rules - finale outro, end
 credits, chapter-end transition, map-start cinematic, pause menu and console - were confirmed
 in L4D2 on 2026-08-25 with the v2.1.2 pair. The v2.1.3 reinforcement badge and the v2.2.0
-reinforcement ring are not confirmed in game yet; both need a Finale Soldiers build carrying
-`help!`.
+reinforcement ring are not confirmed in game yet; both need Finale Soldiers v1.8.6 or newer
+installed, which is where `help!` was added.
 
 ## Running it
 
@@ -259,8 +259,8 @@ Lower Right, **height** runs the full screen height, and **size** scales it from
 double on top of the Consistent HUD's own size. The default corner is the opposite of the
 weapon HUD's, so the two do not land on each other on a fresh install.
 
-The ring needs exporter v2.2.0 or newer **and** a Finale Soldiers build carrying the `help!`
-feature. Without both, no reinforcement state is exported and the ring is absent rather than
+The ring needs exporter v2.2.0 or newer **and** Finale Soldiers v1.8.6 or newer, which is
+where `help!` was added. Without both, no reinforcement state is exported and the ring is absent rather than
 empty — an install that has no such call has nothing for a dial to be about. The countdown
 holds its last frame while the game is paused or between maps rather than draining to zero
 on a clock nothing is confirming.

@@ -275,8 +275,8 @@ the same `ToggleSoldierFollow` a hand-picked follower does, so `cf_soldier_follo
 for both; `cf_soldier_help_temp` is written once at adoption, before that toggle, and never
 cleared. `cf_soldier_help_active` is not used for identity: it goes false on a dead
 reinforcement whose body is still on the map, which would drop the card back to `follower`
-mid-round. The `help!` feature ships on Finale Soldiers' `feature/go-command` branch, so an
-install without it never sends `reinforcement` and following soldiers all read `follower`.
+mid-round. `help!` was added in Finale Soldiers v1.8.6, so an older
+install never sends `reinforcement` and following soldiers all read `follower`.
 
 Without the addon installed every player reports `survivor`, and so does everything from an
 exporter older than v0.6.5, which the overlay treats as the previous behavior.

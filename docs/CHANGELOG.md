@@ -21,8 +21,8 @@ Two components, released under one shared version: the exporter addon and overla
   rather than empty.
 - Also fixes a duplicated `won` key in the exported JSON.
 
-**Requires** a Finale Soldiers build with `help!` - the feature lives on its
-`feature/go-command` branch - and exporter 2.2.0. Without both, nothing is drawn.
+**Requires** Finale Soldiers v1.8.6 or newer, which is where `help!` was added, and
+exporter 2.2.0. Without both, nothing is drawn.
 
 ## Overlay HUD v2.1.3 - 2026-08-26: reinforcements get their own card badge
 
@@ -43,9 +43,8 @@ Two components, released under one shared version: the exporter addon and overla
 - Roster filters are unchanged: a reinforcement counts as a follower everywhere, so
   **Followers only** lists both kinds.
 
-**Requires** a Finale Soldiers build with `help!` - the feature lives on its
-`feature/go-command` branch. Without it, nothing changes: every following soldier reports
-`follower` and keeps the blue badge.
+**Requires** Finale Soldiers v1.8.6 or newer, which is where `help!` was added. Without it,
+nothing changes: every following soldier reports `follower` and keeps the blue badge.
 
 ## Overlay HUD v2.1.2 - 2026-08-25: the HUD stays away for the end credits
 

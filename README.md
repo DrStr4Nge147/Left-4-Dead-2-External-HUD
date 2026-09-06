@@ -58,8 +58,8 @@ Finale Soldiers reinforcement call: green and full while the call goes through, 
 emptying while a squad is on its way or with you, grey and emptying while the cooldown runs,
 with the seconds left in the middle. Two colours, because the question is binary — can I call,
 or am I waiting. It has its own corner, height, and size, and the exporter sends the clock as a
-new `help` object for the host player. Needs a Finale Soldiers build carrying `help!`; without
-it nothing is exported and the ring is absent rather than empty. Not yet confirmed in game.
+new `help` object for the host player. Needs Finale Soldiers v1.8.6 or newer, which is where
+`help!` was added; without it nothing is exported and the ring is absent rather than empty. Not yet confirmed in game.
 
 **v2.1.3 — reinforcements get their own card badge.** Soldiers called in with Finale
 Soldiers' `help!` now carry a yellow **REINFORCEMENT** badge instead of the blue **FOLLOW** one.
@@ -67,7 +67,7 @@ They follow their caller like any other follower, so the old card said nothing a
 they came from; the exporter now tells the two apart on the `cf_soldier_help_temp` marker
 Finale Soldiers writes at adoption, and sends them as a `reinforcement` class of their own.
 The card also leaves the moment an expired reinforcement is turned immortal, rather than
-waiting for its body to despawn. The feature needs a Finale Soldiers build carrying `help!`;
+waiting for its body to despawn. The feature needs Finale Soldiers v1.8.6 or newer;
 without it every following soldier reports as before. Not yet confirmed in game.
 
 **v2.1.2 — the Consistent HUD stays away for the end credits.** Finishing a campaign used to
@@ -139,8 +139,8 @@ has nothing to read.
   The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
   in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair. The
   v2.1.3 reinforcement badge and the v2.2.0 reinforcement ring are not yet confirmed in
-  game: both need a Finale Soldiers build from `feature/go-command`, which is where `help!`
-  lives.
+  game: both need Finale Soldiers v1.8.6 or newer installed, which is where `help!` was
+  added.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
