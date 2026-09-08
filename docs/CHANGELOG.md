@@ -4,8 +4,10 @@ Two components, released under one shared version: the exporter addon and overla
 
 ## Overlay HUD v2.2.1 - 2026-09-08: exclude campaign support NPCs
 
-- Fixed unmarked team-4 campaign NPCs being classified as teammates. Hid them in every
-  roster mode without counting them toward the four vanilla slots.
+- Fixed unmarked team-4 campaign support NPCs being classified as teammates. Hid them in
+  every roster mode without counting them toward the four vanilla slots. This covers maps
+  that use team 4 for stationary support; team-2 support or team-4 companions need a
+  verified campaign-specific rule.
 - Preserved Finale Soldiers' mortal soldiers, followers, and reinforcements, including
   temporary moves to team 4.
 - Preserved Cold Front's Mike while traveling and after death/transition using the

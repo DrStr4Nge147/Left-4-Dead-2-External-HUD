@@ -12,9 +12,9 @@ list at all. [h1], [b] and [url] are fine.
 v2.2.1
 ================================================================================
 
-[h1]v2.2.1 - campaign support survivors stay off the HUD[/h1]
+[h1]v2.2.1 - team-4 campaign support stays off the HUD[/h1]
 
-- Map-only support survivors no longer appear as extra teammates.
+- Unmarked team-4 map support survivors no longer appear as extra teammates.
 - Cold Front's joined Mike still gets a health card, including after a death or chapter transition.
 - Finale Soldiers, followers, and reinforcements keep their cards as before.
 

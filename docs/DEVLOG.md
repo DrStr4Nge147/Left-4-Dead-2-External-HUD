@@ -14,8 +14,9 @@
   Passed all 30 fixtures after the change. Kept test doubles outside the VPK.
 - Kept classification stateless and re-evaluated each export. Limited the general rule
   to unmarked team-4 NPCs; team-2 scenery or other team-4 companions require verified
-  campaign integration. Modeled The Passing's support as team 4 in fixtures; retained
-  an in-game check for both appearances.
+  campaign integration. Did not claim a universal accompanying-survivor detector: the
+  engine provides no such semantic flag. Modeled The Passing's support as team 4 in
+  fixtures; retained an in-game check for both appearances.
 - Passed the app roster-filter check with map NPCs before the four teammates. Packed
   format v1 using the existing builder; verified all five entries against source bytes
   and CRC32. Attempted `vpk.exe -t`; the installed legacy tool rejects that option.
