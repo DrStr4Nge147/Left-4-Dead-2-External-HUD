@@ -2,6 +2,19 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.2.1 - 2026-09-08: exclude campaign support NPCs
+
+- Fixed unmarked team-4 campaign NPCs being classified as teammates. Hid them in every
+  roster mode without counting them toward the four vanilla slots.
+- Preserved Finale Soldiers' mortal soldiers, followers, and reinforcements, including
+  temporary moves to team 4.
+- Preserved Cold Front's Mike while traveling and after death/transition using the
+  campaign's own entity reference and join state. Avoided name and distance filters.
+- Added executable Squirrel classifier fixtures and campaign NPCs to the app roster checks.
+
+**Verification**: source-level and automated fixtures only. Not yet live-tested — check
+Cold Front's developer room/Mike and The Passing's bridge/finale with the new VPK.
+
 ## Overlay HUD v2.2.0 - 2026-09-06: a ring for the help! call
 
 - A new **reinforcement ring** draws your own `help!` availability as one dial on the

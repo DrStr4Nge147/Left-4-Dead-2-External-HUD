@@ -9,6 +9,18 @@ every BBCode tag the description field does, and a list that is not rendered is 
 list at all. [h1], [b] and [url] are fine.
 
 ================================================================================
+v2.2.1
+================================================================================
+
+[h1]v2.2.1 - campaign support survivors stay off the HUD[/h1]
+
+- Map-only support survivors no longer appear as extra teammates.
+- Cold Front's joined Mike still gets a health card, including after a death or chapter transition.
+- Finale Soldiers, followers, and reinforcements keep their cards as before.
+
+Both halves advance to v2.2.1 - [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]get the matching application here[/url], and close L4D2 before the addon updates.
+
+================================================================================
 v2.2.0
 ================================================================================
 

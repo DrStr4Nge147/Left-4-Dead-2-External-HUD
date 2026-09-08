@@ -1,5 +1,28 @@
 # Dev log
 
+## 2026-09-08 - v2.2.1: campaign support was falling through to survivor
+
+- Read the installed export: Bill, Zoey, and Louis were team 4 with `cls=survivor`.
+  Found `Classify` returning `survivor` whenever Finale Soldiers' marker was absent.
+- Inspected installed Cold Front pack `3135451698.vpk`, `scripts/vscripts/cf_npc_script.nut`:
+  `NPCJoinGroup` sets team 2 at line 244; chapter 3 calls it unconditionally at line 306;
+  later chapters consult `bJoined`. Found death moving Mike to team 4 at line 1752 and
+  transition doing so at line 1794. Preserved that companion using `cf_npc_script.npc_ent`
+  and the joined state or automatic chapter-3 join, without changing campaign state.
+- Ran `tools/Test-ExporterRoster.ps1` with upstream Squirrel 3.2 against the original
+  classifier: reproduced 12 failed exclusions, including all three recorded room NPCs.
+  Passed all 30 fixtures after the change. Kept test doubles outside the VPK.
+- Kept classification stateless and re-evaluated each export. Limited the general rule
+  to unmarked team-4 NPCs; team-2 scenery or other team-4 companions require verified
+  campaign integration. Modeled The Passing's support as team 4 in fixtures; retained
+  an in-game check for both appearances.
+- Passed the app roster-filter check with map NPCs before the four teammates. Packed
+  format v1 using the existing builder; verified all five entries against source bytes
+  and CRC32. Attempted `vpk.exe -t`; the installed legacy tool rejects that option.
+
+**Verification**: source-level and automated fixtures only. Not yet live-tested with the
+updated addon. Used installed campaign source and the saved game export as evidence.
+
 ## 2026-09-06 - v2.2.0: reading another addon's clock
 
 The reinforcement ring needed two numbers Finale Soldiers already keeps: how long the squad

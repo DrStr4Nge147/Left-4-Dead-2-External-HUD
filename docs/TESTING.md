@@ -1,4 +1,29 @@
-# Testing — exporter v2.2.0 + overlay app v2.2.0
+# Testing — exporter v2.2.1 + overlay app v2.2.1
+
+## Campaign roster filtering (v2.2.1)
+
+Not yet live-tested. Run with an upstream Squirrel 3.x interpreter, then check the app:
+
+```powershell
+./tools/Test-ExporterRoster.ps1 -SqExe C:/path/to/sq.exe
+dotnet run --project overlay-app/OverlayHud.LayoutChecks -- roster-filter
+```
+
+Loaded production definitions with only engine startup suppressed. Reproduced 12 failures
+before the fix; passed all 30 fixtures afterward. Engine calls are test doubles:
+
+1. Install the VPK with L4D2 closed. Enter/leave Cold Front's developer room: keep Bill,
+   Zoey, and Louis absent from both HUDs in every mode.
+2. Recruit/travel with Mike: keep his card in All and Extras. Check incap, death, chapter
+   transition, and round restart. Hide unjoined Mike outside the automatic chapter-3 join.
+3. Play The Passing's bridge and finale: keep map support NPCs absent while they assist.
+4. Spawn mortal Finale Soldiers, use follow and help!, and let soldiers enter their
+   distance-suspended team-4 state: retain eligible cards. Hide immortal/expired holdouts.
+5. Keep extra team-2 bots visible even far away. Confirm joining team 2 appears on the next
+   export, and hidden NPCs do not consume the first four slots in Extras.
+
+Other campaigns using team 2 for scenery or team 4 for companions need verified campaign
+integration. Avoided distance and character-name guessing.
 
 The v2.2.0 ring and the v2.1.3 REINFORCEMENT badge were both seen working in game on
 2026-09-06, with a six-soldier `help!` squad on the map. The section below is still the

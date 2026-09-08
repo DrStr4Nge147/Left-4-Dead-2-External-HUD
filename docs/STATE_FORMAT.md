@@ -251,13 +251,18 @@ back on team 2 twenty seconds later. Filtering to team 2 makes them blink out of
 
 **`cls` is what the roster filter runs on, and `team` cannot replace it.**
 
+Since v2.2.1, classified Finale Soldiers first, then unmarked team-4 actors as `holdout`.
+Retained Cold Front's joined Mike by the campaign's actual `npc_ent` reference and
+`bJoined` state (or its automatic `cf_m3_evac` join), including team-4 death/transition.
+Re-evaluated every export; excluded NPCs remain in the raw JSON for diagnostics.
+
 | `cls` | Meaning |
 |---|---|
-| `survivor` | Not a Finale Soldiers bot: a real survivor, or another addon's extra bot |
+| `survivor` | A team-2 teammate/extra bot, or a verified campaign companion |
 | `soldier` | A mortal soldier holding a post — shootable, killable, worth a health card |
 | `reinforcement` | A soldier called in with `help!`, while it is still mortal. Carries the yellow **REINFORCEMENT** badge |
 | `follower` | A soldier told to follow a player by hand. Always forced mortal while it follows. Carries the blue **FOLLOW** badge |
-| `holdout` | Any immortal soldier: a team-4 holdout, or a reinforcement whose timeout ran out and turned it immortal. The overlay never draws these |
+| `holdout` | Unmarked team-4 campaign support, or an immortal Finale Soldiers bot (including expired reinforcements). Never drawn; does not imply campaign NPC invulnerability |
 
 The exporter reads Finale Soldiers' own per-player script-scope markers — `cf_soldier_bot`,
 `cf_soldier_following`, `cf_soldier_help_temp`, `cf_soldier_mortal`, `cf_soldier_distance_suspended` — because both

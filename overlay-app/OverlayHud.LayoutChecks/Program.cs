@@ -3053,6 +3053,10 @@ internal static class Program
     {
         var roster = new List<Survivor>
         {
+            // Campaign NPCs must not consume vanilla slots, even if enumerated first.
+            Named("Map Bill", RosterPolicy.ClassHoldout),
+            Named("Map Zoey", RosterPolicy.ClassHoldout),
+            Named("Map Louis", RosterPolicy.ClassHoldout),
             Named("Host", RosterPolicy.ClassSurvivor),
             Named("Ellis", RosterPolicy.ClassSurvivor),
             Named("Coach", RosterPolicy.ClassSurvivor),
@@ -3080,8 +3084,8 @@ internal static class Program
         string[] legacyAll = Names(RosterPolicy.Apply(legacy, RosterMode.All));
         string[] legacyExtras = Names(RosterPolicy.Apply(legacy, RosterMode.Extras));
 
-        bool noHoldoutAnywhere = !all.Concat(soldiers).Concat(followers)
-            .Any(name => name is "Cpl. Blake" or "Cpl. Foster");
+        bool noHoldoutAnywhere = !all.Concat(extras).Concat(soldiers).Concat(followers)
+            .Any(name => name is "Cpl. Blake" or "Cpl. Foster" or "Map Bill" or "Map Zoey" or "Map Louis");
         bool allMode = all.SequenceEqual(
             new[] { "Host", "Ellis", "Coach", "Rochelle", "Extra bot",
                     "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });

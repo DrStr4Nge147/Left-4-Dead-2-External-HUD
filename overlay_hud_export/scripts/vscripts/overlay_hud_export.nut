@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.2.0"
+::OvlHud.VERSION   <- "2.2.1"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -66,8 +66,8 @@
 
 ::OvlHud.DEBUG     <- false
 
-// A survivor is anything on these teams. Team 4 is L4D1_Survivor: Finale Soldiers moves
-// its bots there transiently, and a team-2-only filter makes them blink out of the HUD.
+// Acquire both teams; Classify decides which entries deserve a card. Team 4 includes
+// map support NPCs, but Finale Soldiers also moves mortal bots there transiently.
 ::OvlHud.SURVIVOR_TEAMS <- [2, 4]
 
 // Bumped every time this script loads. A tick belonging to an older generation exits,
@@ -256,12 +256,11 @@
 
 // Which kind of survivor this is, for the overlay's roster filter:
 //
-//   survivor  not a Finale Soldiers bot - a real survivor, or another addon's extra bot
+//   survivor  a team-2 teammate/extra bot, or a verified campaign companion
 //   reinforcement  a soldier called in with help!. Follows its caller, forced mortal
 //   follower  a soldier told to follow a player by hand. Also forced mortal while it follows
 //   soldier   a mortal soldier holding a post
-//   holdout   any immortal soldier: a team-4 holdout, or a reinforcement whose timeout ran
-//             out and turned it immortal while its body is still on the map
+//   holdout   unmarked team-4 map support, or an immortal Finale Soldiers bot
 //
 // Finale Soldiers marks every soldier it spawns with flags on the player entity's script
 // scope, and this addon runs in the same server VM, so they are readable directly:
@@ -286,14 +285,44 @@
 // Reads only. GetScriptScope returns null when the entity has no scope yet, which is the
 // normal state for a plain survivor and for a soldier mid-spawn; the next tick sees it.
 // ValidateScriptScope would create one, so it is deliberately not called.
+::OvlHud.ClassifyUnmarked <- function (p)
+{
+	local team = -1
+	try { team = NetProps.GetPropInt(p, "m_iTeamNum") } catch (e) { return "survivor" }
+	if (team != 4) { return "survivor" }
+
+	// [SOURCE] Cold Front's cf_npc_script.nut, NPCJoinGroup, player_death and
+	// map_transition: Mike joins team 2, but moves back to team 4 on death/transition.
+	// Match the campaign's actual entity, never Bill's character ID or a display name.
+	// Chapter 3 calls NPCJoinGroup unconditionally; later chapters use bJoined.
+	local root = getroottable()
+	if (("cf_npc_script" in root) && typeof root.cf_npc_script == "table")
+	{
+		local npc = root.cf_npc_script
+		if (("npc_ent" in npc) && npc.npc_ent == p)
+		{
+			if (("cf_npc_script_data" in root) && typeof root.cf_npc_script_data == "table")
+			{
+				local data = root.cf_npc_script_data
+				if (("bJoined" in data) && data.bJoined) { return "survivor" }
+			}
+			if (Director.GetMapName() == "cf_m3_evac") { return "survivor" }
+		}
+	}
+
+	// Team 4 alone does not imply immortality. It means this unmarked actor has not
+	// joined the playable group. Re-evaluate each export so a later join appears.
+	return "holdout"
+}
+
 ::OvlHud.Classify <- function (p)
 {
 	local scope = null
 
-	try { scope = p.GetScriptScope() } catch (e) { return "survivor" }
+	try { scope = p.GetScriptScope() } catch (e) { return this.ClassifyUnmarked(p) }
 
-	if (scope == null)                    { return "survivor" }
-	if (!("cf_soldier_bot" in scope))     { return "survivor" }
+	if (scope == null)                    { return this.ClassifyUnmarked(p) }
+	if (!("cf_soldier_bot" in scope))     { return this.ClassifyUnmarked(p) }
 
 	// Mortality first, for everyone. An immortal soldier is scenery whatever else it is, and
 	// a reinforcement whose timeout has run out is turned immortal well before it despawns -

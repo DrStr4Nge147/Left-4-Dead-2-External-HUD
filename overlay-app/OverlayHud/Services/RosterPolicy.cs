@@ -36,8 +36,8 @@ public enum CardMarker
 /// Two rules are applied in order, and both exist because the panel supplements the
 /// vanilla HUD rather than replacing it:
 ///
-/// 1. Immortal team-4 holdout soldiers are never drawn, in any mode. They are scenery
-///    that cannot be hurt, so a health card for one is noise.
+/// 1. Holdouts are never drawn, in any mode: unjoined team-4 campaign NPCs and immortal
+///    Finale Soldiers bots. Campaign support can be mortal without joining the group.
 /// 2. Plain survivors are either all included, or keep the established positional rule -
 ///    L4D2 already draws four survivor slots, so only the fifth onward is a card in
 ///    <see cref="RosterMode.Extras"/>. Soldiers and followers are never subject to that
