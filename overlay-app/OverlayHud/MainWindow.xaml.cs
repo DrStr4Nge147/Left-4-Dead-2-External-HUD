@@ -1400,8 +1400,8 @@ public partial class MainWindow : Window
                 _livePreviewSampleCount,
                 mode != RosterMode.Followers,
                 monochrome: ConsistentMode && _cfg.ConsistentMonochrome,
-                showHealthNumbers: !ConsistentMode || _cfg.ConsistentShowHealthNumbers);
-            if (separateYouRequested && samples.Count > 0)
+                showHealthNumbers: !ConsistentMode || _cfg.ConsistentShowHealthNumbers, mode: mode);
+            if (separateYouRequested && mode.HasFlag(RosterMode.Survivors) && samples.Count > 0)
             {
                 youCards = new List<SurvivorCard> { samples[0] };
                 samples.RemoveAt(0);

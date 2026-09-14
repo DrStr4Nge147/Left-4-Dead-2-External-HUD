@@ -189,23 +189,13 @@ public sealed class AppConfig
     /// <summary>Panel opacity, 0..1.</summary>
     [JsonPropertyName("opacity")] public double Opacity { get; set; } = 0.92;
 
-    /// <summary>
-    /// Which part of the roster the SCOREBOARD panel draws: "extras" (everyone past the
-    /// four the vanilla scoreboard already lists), "soldiers" (mortal soldiers and
-    /// followers), or "followers". Immortal team-4 holdout soldiers are excluded by all of
-    /// them. "all" is accepted from older configs and read as "extras": that panel is drawn
-    /// beside L4D2's own scoreboard, so including the original four listed them twice.
-    /// </summary>
-    [JsonPropertyName("rosterFilter")] public string RosterFilter { get; set; } = "extras";
+    /// <summary>Independent scoreboard categories; legacy presets remain readable.</summary>
+    [JsonPropertyName("rosterFilter")]
+    public string RosterFilter { get; set; } = "selected:extra-survivors,followers,reinforcements";
 
-    /// <summary>
-    /// Which part of the roster the CONSISTENT HUD draws, independently of the scoreboard:
-    /// "all", "extras", "soldiers", or "followers". It keeps "all" because it replaces
-    /// nothing on screen - the vanilla survivor HUD is hidden while it is up, so the
-    /// original four are its to draw.
-    /// </summary>
+    /// <summary>Independent consistent HUD categories; excludes mortal soldiers by default.</summary>
     [JsonPropertyName("consistentRosterFilter")]
-    public string ConsistentRosterFilter { get; set; } = "all";
+    public string ConsistentRosterFilter { get; set; } = "selected:survivors,extra-survivors,followers,reinforcements";
 
     /// <summary>
     /// Which preview the editor opens with: "live" (the real overlay, the default) or

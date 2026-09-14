@@ -1622,6 +1622,9 @@ internal static class Program
     {
         var app = new App();
         app.InitializeComponent();
+        // This check opens and closes multiple standalone editors. Keep its test
+        // Application alive until the check completes, even after the first editor closes.
+        app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var settings = new SettingsWindow(new AppConfig(), () => { });
 
         bool enlargementRemoved = settings.FindName("MaxFitSlider") == null
@@ -1989,33 +1992,12 @@ internal static class Program
         var remembered = new SettingsWindow(
             new AppConfig { PreviewMode = "live", PreviewScoreboard = false }, () => { });
         Invoke(remembered, "LoadControls", BindingFlags.Instance | BindingFlags.NonPublic);
-        // The two Finale Soldiers options are visually sectioned off, but all four choices
-        // must stay in the same radio group - splitting the group would let two filters be
-        // selected at once.
         bool rosterSectionIsCosmetic =
             settings.FindName("RosterSectionRule") is Border
-            && settings.FindName("RosterSectionHeading") is TextBlock
-            {
-                Text: "FOR FINALE SOLDIERS MOD"
-            }
-            && settings.FindName("RosterExtrasRadio") is RadioButton extrasRadio
-            && settings.FindName("RosterSoldiersRadio") is RadioButton soldiersRadio
-            && settings.FindName("RosterFollowersRadio") is RadioButton followersRadio
-            && extrasRadio.GroupName == soldiersRadio.GroupName
-            && soldiersRadio.GroupName == followersRadio.GroupName
-            // The scoreboard sits beside L4D2's own, which lists the original four, so it
-            // has no All option at all - not a hidden one, not a disabled one.
-            && settings.FindName("RosterAllRadio") == null
-            // The consistent HUD carries its own four, in their own group, so the two
-            // rosters cannot select each other.
-            && settings.FindName("ConsistentRosterAllRadio") is RadioButton consistentAll
-            && settings.FindName("ConsistentRosterExtrasRadio") is RadioButton consistentExtras
-            && settings.FindName("ConsistentRosterSoldiersRadio") is RadioButton consistentSoldiers
-            && settings.FindName("ConsistentRosterFollowersRadio") is RadioButton consistentFollowers
-            && consistentAll.GroupName == consistentExtras.GroupName
-            && consistentExtras.GroupName == consistentSoldiers.GroupName
-            && consistentSoldiers.GroupName == consistentFollowers.GroupName
-            && consistentAll.GroupName != extrasRadio.GroupName;
+            && settings.FindName("RosterSectionHeading") is TextBlock { Text: "FOR FINALE SOLDIERS MOD" }
+            && new[] { "Roster", "ConsistentRoster" }.All(prefix =>
+                new[] { "Survivors", "Extras", "Soldiers", "Followers", "Reinforcements" }
+                    .All(name => settings.FindName(prefix + name + "CheckBox") is CheckBox));
 
         bool previewChoiceRemembered =
             remembered.FindName("LivePreviewRadio") is RadioButton { IsChecked: true }
@@ -3053,181 +3035,80 @@ internal static class Program
     {
         var roster = new List<Survivor>
         {
-            // Campaign NPCs must not consume vanilla slots, even if enumerated first.
-            Named("Map Bill", RosterPolicy.ClassHoldout),
-            Named("Map Zoey", RosterPolicy.ClassHoldout),
-            Named("Map Louis", RosterPolicy.ClassHoldout),
-            Named("Host", RosterPolicy.ClassSurvivor),
-            Named("Ellis", RosterPolicy.ClassSurvivor),
-            Named("Coach", RosterPolicy.ClassSurvivor),
-            Named("Rochelle", RosterPolicy.ClassSurvivor),
-            Named("Extra bot", RosterPolicy.ClassSurvivor),
-            Named("Cpl. Blake", RosterPolicy.ClassHoldout),
-            Named("Cpl. Nguyen", RosterPolicy.ClassSoldier),
-            Named("Pvt. Chambers", RosterPolicy.ClassFollower),
-            Named("Pvt. Ortiz", RosterPolicy.ClassReinforcement),
-            Named("Cpl. Foster", RosterPolicy.ClassHoldout)
+            new() { Name = "Map support", Cls = "holdout" },
+            new() { Name = "Host", Cls = "survivor", IsLocal = true },
+            new() { Name = "Ellis", Cls = "survivor" },
+            new() { Name = "Soldier", Cls = "soldier" },
+            new() { Name = "Coach", Cls = "survivor" },
+            new() { Name = "Follower", Cls = "follower" },
+            new() { Name = "Rochelle", Cls = "survivor" },
+            new() { Name = "Extra", Cls = "survivor" },
+            new() { Name = "Reinforcement", Cls = "reinforcement" },
+            new() { Name = "Immortal", Cls = "holdout" }
         };
-
-        string[] all = Names(RosterPolicy.Apply(roster, RosterMode.All));
-        string[] extras = Names(RosterPolicy.Apply(roster, RosterMode.Extras));
-        string[] soldiers = Names(RosterPolicy.Apply(roster, RosterMode.SoldiersAndFollowers));
-        string[] followers = Names(RosterPolicy.Apply(roster, RosterMode.Followers));
-
-        // No cls at all: an exporter older than v0.6.5. Everything is a plain survivor, so
-        // All includes the four vanilla entries and Extras keeps the previous skip.
-        var legacy = new List<Survivor>
+        var categoryByName = new Dictionary<string, int>
         {
-            Named("Host", ""), Named("Ellis", ""), Named("Coach", ""),
-            Named("Rochelle", ""), Named("Pvt. Chambers", "")
+            ["Host"] = 1, ["Ellis"] = 1, ["Coach"] = 1, ["Rochelle"] = 1,
+            ["Extra"] = 2, ["Soldier"] = 4, ["Follower"] = 8, ["Reinforcement"] = 16
         };
-        string[] legacyAll = Names(RosterPolicy.Apply(legacy, RosterMode.All));
-        string[] legacyExtras = Names(RosterPolicy.Apply(legacy, RosterMode.Extras));
-
-        bool noHoldoutAnywhere = !all.Concat(extras).Concat(soldiers).Concat(followers)
-            .Any(name => name is "Cpl. Blake" or "Cpl. Foster" or "Map Bill" or "Map Zoey" or "Map Louis");
-        bool allMode = all.SequenceEqual(
-            new[] { "Host", "Ellis", "Coach", "Rochelle", "Extra bot",
-                    "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
-        bool extrasMode = extras.SequenceEqual(
-            new[] { "Extra bot", "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
-        bool soldierMode = soldiers.SequenceEqual(
-            new[] { "Cpl. Nguyen", "Pvt. Chambers", "Pvt. Ortiz" });
-        // A reinforcement follows too, so followers-only keeps it beside the hand-picked one.
-        bool followerMode = followers.SequenceEqual(new[] { "Pvt. Chambers", "Pvt. Ortiz" });
-        bool legacyAllIncludesVanilla = legacyAll.SequenceEqual(
-            new[] { "Host", "Ellis", "Coach", "Rochelle", "Pvt. Chambers" });
-        bool legacyExtrasUnchanged = legacyExtras.SequenceEqual(new[] { "Pvt. Chambers" });
-        bool headersDiffer = RosterPolicy.Header(RosterMode.All) == "ALL SURVIVORS"
-            && RosterPolicy.Header(RosterMode.Extras) == "EXTRA SURVIVORS"
-            && RosterPolicy.Header(RosterMode.SoldiersAndFollowers) == "SOLDIERS + FOLLOWERS"
-            && RosterPolicy.Header(RosterMode.Followers) == "FOLLOWERS";
-        bool roundTrips = new[]
-            {
-                RosterMode.All, RosterMode.Extras, RosterMode.SoldiersAndFollowers,
-                RosterMode.Followers
-            }
-            .All(mode => RosterPolicy.Parse(RosterPolicy.ToConfigValue(mode)) == mode)
-            && RosterPolicy.Parse(null) == RosterMode.All
-            && RosterPolicy.Parse("nonsense") == RosterMode.All;
-
-        // The scoreboard can never resolve to All, whatever the config says, because the
-        // vanilla scoreboard it sits beside already lists the original four. The consistent
-        // HUD keeps All: it replaces the vanilla survivor HUD rather than sitting beside it.
-        bool scoreboardNeverDrawsAll =
-            RosterPolicy.ParseScoreboard("all") == RosterMode.Extras
-            && RosterPolicy.ParseScoreboard(null) == RosterMode.Extras
-            && RosterPolicy.ParseScoreboard("nonsense") == RosterMode.Extras
-            && RosterPolicy.ParseScoreboard("followers") == RosterMode.Followers
-            && RosterPolicy.Parse("all") == RosterMode.All
-            && new AppConfig().RosterFilter == "extras"
-            && new AppConfig().ConsistentRosterFilter == "all";
-
-        // FOLLOW only means something on a mixed roster; REINFORCEMENT means something
-        // everywhere, since it is what separates a help! soldier from a hand-picked one.
-        var follower = Named("Pvt. Chambers", RosterPolicy.ClassFollower);
-        var reinforcement = Named("Pvt. Ortiz", RosterPolicy.ClassReinforcement);
-        var soldier = Named("Cpl. Nguyen", RosterPolicy.ClassSoldier);
-        bool marksOnMixedRosters =
-            RosterPolicy.Marker(follower, RosterMode.All) == CardMarker.Follower
-            && RosterPolicy.Marker(follower, RosterMode.SoldiersAndFollowers) == CardMarker.Follower
-            && RosterPolicy.Marker(follower, RosterMode.Followers) == CardMarker.None
-            && RosterPolicy.Marker(soldier, RosterMode.All) == CardMarker.None
-            && RosterPolicy.Marker(reinforcement, RosterMode.All) == CardMarker.Reinforcement
-            && RosterPolicy.Marker(reinforcement, RosterMode.Followers)
-                == CardMarker.Reinforcement;
-
-        // The editor is the only way to reach the setting, so all four controls are part
-        // of the contract: they must load from config and write back to it.
         var app = new App();
         app.InitializeComponent();
-
-        // Rendered, not just modelled: the marker has to survive the shared card template.
-        bool markerRenders =
-            MarkerVisible(app, SurvivorCard.From(follower, CardMarker.Follower), "FOLLOW")
-            && MarkerVisible(app, SurvivorCard.From(reinforcement, CardMarker.Reinforcement),
-                             "REINFORCEMENT")
-            && !MarkerVisible(app, SurvivorCard.From(follower, CardMarker.None), "FOLLOW");
-        var settings = new SettingsWindow(
-            new AppConfig { RosterFilter = "extras", ConsistentRosterFilter = "followers" },
-            () => { });
+        var settings = new SettingsWindow(new AppConfig(), () => { });
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         Invoke(settings, "LoadControls", flags);
-
-        // Each tab loads its own filter, and neither reads the other's.
-        bool editorLoadsSetting = settings.FindName("RosterExtrasRadio")
-                is RadioButton { IsChecked: true }
-            && settings.FindName("RosterSoldiersRadio") is RadioButton { IsChecked: false }
-            && settings.FindName("ConsistentRosterFollowersRadio")
-                is RadioButton { IsChecked: true }
-            && settings.FindName("ConsistentRosterAllRadio") is RadioButton { IsChecked: false };
-
-        // "all" from an older config is the one value the scoreboard cannot honour, and it
-        // must land on Extras rather than on nothing at all.
-        var migrated = new SettingsWindow(new AppConfig { RosterFilter = "all" }, () => { });
-        Invoke(migrated, "LoadControls", flags);
-        bool legacyAllMigrates = migrated.FindName("RosterExtrasRadio")
-            is RadioButton { IsChecked: true };
-        migrated.Close();
-
-        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = true;
-        ((RadioButton)GetField(settings, "ConsistentRosterFollowersRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "ConsistentRosterAllRadio", flags)).IsChecked = true;
-        Invoke(settings, "ReadControls", flags);
-        var draft = (AppConfig)GetField(settings, "_draft", flags);
-        bool writesIndependently = draft.RosterFilter == "followers"
-            && draft.ConsistentRosterFilter == "all";
-
-        ((RadioButton)GetField(settings, "RosterFollowersRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = true;
-        ((RadioButton)GetField(settings, "ConsistentRosterAllRadio", flags)).IsChecked = false;
-        ((RadioButton)GetField(settings, "ConsistentRosterSoldiersRadio", flags)).IsChecked = true;
-        Invoke(settings, "ReadControls", flags);
-        bool editorWritesExtras = draft.RosterFilter == "extras"
-            && draft.ConsistentRosterFilter == "soldiers";
-
-        // Reset UI is a layout reset; it may return the filters to their defaults, but they
-        // must survive Save & Apply through the same UI copy the sliders use.
-        var live = new AppConfig { RosterFilter = "all", ConsistentRosterFilter = "all" };
-        ((RadioButton)GetField(settings, "RosterSoldiersRadio", flags)).IsChecked = true;
-        ((RadioButton)GetField(settings, "RosterExtrasRadio", flags)).IsChecked = false;
-        Invoke(settings, "ReadControls", flags);
-        live.CopyUiFrom(draft);
-        bool editorWritesSoldiers = draft.RosterFilter == "soldiers";
-        bool appliedToLiveConfig = live.RosterFilter == "soldiers"
-            && live.ConsistentRosterFilter == "soldiers";
-
+        var names = new[] { "Survivors", "Extras", "Soldiers", "Followers", "Reinforcements" };
+        bool passed = true;
+        void Check(bool condition, string description)
+        {
+            if (!condition) { passed = false; Console.WriteLine("FAIL: " + description); }
+        }
+        for (int mask = 0; mask < 32; mask++)
+        {
+            var mode = (RosterMode)mask;
+            var expected = roster.Where(survivor => categoryByName.TryGetValue(survivor.Name, out int bit)
+                && (mask & bit) != 0).Select(survivor => survivor.Name);
+            Check(RosterPolicy.Apply(roster, mode).Select(survivor => survivor.Name).SequenceEqual(expected),
+                $"roster combination {mask}");
+            string saved = RosterPolicy.ToConfigValue(mode);
+            Check(RosterPolicy.Parse(saved) == mode && RosterPolicy.ParseScoreboard(saved) == mode,
+                $"round trip {mask}");
+            for (int i = 0; i < names.Length; i++)
+            {
+                ((CheckBox)settings.FindName("Roster" + names[i] + "CheckBox")).IsChecked = (mask & (1 << i)) != 0;
+                ((CheckBox)settings.FindName("ConsistentRoster" + names[i] + "CheckBox")).IsChecked = ((31 - mask) & (1 << i)) != 0;
+            }
+            Invoke(settings, "ReadControls", flags);
+            var draft = (AppConfig)GetField(settings, "_draft", flags);
+            var live = new AppConfig();
+            live.CopyUiFrom(draft);
+            live = System.Text.Json.JsonSerializer.Deserialize<AppConfig>(System.Text.Json.JsonSerializer.Serialize(live))!;
+            Check(RosterPolicy.ParseScoreboard(live.RosterFilter) == mode
+                && RosterPolicy.Parse(live.ConsistentRosterFilter) == (RosterMode)(31 - mask), $"independent editor save/apply {mask}");
+            Invoke(settings, "LoadControls", flags);
+            for (int i = 0; i < names.Length; i++)
+                Check(((CheckBox)settings.FindName("Roster" + names[i] + "CheckBox")).IsChecked == ((mask & (1 << i)) != 0),
+                    $"editor reload {mask}/{i}");
+            Check(SampleRoster.Cards(12, mode: mode).Count == (mask == 0 ? 0 : mask == 1 ? 4 : 12),
+                $"preview selection {mask}");
+        }
+        var defaults = new AppConfig();
+        Check(RosterPolicy.ParseScoreboard(defaults.RosterFilter) == (RosterMode)26
+            && RosterPolicy.Parse(defaults.ConsistentRosterFilter) == (RosterMode)27, "requested defaults");
+        foreach (var preset in new[] { ("all", 31), ("extras", 30), ("soldiers", 28), ("followers", 24) })
+        {
+            Check((int)RosterPolicy.Parse(preset.Item1) == preset.Item2, "legacy " + preset.Item1);
+            Check((int)RosterPolicy.ParseScoreboard(preset.Item1) == (preset.Item1 == "all" ? 30 : preset.Item2),
+                "legacy scoreboard " + preset.Item1);
+        }
+        Check(RosterPolicy.Parse("selected:unknown") == RosterMode.None, "unknown category ignored");
+        Check(RosterPolicy.Apply(new[] { new Survivor(), new Survivor(), new Survivor(), new Survivor(), new Survivor() },
+            RosterMode.ExtraSurvivors).Count == 1, "exporter without classification");
+        Check(MarkerVisible(app, SurvivorCard.From(roster[5], RosterPolicy.Marker(roster[5], RosterMode.All)), "FOLLOW")
+            && MarkerVisible(app, SurvivorCard.From(roster[8], RosterPolicy.Marker(roster[8], RosterMode.Reinforcements)), "REINFORCEMENT"),
+            "card markers");
         settings.Close();
         app.Shutdown();
-
-        bool passed = noHoldoutAnywhere && allMode && extrasMode && soldierMode && followerMode
-            && legacyAllIncludesVanilla && legacyExtrasUnchanged && headersDiffer && roundTrips
-            && editorLoadsSetting && writesIndependently && legacyAllMigrates
-            && scoreboardNeverDrawsAll && editorWritesExtras && editorWritesSoldiers
-            && appliedToLiveConfig
-            && marksOnMixedRosters && markerRenders;
-
-        Console.WriteLine(
-            $"all=[{string.Join(", ", all)}] " +
-            $"extras=[{string.Join(", ", extras)}] " +
-            $"soldiers=[{string.Join(", ", soldiers)}] " +
-            $"followers=[{string.Join(", ", followers)}] " +
-            $"legacyAll=[{string.Join(", ", legacyAll)}] " +
-            $"legacyExtras=[{string.Join(", ", legacyExtras)}] " +
-            $"holdoutHiddenEverywhere={noHoldoutAnywhere} " +
-            $"headers={headersDiffer} configRoundTrip={roundTrips} " +
-            $"editorLoads={editorLoadsSetting} independentFilters={writesIndependently} " +
-            $"legacyAllMigrates={legacyAllMigrates} " +
-            $"scoreboardExcludesOriginalFour={scoreboardNeverDrawsAll} " +
-            $"editorWritesExtras={editorWritesExtras} editorWritesSoldiers={editorWritesSoldiers} " +
-            $"appliedToLiveConfig={appliedToLiveConfig} " +
-            $"followerMarkedOnMixedOnly={marksOnMixedRosters} markerRenders={markerRenders}");
-        Console.WriteLine(passed
-            ? "PASS"
-            : "FAIL: holdouts must never draw and each filter must select its own roster");
-
+        Console.WriteLine(passed ? "PASS: all 32 selections, editor persistence, defaults, legacy presets, previews and markers" : "FAIL");
         return passed ? 0 : 1;
     }
 

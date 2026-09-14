@@ -2,6 +2,17 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.3.0 - 2026-09-14: customizable roster categories
+
+- Replaced roster radio buttons with five independent checkboxes on both tabs.
+- Split original survivors, extra survivors, mortal soldiers, followers, and reinforcements.
+- Enabled extras, followers, and reinforcements by default on Scoreboard; also enabled original survivors on Consistent HUD.
+- Preserved legacy saved presets and allowed empty selections and original survivors on Scoreboard.
+- Applied category selections to previews, live rendering, and Save & Apply.
+- Advanced both components to v2.3.0 and rebuilt dist, release executables, and VPK v1.
+
+**Verification**: automated checks and source-level only. Not yet live-tested — verify category changes with Finale Soldiers in game.
+
 ## Overlay HUD v2.2.1 - 2026-09-08: exclude campaign support NPCs
 
 - Fixed unmarked team-4 campaign support NPCs being classified as teammates. Hid them in

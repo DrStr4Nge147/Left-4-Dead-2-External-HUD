@@ -9,6 +9,21 @@ every BBCode tag the description field does, and a list that is not rendered is 
 list at all. [h1], [b] and [url] are fine.
 
 ================================================================================
+v2.3.0
+================================================================================
+
+[h1]v2.3.0 - Customize who appears on your HUD[/h1]
+
+- Replaced Who to show radio buttons with independent checkboxes on both tabs.
+- Choose Survivors (Original 4), Extra Survivors, Mortal Soldiers (Stationary/hold), Followers, and Reinforcements.
+- Scoreboard defaults: Extra Survivors, Followers, and Reinforcements checked.
+- Consistent HUD defaults: Survivors, Extra Survivors, Followers, and Reinforcements checked.
+- Select any combination, including none. Existing saved selections are preserved; use Reset UI for the new defaults.
+
+[b]Update both the addon and application to v2.3.0.[/b]
+[url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Download the matching application[/url]
+
+================================================================================
 v2.2.1
 ================================================================================
 

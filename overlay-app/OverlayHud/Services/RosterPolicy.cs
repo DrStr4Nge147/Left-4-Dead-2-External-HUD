@@ -2,20 +2,20 @@ using OverlayHud.Model;
 
 namespace OverlayHud.Services;
 
-/// <summary>Which part of the roster the panel draws.</summary>
+/// <summary>Independent roster categories, with aliases for saved legacy presets.</summary>
+[Flags]
 public enum RosterMode
 {
-    /// <summary>Every mortal survivor, including the four slots in the vanilla HUD.</summary>
-    All,
-
-    /// <summary>The previous All behavior: extra plain survivors plus soldiers and followers.</summary>
-    Extras,
-
-    /// <summary>Finale Soldiers mortal soldiers and followers only.</summary>
-    SoldiersAndFollowers,
-
-    /// <summary>Followers only - reinforcements included, since they follow too.</summary>
-    Followers
+    None = 0,
+    Survivors = 1,
+    ExtraSurvivors = 2,
+    MortalSoldiers = 4,
+    ManualFollowers = 8,
+    Reinforcements = 16,
+    Followers = ManualFollowers | Reinforcements,
+    SoldiersAndFollowers = MortalSoldiers | Followers,
+    Extras = ExtraSurvivors | SoldiersAndFollowers,
+    All = Survivors | Extras
 }
 
 /// <summary>The badge a card carries, if any.</summary>
@@ -30,24 +30,7 @@ public enum CardMarker
     Reinforcement
 }
 
-/// <summary>
-/// Turns an exported roster into the cards the panel shows.
-///
-/// Two rules are applied in order, and both exist because the panel supplements the
-/// vanilla HUD rather than replacing it:
-///
-/// 1. Holdouts are never drawn, in any mode: unjoined team-4 campaign NPCs and immortal
-///    Finale Soldiers bots. Campaign support can be mortal without joining the group.
-/// 2. Plain survivors are either all included, or keep the established positional rule -
-///    L4D2 already draws four survivor slots, so only the fifth onward is a card in
-///    <see cref="RosterMode.Extras"/>. Soldiers and followers are never subject to that
-///    skip; they are not what those four slots contain.
-///
-/// An exporter older than v0.6.5 sends no <c>cls</c>, so every entry classifies as a
-/// plain survivor. <see cref="RosterMode.All"/> then includes the complete exported roster,
-/// while <see cref="RosterMode.Extras"/> reproduces the previous behavior exactly. The two
-/// soldier modes need the newer exporter to have anything to show.
-/// </summary>
+/// <summary>Filters independent roster groups while always excluding holdouts.</summary>
 public static class RosterPolicy
 {
     /// <summary>Survivor slots L4D2's own HUD already draws.</summary>
@@ -66,34 +49,42 @@ public static class RosterPolicy
     /// </summary>
     public const string ClassReinforcement = "reinforcement";
 
-    /// <summary>
-    /// The scoreboard's own reading of the setting. It never resolves to
-    /// <see cref="RosterMode.All"/>: that panel is drawn beside L4D2's own scoreboard,
-    /// which already lists the original four, so including them was the same four names
-    /// twice on one screen. The consistent HUD replaces nothing and keeps the full set of
-    /// modes through <see cref="Parse"/>.
-    /// </summary>
-    public static RosterMode ParseScoreboard(string? value)
+    // Legacy scoreboard "all" historically meant Extras. Explicit selections can now
+    // include the original four; use a prefix so no checkbox combination is ambiguous.
+    public static RosterMode ParseScoreboard(string? value) =>
+        value?.Trim().StartsWith("selected:", StringComparison.OrdinalIgnoreCase) == true
+            ? Parse(value)
+            : Parse(value) == RosterMode.All ? RosterMode.Extras : Parse(value);
+
+    private static readonly (string Name, RosterMode Mode)[] Categories =
     {
-        var mode = Parse(value);
-        return mode == RosterMode.All ? RosterMode.Extras : mode;
+        ("survivors", RosterMode.Survivors),
+        ("extra-survivors", RosterMode.ExtraSurvivors),
+        ("mortal-soldiers", RosterMode.MortalSoldiers),
+        ("followers", RosterMode.ManualFollowers),
+        ("reinforcements", RosterMode.Reinforcements)
+    };
+
+    public static RosterMode Parse(string? value)
+    {
+        value = value?.Trim().ToLowerInvariant();
+        if (value?.StartsWith("selected:") == true)
+        {
+            var selected = value[9..].Split(',', StringSplitOptions.TrimEntries);
+            return Categories.Where(category => selected.Contains(category.Name))
+                .Aggregate(RosterMode.None, (mode, category) => mode | category.Mode);
+        }
+        return value switch
+        {
+            "extras" => RosterMode.Extras,
+            "soldiers" => RosterMode.SoldiersAndFollowers,
+            "followers" => RosterMode.Followers,
+            _ => RosterMode.All
+        };
     }
 
-    public static RosterMode Parse(string? value) => value?.Trim().ToLowerInvariant() switch
-    {
-        "extras"    => RosterMode.Extras,
-        "soldiers"  => RosterMode.SoldiersAndFollowers,
-        "followers" => RosterMode.Followers,
-        _           => RosterMode.All
-    };
-
-    public static string ToConfigValue(RosterMode mode) => mode switch
-    {
-        RosterMode.Extras              => "extras",
-        RosterMode.SoldiersAndFollowers => "soldiers",
-        RosterMode.Followers            => "followers",
-        _                               => "all"
-    };
+    public static string ToConfigValue(RosterMode mode) => "selected:" + string.Join(",",
+        Categories.Where(category => mode.HasFlag(category.Mode)).Select(category => category.Name));
 
     /// <summary>Panel header for the mode, without the count.</summary>
     public static string Header(RosterMode mode) => mode switch
@@ -101,7 +92,9 @@ public static class RosterPolicy
         RosterMode.Extras              => "EXTRA SURVIVORS",
         RosterMode.SoldiersAndFollowers => "SOLDIERS + FOLLOWERS",
         RosterMode.Followers            => "FOLLOWERS",
-        _                               => "ALL SURVIVORS"
+        RosterMode.All                  => "ALL SURVIVORS",
+        RosterMode.None                 => "NO SURVIVORS SELECTED",
+        _                               => "SELECTED SURVIVORS"
     };
 
     public static List<Survivor> Apply(IEnumerable<Survivor> roster, RosterMode mode)
@@ -115,22 +108,16 @@ public static class RosterPolicy
 
             if (cls == ClassHoldout) continue;
 
-            if (cls == ClassSurvivor)
+            var category = cls switch
             {
-                plainSurvivorsSeen++;
-
-                if (mode == RosterMode.SoldiersAndFollowers || mode == RosterMode.Followers)
-                    continue;
-
-                // Counted even when Extras discards it, so the fifth survivor is still the
-                // fifth one after a mode change rather than the first one kept.
-                if (mode == RosterMode.Extras && plainSurvivorsSeen <= VanillaSurvivorSlots)
-                    continue;
-            }
-            else if (cls == ClassSoldier && mode == RosterMode.Followers)
-            {
-                continue;
-            }
+                ClassSurvivor => ++plainSurvivorsSeen <= VanillaSurvivorSlots
+                    ? RosterMode.Survivors : RosterMode.ExtraSurvivors,
+                ClassSoldier => RosterMode.MortalSoldiers,
+                ClassFollower => RosterMode.ManualFollowers,
+                ClassReinforcement => RosterMode.Reinforcements,
+                _ => RosterMode.None
+            };
+            if ((mode & category) == 0) continue;
 
             result.Add(survivor);
         }
@@ -147,7 +134,7 @@ public static class RosterPolicy
     public static CardMarker Marker(Survivor survivor, RosterMode mode) => Classify(survivor) switch
     {
         ClassReinforcement => CardMarker.Reinforcement,
-        ClassFollower      => mode == RosterMode.Followers ? CardMarker.None : CardMarker.Follower,
+        ClassFollower      => (mode & ~RosterMode.Followers) == 0 ? CardMarker.None : CardMarker.Follower,
         _                  => CardMarker.None
     };
 

@@ -48,11 +48,26 @@ public static class SampleRoster
 
     public static List<SurvivorCard> Cards(int count, bool markFollowers = false,
                                            bool monochrome = false,
-                                           bool showHealthNumbers = true)
+                                           bool showHealthNumbers = true, RosterMode? mode = null)
     {
         var result = new List<SurvivorCard>(Math.Max(0, count));
 
-        for (int i = 0; i < count; i++)
+        // Generate a representative exported roster, then apply the same category policy
+        // as the live renderer. Keep the slider as the maximum number of visible cards.
+        var selected = mode.HasValue ? RosterPolicy.Apply(
+            Enumerable.Range(0, Math.Max(0, count) * 4 + 4).Select(i => new Survivor
+            {
+                IsLocal = i == 0,
+                Cls = i < 4 ? RosterPolicy.ClassSurvivor : ((i - 4) % 4) switch
+                {
+                    0 => RosterPolicy.ClassSurvivor,
+                    1 => RosterPolicy.ClassSoldier,
+                    2 => RosterPolicy.ClassFollower,
+                    _ => RosterPolicy.ClassReinforcement
+                }
+            }), mode.Value).Take(Math.Max(0, count)).ToList() : null;
+
+        for (int i = 0; i < (selected?.Count ?? count); i++)
         {
             var survivor = new Survivor
             {
@@ -61,7 +76,8 @@ public static class SampleRoster
                 // The first card stands in for the player: the editor's Separate You card
                 // is taken from the front of this list, and their own card is the one the
                 // consistent HUD draws without items.
-                IsLocal = i == 0,
+                IsLocal = selected?[i].IsLocal ?? i == 0,
+                Cls = selected?[i].Cls ?? RosterPolicy.ClassSurvivor,
                 Hp = i % 5 == 3 ? 28 : 100 - (i % 4) * 12,
                 MaxHp = 100,
                 Temp = i % 5 == 1 ? 18 : 0,
@@ -89,7 +105,8 @@ public static class SampleRoster
             };
 
             result.Add(SurvivorCard.From(survivor,
-                                         !markFollowers   ? CardMarker.None
+                                         mode.HasValue ? RosterPolicy.Marker(survivor, mode.Value)
+                                         : !markFollowers   ? CardMarker.None
                                              : i % 4 == 1 ? CardMarker.Reinforcement
                                              : i % 4 == 3 ? CardMarker.Follower
                                              : CardMarker.None,

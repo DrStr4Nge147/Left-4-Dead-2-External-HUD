@@ -53,7 +53,7 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v2.2.1 — campaign roster fix (awaiting live testing).** Excludes unmarked team-4 map support NPCs while retaining Finale Soldiers and Cold Front's joined Mike. See [testing](docs/TESTING.md).
+**v2.3.0 — customizable roster checkboxes (awaiting live testing).** Added five independent categories to both HUD tabs with separate defaults. See [testing](docs/TESTING.md).
 
 **v2.2.0 — a ring for the `help!` call.** The Consistent HUD can now draw one dial for your own
 Finale Soldiers reinforcement call: full and green reading **READY** when the call goes
@@ -129,7 +129,7 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.2.1** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.3.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
@@ -137,10 +137,10 @@ has nothing to read.
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.2.1** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.3.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
-  and Minimalist HUD designs, the four roster filters, and the optional Separate You split card.
+  and Minimalist HUD designs, five independent roster checkboxes, and the optional Separate You split card.
   The Consistent HUD templates, the weapon HUD, and the presentation options are confirmed
   in-game with the v2.0.0 app/VPK pair, and the scene-hiding rules with the v2.1.2 pair. The
   v2.1.3 reinforcement badge and the v2.2.0 reinforcement ring were seen working in game on
@@ -149,7 +149,7 @@ has nothing to read.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-Earlier versions are live-tested; v2.2.1 awaits the campaign checks in `docs/TESTING.md`. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+Earlier versions are live-tested; v2.3.0 awaits the roster and campaign checks in `docs/TESTING.md`. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over
@@ -170,29 +170,28 @@ loses focus.
 
 ## Who the panel shows
 
-Each view has its own **Who to show**, and the two rosters are independent. The lower two
-options are grouped under **For Finale Soldiers Mod** — without that addon nothing is ever
-classified as a soldier or a follower, so they would show an empty panel:
+Added independent **Who to show** checkboxes to both tabs. Select any combination, including none.
 
-| Option | Shows | Where |
-|---|---|---|
-| **All survivors** | Every mortal survivor, including the four L4D2 would draw itself | Consistent HUD only |
-| **Extra survivors** | Mortal soldiers, followers, and plain survivors from slot 5 onward | Both |
-| **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only | Both |
-| **Followers only** | Only the soldiers currently following a player | Both |
+| Checkbox | Cards shown | Scoreboard default | Consistent HUD default |
+|---|---|---|---|
+| **Survivors** | Original four plain survivor slots | Off | On |
+| **Extra Survivors** | Additional plain survivors; excludes Finale Soldiers | On | On |
+| **Mortal Soldiers (Stationary/hold)** | Mortal Finale Soldiers currently holding position | Off | Off |
+| **Followers** | Manually assigned Finale Soldiers followers | On | On |
+| **Reinforcements** | Finale Soldiers called with `help!` | On | On |
 
-The scoreboard panel has no **All survivors**: it is drawn beside L4D2's own scoreboard,
-which lists the original four already, so it always excludes them. The Consistent HUD keeps
-the option because the vanilla survivor HUD is hidden while it is up.
+Grouped the last three under **For Finale Soldiers Mod**. Kept immortal holdouts and unjoined
+campaign support excluded from every selection. Counted only plain survivors toward the
+original four, using the exported roster order.
 
-Immortal team-4 holdout soldiers are never drawn under any option: nothing can hurt them,
-so a health card for one carries no information.
+Preserved existing `all`, `extras`, `soldiers`, and `followers` presets when loading old
+configs, including their previous combined soldier/follower membership. Kept legacy
+scoreboard `all` equivalent to the old `extras` preset. Apply **Reset UI** for the new defaults,
+or choose the boxes directly. Enabled original-four cards on the Scoreboard tab when selected.
 
-Followers carry a blue **FOLLOW** marker in the first two options, where the roster is
-mixed. In **Followers only** they are not marked — every card would carry it. A soldier called
-in with `help!` carries a yellow **REINFORCEMENT** marker instead, in every option including
-**Followers only**, since there it is the only thing separating it from a hand-picked
-follower.
+Kept the blue **FOLLOW** badge on mixed rosters and the yellow **REINFORCEMENT** badge on
+reinforcements. Hid the redundant FOLLOW badge when only followers/reinforcements are selected.
+An exporter older than v2.1.3 cannot distinguish reinforcements from followers.
 
 The editor includes an **Exit when L4D2 closes** option. It is enabled by default; turn it
 off if the overlay should remain in the tray between game sessions.

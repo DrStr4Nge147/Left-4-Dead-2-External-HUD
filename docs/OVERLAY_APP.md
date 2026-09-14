@@ -2,7 +2,7 @@
 
 A transparent, click-through, always-on-top window that draws the selected part of L4D2's
 survivor roster. The Tab scoreboard panel and the Consistent HUD keep separate rosters: the
-scoreboard never repeats the original four that L4D2's own scoreboard lists, while the
+scoreboard excludes the original four by default, while the
 Consistent HUD can draw everyone. It reads one JSON file and does not touch the game
 process — no injection, no memory reading, no DirectX hooking.
 
@@ -346,41 +346,33 @@ that is not a version — nothing is claimed and nothing is shown.
 
 ## Who to show
 
-The two views keep separate rosters, and each tab has its own **Who to show**. They answer
-different questions: the scoreboard panel is drawn beside L4D2's own scoreboard, which lists
-the original four already, while the Consistent HUD stands in for the vanilla survivor HUD,
-which is hidden while it is up.
+Added independent **Who to show** checkboxes to both tabs. Select any combination, including none.
 
-**Scoreboard tab** — the original four are never drawn, so listing them twice on one screen
-is not possible:
+| Checkbox | Cards shown | Scoreboard default | Consistent HUD default |
+|---|---|---|---|
+| **Survivors** | Original four plain survivor slots | Off | On |
+| **Extra Survivors** | Additional plain survivors; excludes Finale Soldiers | On | On |
+| **Mortal Soldiers (Stationary/hold)** | Mortal Finale Soldiers currently holding position | Off | Off |
+| **Followers** | Manually assigned Finale Soldiers followers | On | On |
+| **Reinforcements** | Finale Soldiers called with `help!` | On | On |
 
-| Option | Cards shown |
-|---|---|
-| **Extra survivors** | Plain survivors from slot 5 onward, plus mortal soldiers and followers |
-| **Mortal soldiers + followers** | Finale Soldiers' mortal soldiers and followers only |
-| **Followers only** | Only soldiers currently following a player, hand-picked and `help!` reinforcements alike |
+Grouped the last three under **For Finale Soldiers Mod**. Kept immortal holdouts and unjoined
+campaign support excluded from every selection. Counted only plain survivors toward the
+original four, using the exported roster order.
 
-**Consistent HUD tab** — the same three, plus:
+Preserved existing `all`, `extras`, `soldiers`, and `followers` presets when loading old
+configs, including their previous combined soldier/follower membership. Kept legacy
+scoreboard `all` equivalent to the old `extras` preset. Apply **Reset UI** for the new defaults,
+or choose the boxes directly. Enabled original-four cards on the Scoreboard tab when selected.
 
-| Option | Cards shown |
-|---|---|
-| **All survivors** | Every mortal survivor, including the four the vanilla HUD would have drawn |
+Kept the blue **FOLLOW** badge on mixed rosters and the yellow **REINFORCEMENT** badge on
+reinforcements. Hid the redundant FOLLOW badge when only followers/reinforcements are selected.
+An exporter older than v2.1.3 cannot distinguish reinforcements from followers.
 
-A config carried over from an earlier version with `rosterFilter` set to `all` is read by the
-scoreboard as **Extra survivors**; the Consistent HUD's own filter defaults to **All
-survivors**, so nothing disappears from the view that was showing everyone.
-
-A following soldier carries a badge on its card: a blue **FOLLOW** for one you told to follow
-by hand, and a yellow **REINFORCEMENT** for one called in with `help!`. **Followers only** drops
-the FOLLOW badge - every card there is following, so only the reinforcements need saying.
-An exporter older than v2.1.3, or a Finale Soldiers install without the `help!` feature,
-reports every following soldier as a plain follower.
-
-Immortal team-4 holdout soldiers are excluded from every option. In **Extra survivors**, when
-there are four or fewer plain survivors and no soldier/follower cards, holding Tab draws no
-roster panel. Cards use one column while they fit naturally, then balance across at most two
-columns. The panel shrinks inside the scoreboard sidebar instead of adding more columns across
-the screen.
+Saved selections as `selected:` followed by comma-separated category names:
+`survivors`, `extra-survivors`, `mortal-soldiers`, `followers`, `reinforcements`.
+Used `selected:` alone for an empty roster. Preserved selections through Save & Apply,
+restart, and preview; kept weapon and reinforcement-ring controls independent.
 
 ## config.json
 
@@ -426,8 +418,8 @@ Sits next to the exe. Edit and restart the app.
 | `bottomReserve` | `0.0` | Optional bottom clearance for custom HUDs; vanilla Tab uses the full remaining height |
 | `opacity` | `0.92` | Panel opacity |
 | `consistentTemplate` | `vanilla-bottom-center` | `vanilla-bottom-center`, legacy `vanilla-vertical`, or `lower-right-vertical`; old `bottom-right` and `top-vertical` values migrate to the default |
-| `rosterFilter` | `extras` | Scoreboard roster: `extras` = plain survivors from slot 5 onward plus soldiers and followers, `soldiers` = mortal soldiers and followers, `followers` = followers only. `all` from an older config reads as `extras` |
-| `consistentRosterFilter` | `all` | Consistent HUD roster, independent of the scoreboard's: `all`, `extras`, `soldiers`, or `followers` |
+| `rosterFilter` | `selected:extra-survivors,followers,reinforcements` | Independent Scoreboard checkboxes; accepts legacy presets |
+| `consistentRosterFilter` | `selected:survivors,extra-survivors,followers,reinforcements` | Independent Consistent HUD checkboxes; accepts legacy presets |
 | `cardsPerColumn` | `0` | `0` measures the real one-column height first; positive values override it |
 | `maxColumns` | `2` | Hard horizontal column limit; overflow is balanced and scaled vertically |
 | `staleAfterSeconds` | `2.0` | Seconds without a new `seq` before the export counts as stopped |

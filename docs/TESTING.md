@@ -1,4 +1,27 @@
-# Testing — exporter v2.2.1 + overlay app v2.2.1
+# Testing — exporter v2.3.0 + overlay app v2.3.0
+
+## Customizable roster checkboxes (v2.3.0)
+
+Run `dotnet run --project overlay-app/OverlayHud.LayoutChecks -- roster-filter`.
+Covered all 32 category combinations, config round trips, both editor tabs, Save & Apply,
+legacy presets, missing classifications, and previews with all boxes cleared.
+Also run `editor-controls`, `config-apply`, `consistent-hud`, and `live-preview` checks.
+
+1. Reset UI and confirm Scoreboard checks extras/followers/reinforcements; Consistent HUD also checks survivors.
+2. Toggle each category alone in both tabs; keep extra survivors separate from every Finale Soldiers category.
+3. Check original survivors on Scoreboard; clear all categories and confirm no roster cards appear.
+4. Change a mortal soldier between hold and follow, call reinforcements, and confirm membership updates.
+5. Save & Apply, reopen the editor, and restart the app; preserve each tab's selection.
+6. Keep campaign support and immortal holdouts hidden through death, round restart, and chapter transition.
+
+Passed `roster-filter`, `editor-controls`, `config-apply`, `consistent-hud`, and `live-preview`.
+Built the check project without warnings and inspected rendered editor screenshots.
+Published both executables successfully; NuGet advisory lookup was unavailable (NU1900). Verified the VPK v1 header
+and all five packed files against source bytes and CRC32; the installed legacy `vpk.exe`
+rejects `-t`. Preserved customized `dist/config.json` while updating the binaries.
+
+Not yet live-tested. Verify in game with the matching v2.3.0 app and VPK.
+
 
 ## Campaign roster filtering (v2.2.1)
 

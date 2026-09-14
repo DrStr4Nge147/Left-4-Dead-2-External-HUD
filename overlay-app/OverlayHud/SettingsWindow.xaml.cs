@@ -319,18 +319,10 @@ public partial class SettingsWindow : Window
         // Nothing for it to hold onto in the simulated preview, which has no real game.
         ShowScoreboardCheckBox.IsEnabled = live && _startLivePreview != null;
 
-        // Two independent rosters, and the scoreboard's has no All: it is drawn beside
-        // L4D2's own scoreboard, which lists the original four already.
+        // Load each tab independently, preserving legacy presets on the scoreboard.
         var mode = RosterPolicy.ParseScoreboard(_draft.RosterFilter);
-        RosterExtrasRadio.IsChecked = mode == RosterMode.Extras;
-        RosterSoldiersRadio.IsChecked = mode == RosterMode.SoldiersAndFollowers;
-        RosterFollowersRadio.IsChecked = mode == RosterMode.Followers;
-
-        var consistentMode = RosterPolicy.Parse(_draft.ConsistentRosterFilter);
-        ConsistentRosterAllRadio.IsChecked = consistentMode == RosterMode.All;
-        ConsistentRosterExtrasRadio.IsChecked = consistentMode == RosterMode.Extras;
-        ConsistentRosterSoldiersRadio.IsChecked = consistentMode == RosterMode.SoldiersAndFollowers;
-        ConsistentRosterFollowersRadio.IsChecked = consistentMode == RosterMode.Followers;
+        LoadRosterChecks("Roster", mode);
+        LoadRosterChecks("ConsistentRoster", RosterPolicy.Parse(_draft.ConsistentRosterFilter));
 
         if (PreviewCountSlider.Value < 1) PreviewCountSlider.Value = 6;
 
@@ -810,27 +802,30 @@ public partial class SettingsWindow : Window
         SaveStatus.Text = "Unsaved changes";
     }
 
-    private RosterMode SelectedConsistentRosterMode()
+    private static readonly (string Name, RosterMode Mode)[] RosterChecks =
     {
-        if (ConsistentRosterExtrasRadio.IsChecked == true) return RosterMode.Extras;
-        if (ConsistentRosterSoldiersRadio.IsChecked == true) return RosterMode.SoldiersAndFollowers;
-        if (ConsistentRosterFollowersRadio.IsChecked == true) return RosterMode.Followers;
+        ("Survivors", RosterMode.Survivors), ("Extras", RosterMode.ExtraSurvivors),
+        ("Soldiers", RosterMode.MortalSoldiers), ("Followers", RosterMode.ManualFollowers),
+        ("Reinforcements", RosterMode.Reinforcements)
+    };
 
-        return RosterMode.All;
+    private void LoadRosterChecks(string prefix, RosterMode mode)
+    {
+        foreach (var item in RosterChecks)
+            ((System.Windows.Controls.CheckBox)FindName(prefix + item.Name + "CheckBox")).IsChecked = mode.HasFlag(item.Mode);
     }
+
+    private RosterMode ReadRosterChecks(string prefix) => RosterChecks
+        .Where(item => ((System.Windows.Controls.CheckBox)FindName(prefix + item.Name + "CheckBox")).IsChecked == true)
+        .Aggregate(RosterMode.None, (mode, item) => mode | item.Mode);
+
+    private RosterMode SelectedConsistentRosterMode() => ReadRosterChecks("ConsistentRoster");
+    private RosterMode SelectedRosterMode() => ReadRosterChecks("Roster");
 
     /// <summary>Whichever roster the tab being edited draws.</summary>
     private RosterMode ActiveRosterMode() => IsConsistentTab
         ? RosterPolicy.Parse(_draft.ConsistentRosterFilter)
         : RosterPolicy.ParseScoreboard(_draft.RosterFilter);
-
-    private RosterMode SelectedRosterMode()
-    {
-        if (RosterSoldiersRadio.IsChecked == true) return RosterMode.SoldiersAndFollowers;
-        if (RosterFollowersRadio.IsChecked == true) return RosterMode.Followers;
-
-        return RosterMode.Extras;
-    }
 
     private void ReadControls()
     {
@@ -914,9 +909,9 @@ public partial class SettingsWindow : Window
             (int)Math.Round(PreviewCountSlider.Value),
             mode != RosterMode.Followers,
             monochrome: consistent && _draft.ConsistentMonochrome,
-            showHealthNumbers: !consistent || _draft.ConsistentShowHealthNumbers);
+            showHealthNumbers: !consistent || _draft.ConsistentShowHealthNumbers, mode: mode);
         var youCards = new List<SurvivorCard>();
-        if (consistent && _draft.ConsistentSeparateYou && cards.Count > 0)
+        if (consistent && _draft.ConsistentSeparateYou && mode.HasFlag(RosterMode.Survivors) && cards.Count > 0)
         {
             youCards.Add(cards[0]);
             cards.RemoveAt(0);

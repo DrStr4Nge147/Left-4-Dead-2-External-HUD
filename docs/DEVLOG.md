@@ -1,5 +1,17 @@
 # Dev log
 
+## 2026-09-14 - independent roster categories (v2.3.0)
+
+- Replaced exclusive presets with category flags while retaining legacy aliases for config compatibility.
+- Added a `selected:` serialization prefix to distinguish explicit all-category selections from legacy scoreboard `all`.
+- Reused exporter classifications and the established first-four plain-survivor rule; added no game API or protocol changes.
+- Applied the same filter to representative preview rosters and suppressed a separated You card when original survivors are unchecked.
+- Added exhaustive checks for 32 combinations, independent editor persistence, defaults, legacy presets, and empty previews.
+- Kept the editor-controls test Application alive across its multiple test windows; closing its first window previously shut down later checks.
+
+**Verification**: automated checks and source-level only. Not yet live-tested — check following/holding transitions, help! arrivals, and round changes.
+
+
 ## 2026-09-08 - v2.2.1: campaign support was falling through to survivor
 
 - Read the installed export: Bill, Zoey, and Louis were team 4 with `cls=survivor`.
