@@ -20,7 +20,7 @@ Published both executables successfully; NuGet advisory lookup was unavailable (
 and all five packed files against source bytes and CRC32; the installed legacy `vpk.exe`
 rejects `-t`. Preserved customized `dist/config.json` while updating the binaries.
 
-Not yet live-tested. Verify in game with the matching v2.3.0 app and VPK.
+**Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game with the matching v2.3.0 app and VPK.
 
 
 ## Campaign roster filtering (v2.2.1)

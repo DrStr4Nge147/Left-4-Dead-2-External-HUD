@@ -11,7 +11,7 @@ Two components, released under one shared version: the exporter addon and overla
 - Applied category selections to previews, live rendering, and Save & Apply.
 - Advanced both components to v2.3.0 and rebuilt dist, release executables, and VPK v1.
 
-**Verification**: automated checks and source-level only. Not yet live-tested — verify category changes with Finale Soldiers in game.
+**Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game.
 
 ## Overlay HUD v2.2.1 - 2026-09-08: exclude campaign support NPCs
 

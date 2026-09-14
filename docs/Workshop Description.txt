@@ -2,7 +2,7 @@
 
 [h2][b]Download the application:[/b] [url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Left 4 Dead 2 Customized Overlay HUD - External (GitHub releases)[/url][/h2]
 
-This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be on the same version - currently v2.1.2.
+This Workshop item is the exporter half. It writes live survivor state to a file; the separate application reads that file and draws the HUD. Both halves are required and must be on the same version - currently v2.3.0.
 
 [list]
 [*][b]Standalone[/b] includes the required .NET components.
@@ -13,7 +13,7 @@ This Workshop item is the exporter half. It writes live survivor state to a file
 
 An external survivor HUD for oversized rosters. It shows every mortal survivor in the session, not only the four slots available in the built-in HUD. It is designed for [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3766326051]Finale Soldiers[/url] and other mods that spawn more than four survivors.
 
-Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, and incapacitated / hanging / dying / dead state. Cards show each survivor's carried items, except your own: your throwable, kit, and pills sit with your weapons and ammunition instead, where vanilla keeps them. The Tab scoreboard shows the whole extra survivor team.
+Cards show the survivor name, permanent health, temporary health from pills or adrenaline, black-and-white state, and incapacitated / hanging / dying / dead state. Cards show each survivor's carried items, except your own: your throwable, kit, and pills sit with your weapons and ammunition instead, where vanilla keeps them. The Tab scoreboard shows the survivor categories selected in its own editor tab.
 
 Your own weapons sit in their own panel: primary with its magazine and reserve, pistol / Magnum / chainsaw / melee below it, and your throwable, kit, and pills under those. Weapons use the game's own HUD icons, and ammunition counts down round by round. The count is marked with a cartridge, a flame for incendiary, or a burst for explosive - while an upgrade is loaded the number is the upgraded rounds left, so reloading does not reset it - and whatever is in your hands is outlined in green.
 
@@ -55,16 +55,17 @@ Right-click the overlay's notification-area icon and choose [b]Customize UI...[/
 
 [h1]WHO THE HUD SHOWS[/h1]
 
-The Scoreboard panel and the Consistent HUD keep separate rosters, each with its own [b]Who to show[/b]:
+The Scoreboard panel and the Consistent HUD keep separate rosters, each with its own [b]Who to show[/b] checkboxes:
 
 [list]
-[*][b]All survivors[/b] - everyone, including the four the vanilla HUD would draw. Consistent HUD only, since it replaces that HUD.
-[*][b]Extra survivors[/b] - mortal soldiers, followers, and plain survivors from slot 5 onward.
-[*][b]Mortal soldiers + followers[/b] - Finale Soldiers' mortal soldiers and followers only.
-[*][b]Followers only[/b] - soldiers currently following a player.
+[*][b]Survivors[/b] - the original four plain survivor slots.
+[*][b]Extra Survivors[/b] - plain survivors from slot 5 onward, excluding Finale Soldiers.
+[*][b]Mortal Soldiers (Stationary/hold)[/b] - Finale Soldiers that are holding position.
+[*][b]Followers[/b] - Finale Soldiers currently following a player.
+[*][b]Reinforcements[/b] - Finale Soldiers called with help!.
 [/list]
 
-The Scoreboard panel always excludes the original four: L4D2's own scoreboard beside it lists them already. Immortal holdout soldiers are never shown, since they cannot be hurt. Followers carry a blue [b]FOLLOW[/b] marker on mixed rosters.
+The Scoreboard defaults to Extra Survivors, Followers, and Reinforcements. The Consistent HUD also defaults to Survivors. Select any combination, including none. Immortal holdout soldiers are never shown, since they cannot be hurt. Followers carry a blue [b]FOLLOW[/b] marker on mixed rosters.
 
 [h1]INSTALLING AND UPDATING[/h1]
 

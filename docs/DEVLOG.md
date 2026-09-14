@@ -9,7 +9,7 @@
 - Added exhaustive checks for 32 combinations, independent editor persistence, defaults, legacy presets, and empty previews.
 - Kept the editor-controls test Application alive across its multiple test windows; closing its first window previously shut down later checks.
 
-**Verification**: automated checks and source-level only. Not yet live-tested — check following/holding transitions, help! arrivals, and round changes.
+**Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game.
 
 
 ## 2026-09-08 - v2.2.1: campaign support was falling through to survivor

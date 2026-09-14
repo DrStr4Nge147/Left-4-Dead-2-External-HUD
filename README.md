@@ -53,7 +53,7 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
-**v2.3.0 — customizable roster checkboxes (awaiting live testing).** Added five independent categories to both HUD tabs with separate defaults. See [testing](docs/TESTING.md).
+**v2.3.0 — customizable roster checkboxes.** Added five independent categories to both HUD tabs with separate defaults. Live-tested and confirmed working on 2026-09-14. See [testing](docs/TESTING.md).
 
 **v2.2.0 — a ring for the `help!` call.** The Consistent HUD can now draw one dial for your own
 Finale Soldiers reinforcement call: full and green reading **READY** when the call goes
@@ -149,7 +149,7 @@ has nothing to read.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-Earlier versions are live-tested; v2.3.0 awaits the roster and campaign checks in `docs/TESTING.md`. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+v2.3.0 is live-tested. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over
