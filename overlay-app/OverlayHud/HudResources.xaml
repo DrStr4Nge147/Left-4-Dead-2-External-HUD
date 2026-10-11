@@ -189,6 +189,41 @@
         </Border>
     </DataTemplate>
 
+    <!-- The weapon a soldier carries, as a small silhouette on their card. The same family
+         shapes as the weapon HUD, capped by MarkWidth so a pistol stays smaller than a rifle.
+         Bound to SurvivorCard.HeldWeapon; the host decides size (LayoutTransform) and
+         opacity, since the basic cards want a faint watermark and the minimalist card a
+         crisp icon. -->
+    <DataTemplate x:Key="HeldWeaponMarkTemplate">
+        <Grid Width="48" Height="20" ToolTip="{Binding Label}">
+            <Path Data="{Binding Silhouette}"
+                  Fill="#F2F2F2"
+                  Stretch="Uniform"
+                  MaxWidth="{Binding MarkWidth}"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center"
+                  Visibility="{Binding ShowsSilhouette,
+                               Converter={StaticResource BoolToVisibility}}" />
+            <Image Source="{Binding Icon}"
+                   Stretch="Uniform"
+                   MaxWidth="{Binding MarkWidth}"
+                   SnapsToDevicePixels="True"
+                   UseLayoutRounding="True"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center"
+                   Visibility="{Binding HasIcon,
+                                Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Text="{Binding ShortText}"
+                       FontFamily="{StaticResource HudFont}"
+                       FontSize="10"
+                       Foreground="#E6ECF2"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding ShowsText,
+                                    Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+    </DataTemplate>
+
     <DataTemplate x:Key="MinimalistSegmentTemplate">
         <Grid Width="48.5" Height="4" Margin="0,0,3.5,0">
             <Border Background="#FF3A3D41" />
@@ -227,6 +262,19 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+
+                <!-- Faint watermark behind the name, so the weapon is read without taking
+                     any width from it. -->
+                <ContentControl Grid.Column="0"
+                                Content="{Binding HeldWeapon}"
+                                ContentTemplate="{StaticResource HeldWeaponMarkTemplate}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0"
+                                Opacity="0.3"
+                                IsHitTestVisible="False"
+                                Visibility="{Binding HasHeldWeapon,
+                                             Converter={StaticResource BoolToVisibility}}" />
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBlock Text="{Binding Name}"
@@ -325,6 +373,19 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
+                <!-- Faint watermark behind the name, so the weapon is read without taking
+                     any width from it. -->
+                <ContentControl Grid.Column="0"
+                                Content="{Binding HeldWeapon}"
+                                ContentTemplate="{StaticResource HeldWeaponMarkTemplate}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                Opacity="0.3"
+                                IsHitTestVisible="False"
+                                Visibility="{Binding HasHeldWeapon,
+                                             Converter={StaticResource BoolToVisibility}}" />
+
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
                     <TextBlock Text="{Binding Name}"
                                FontFamily="{StaticResource HudFont}"
@@ -420,6 +481,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <Grid Grid.Column="0" MinWidth="0" Margin="0,0,4,0">
@@ -454,7 +516,23 @@
                                                 Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
 
-                    <ItemsControl Grid.Column="1"
+                    <!-- Crisp, not faint: this card has no panel behind it to carry a
+                         watermark, so the icon sits in the row beside the items. -->
+                    <ContentControl Grid.Column="1"
+                                    Content="{Binding HeldWeapon}"
+                                    ContentTemplate="{StaticResource HeldWeaponMarkTemplate}"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Opacity="0.9"
+                                    Effect="{StaticResource MinimalistItemStroke}"
+                                    Visibility="{Binding HasHeldWeapon,
+                                                 Converter={StaticResource BoolToVisibility}}">
+                        <ContentControl.LayoutTransform>
+                            <ScaleTransform ScaleX="0.6" ScaleY="0.6" />
+                        </ContentControl.LayoutTransform>
+                    </ContentControl>
+
+                    <ItemsControl Grid.Column="2"
                                   ItemsSource="{Binding ConsistentItemSlots}"
                                   VerticalAlignment="Center"
                                   Margin="0,0,6,0"
@@ -466,7 +544,7 @@
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
 
-                    <TextBlock Grid.Column="2"
+                    <TextBlock Grid.Column="3"
                                Text="{Binding HealthText}"
                                Margin="4,0,0,0"
                                FontFamily="{StaticResource HudFont}"

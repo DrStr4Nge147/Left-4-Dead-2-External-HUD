@@ -53,6 +53,8 @@ the layout against a live 16:9 preview, then save and apply it without restartin
 
 ## Status
 
+**v2.4.0 — weapon icons on soldier cards.** Finale Soldiers NPCs now show a small silhouette of the weapon they carry on every card design. Not yet live-tested. See [testing](docs/TESTING.md).
+
 **v2.3.0 — customizable roster checkboxes.** Added five independent categories to both HUD tabs with separate defaults. Live-tested and confirmed working on 2026-09-14. See [testing](docs/TESTING.md).
 
 **v2.2.0 — a ring for the `help!` call.** The Consistent HUD can now draw one dial for your own
@@ -129,7 +131,7 @@ longer leaves the panel showing an empty roster.**
 **Both halves are required.** The addon alone exports a file and draws nothing; the app alone
 has nothing to read.
 
-- **Exporter addon v2.3.0** — exports every survivor plus `cls` classification, a `local`
+- **Exporter addon v2.4.0** — exports every survivor plus `cls` classification, a `local`
   marker for the listen-server host, and each survivor's weapon slots with ammunition, and
   holds the game's scoreboard open on request. It also reports when the game has hidden its
   own HUD, so the overlay can leave with it. The v2.0.0 app/VPK pair has been live-tested in
@@ -137,7 +139,7 @@ has nothing to read.
   `left4dead2\ems\overlay_hud\`;
   builds up to v1.0.3 put them loose at the top of `ems\`, and those leftovers are safe to
   delete.
-- **Left 4 Dead 2 Customized Overlay HUD - External v2.3.0** — includes source-faithful
+- **Left 4 Dead 2 Customized Overlay HUD - External v2.4.0** — includes source-faithful
   monochrome item icons, separate Scoreboard and Consistent HUD editor tabs, a live/simulated
   preview, the default Tab+Insert editor shortcut, a configurable consistent-HUD hotkey, Basic
   and Minimalist HUD designs, five independent roster checkboxes, and the optional Separate You split card.
@@ -149,7 +151,7 @@ has nothing to read.
   Both halves ship under one version; the app reads the installed addon's `addoninfo.txt`
   and reports a mismatch rather than enforcing one.
 
-v2.3.0 is live-tested. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
+v2.3.0 is live-tested; v2.4.0 is not yet. **Close L4D2 before swapping the addon VPK**; a pack replaced while the game
 is running is not reloaded, and the old one stops working.
 
 The editor previews either way round. **Live** is the default: it draws the real panel over

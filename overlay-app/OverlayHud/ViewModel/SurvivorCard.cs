@@ -68,6 +68,16 @@ public sealed class SurvivorCard
     public ItemChip Pill { get; init; } = ItemChip.Empty;
     public ItemChip Throwable { get; init; } = ItemChip.Empty;
 
+    /// <summary>
+    /// The weapon a Finale Soldiers NPC carries, drawn as a small silhouette: the one in
+    /// their hands when it is a gun or melee weapon, else their primary, else their
+    /// secondary. <see cref="WeaponChip.Empty"/> for everyone else, and when the exporter
+    /// reports none - an older exporter, or a soldier with nothing in either slot.
+    /// </summary>
+    public WeaponChip HeldWeapon { get; init; } = WeaponChip.Empty;
+
+    public bool HasHeldWeapon => HeldWeapon.HasWeapon;
+
     /// <summary>L4D2 HUD slot order: throwable, kit/ammo pack, pills/adrenaline.</summary>
     public IReadOnlyList<ItemChip> ItemSlots => new[] { Throwable, Kit, Pill };
 
@@ -174,8 +184,32 @@ public sealed class SurvivorCard
             IsLocal        = s.IsLocal,
             Kit            = ItemChip.For(s.Kit),
             Pill           = ItemChip.For(s.Pill),
-            Throwable      = ItemChip.For(s.Throwable)
+            Throwable      = ItemChip.For(s.Throwable),
+            HeldWeapon     = HeldWeaponFor(s)
         };
+    }
+
+    private static bool IsSoldierNpc(Survivor s) =>
+        !s.IsLocal
+        && s.Cls?.Trim().ToLowerInvariant() is RosterPolicy.ClassSoldier
+            or RosterPolicy.ClassFollower or RosterPolicy.ClassReinforcement;
+
+    /// <summary>
+    /// No ammunition is passed: teammates' counts are not exported, and the mark is only a
+    /// picture of the weapon.
+    /// </summary>
+    private static WeaponChip HeldWeaponFor(Survivor s)
+    {
+        // Soldier NPCs only: a plain survivor's weapon is on the game's own HUD, and the
+        // exporter does not read it. The host is excluded too - their weapon HUD covers them.
+        if (!IsSoldierNpc(s)) return WeaponChip.Empty;
+
+        string id = ActiveSlots.Is(s.ActiveSlot, ActiveSlots.Secondary)
+                    && !string.IsNullOrWhiteSpace(s.Secondary) ? s.Secondary
+                  : !string.IsNullOrWhiteSpace(s.Primary)      ? s.Primary
+                                                               : s.Secondary;
+
+        return WeaponChip.For(id, clip: -1, reserve: -1, ammoKind: WeaponChip.NoAmmoMark);
     }
 
     private static SolidColorBrush Frozen(byte r, byte g, byte b)
@@ -437,6 +471,12 @@ public sealed class SurvivorCard
         public static readonly WeaponChip Empty = new();
 
         public bool HasWeapon => Id.Length > 0;
+
+        /// <summary>
+        /// Width of the small silhouette on a survivor card: the slot's relative sizing
+        /// (a pistol stays smaller than a rifle) at a little over half the scale.
+        /// </summary>
+        public double MarkWidth => ArtWidth * 0.55;
         public bool HasIcon => Icon != null;
         public bool ShowsSilhouette => HasWeapon && Icon == null && Silhouette != null;
         public bool ShowsText => HasWeapon && Icon == null && Silhouette == null;

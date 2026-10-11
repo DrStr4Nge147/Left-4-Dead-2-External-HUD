@@ -1,5 +1,22 @@
 # Dev log
 
+## 2026-10-11 - v2.4.0: weapon icons on soldier cards
+
+- Teammates' weapons were never exported (`pri`/`sec` were host-only to skip work nothing drew),
+  so this needed an exporter change as well as app work. Weapon identity is now read for the host
+  and for any survivor whose class is not `survivor`; clip, reserve, and upgrade reads stay
+  host-only. `Classify` is computed once ahead of the inventory loop and reused for `cls`.
+- Scoped to soldier NPCs after the first pass drew it for everyone: plain survivors' weapons are
+  already on the game's own HUD, so reading them was cost with no display.
+- Reused the weapon HUD's silhouette families and PNG-first lookup through `WeaponChip.For`, with
+  a `MarkWidth` of 0.55x the slot's art width so relative weapon size survives at card scale.
+- Basic cards use a 0.3-opacity watermark in the name column's own cell, so no width is taken.
+  Minimalist has no panel behind it, so it gets a solid icon in a new Auto column before the items.
+- A soldier holding two pistols can read as one: the clip-size fallback in `IsDualPistol` needs an
+  ammunition read that is host-only, though the `m_isDualWielding` route still works.
+
+**Verification**: app builds clean and the layout checks pass. Not yet live-tested.
+
 ## 2026-09-14 - independent roster categories (v2.3.0)
 
 - Replaced exclusive presets with category flags while retaining legacy aliases for config compatibility.
@@ -11,6 +28,21 @@
 
 **Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game.
 
+
+## 2026-09-12 - exporter v2.2.1: early withdrawal masked the real cooldown
+
+- Traced Finale Soldiers BeginHelpWithdrawal: set the leaving flag and started the real
+  cooldown while retaining help_active and the original help_groups expiry until cleanup.
+- Reproduced four failures using production HelpJson with lifecycle snapshots: checkpoint
+  withdrawal, another member still active, cooldown elapsed before removal, and an older
+  build exposing only the leaving marker. Passed all eight fixtures after the fix.
+- Matched the group cooldown marker used by Finale Soldiers HasActiveHelpSquad. Excluded
+  leaving members as a fallback for older builds. Kept cooldown ownership on the original caller.
+- Covered the same stale-state pattern when a squad member remains incapacitated or awaits
+  its withdrawal tick after another member starts cooldown. Changed no gameplay behavior.
+
+**Verification**: source-level and automated fixtures only. Not yet live-tested — enter a
+checkpoint with time left, observe the grey cooldown immediately, and wait for READY.
 
 ## 2026-09-08 - v2.2.1: campaign support was falling through to survivor
 

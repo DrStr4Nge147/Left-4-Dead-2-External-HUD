@@ -8,7 +8,7 @@
 
 ::OvlHud <- {}
 
-::OvlHud.VERSION   <- "2.3.0"
+::OvlHud.VERSION   <- "2.4.0"
 
 // Both files live in an ems subfolder rather than loose at the top of ems/, which is what
 // every other addon on a busy install does. StringToFile takes a relative subpath and the
@@ -642,11 +642,15 @@
 	}
 	catch (e) { }
 
-	// Weapons are read for the host player only. Only their own weapon HUD is drawn, so
-	// classifying every bot's rifle and reading its magazine was work whose result nothing
-	// ever displayed - and the ammunition channel below repeats part of it twenty times a
-	// second. Items stay per-survivor: those DO appear on every card.
+	// Weapon IDENTITY is read for the host and for Finale Soldiers NPCs: their cards draw a
+	// small silhouette of what they carry. Plain survivors' weapons are already on the
+	// game's own HUD, so reading them was work nothing displays. Ammunition is read for the
+	// host player only - only their own weapon HUD shows it, and the ammunition channel
+	// below repeats part of it twenty times a second. Soldiers' clip and reserve stay -1,
+	// which the app reads as unknown.
 	local isLocal = localUid >= 0 && uid == localUid
+	local cls = this.Classify(p)
+	local readWeapons = isLocal || cls != "survivor"
 
 	try
 	{
@@ -685,21 +689,25 @@
 
 				if (held) { slot = "throwable" }
 			}
-			else if (!isLocal) { continue }
+			else if (!readWeapons) { continue }
 			else if (cn in this.PRIMARY_WEAPONS)
 			{
 				primary = this.PRIMARY_WEAPONS[cn]
-				priClip = this.ClipOf(w)
-				priAmmo = this.ReserveOf(p, w)
-				priUpg  = this.UpgradeOf(w)
-				priUpgN = this.upgLoaded
+
+				if (isLocal)
+				{
+					priClip = this.ClipOf(w)
+					priAmmo = this.ReserveOf(p, w)
+					priUpg  = this.UpgradeOf(w)
+					priUpgN = this.upgLoaded
+				}
 
 				if (held) { slot = "primary" }
 			}
 			else if (cn in this.SECONDARY_WEAPONS)
 			{
 				secondary = this.SECONDARY_WEAPONS[cn]
-				secClip   = this.ClipOf(w)
+				if (isLocal) { secClip = this.ClipOf(w) }
 
 				if (cn == "weapon_pistol" && this.IsDualPistol(w, secClip))
 				{
@@ -729,7 +737,7 @@
 	json += ",\"team\":" + team
 	json += ",\"char\":" + chr
 	json += ",\"local\":" + (isLocal ? "true" : "false")
-	json += ",\"cls\":\"" + this.Classify(p) + "\""
+	json += ",\"cls\":\"" + cls + "\""
 	json += ",\"bot\":" + ((bot == null) ? "null" : (bot ? "true" : "false"))
 	json += ",\"hp\":" + hp
 	json += ",\"maxhp\":" + maxhp
@@ -1316,10 +1324,18 @@
 				    || scope.cf_soldier_help_owner != localUid) { continue }
 				if (!("cf_soldier_help_active" in scope)
 				    || !scope.cf_soldier_help_active) { continue }
+				if (("cf_soldier_help_leaving" in scope)
+				    && scope.cf_soldier_help_leaving) { continue }
 				if (!("cf_soldier_help_group" in scope)) { continue }
 
 				local group = scope.cf_soldier_help_group
 				if (group == null || !(group in fs.help_groups)) { continue }
+
+				// Early withdrawal leaves the original stay expiry intact. The first
+				// departing member starts the whole squad's cooldown, even while other
+				// members are still awaiting their withdrawal tick or are incapacitated.
+				if (("help_cooldown_started" in fs)
+				    && (group in fs.help_cooldown_started)) { continue }
 
 				// 0.0 is a squad that has spawned but not joined up yet; its window has not
 				// started, so it is still the arrival window that is running.

@@ -2,6 +2,21 @@
 
 Two components, released under one shared version: the exporter addon and overlay app.
 
+## Overlay HUD v2.4.0 - 2026-10-11: weapon icons on soldier cards
+
+- Finale Soldiers NPCs (soldiers, followers, reinforcements) now show a small silhouette of the
+  weapon they carry: the one in their hands, else their primary, else their secondary.
+- Scoreboard and Consistent HUD Basic draw it as a faint watermark behind the name, taking no
+  width from it. Consistent HUD Minimalist draws a small solid icon beside the item icons.
+- Plain survivors and the host get none: the game's HUD and the weapon panel already cover them.
+- The exporter now reads weapon identity for soldier NPCs. Ammunition is still host-only, so
+  their clip and reserve stay -1 and nothing but the picture is drawn.
+- Includes the unreleased exporter fix for the reinforcement ring keeping the original stay timer
+  after early saferoom withdrawal (see the v2.2.1 rebuild entry below).
+- Advanced both components to v2.4.0.
+
+**Verification**: app builds clean and the layout checks pass. Not yet live-tested.
+
 ## Overlay HUD v2.3.0 - 2026-09-14: customizable roster categories
 
 - Replaced roster radio buttons with five independent checkboxes on both tabs.
@@ -12,6 +27,16 @@ Two components, released under one shared version: the exporter addon and overla
 - Advanced both components to v2.3.0 and rebuilt dist, release executables, and VPK v1.
 
 **Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game.
+
+## Exporter v2.2.1 rebuild - 2026-09-12: update cooldown on early withdrawal
+
+- Fixed the reinforcement ring retaining the original stay timer after saferoom withdrawal.
+- Excluded withdrawing soldiers and squads whose cooldown has started from the active timer.
+- Preserved compatibility with older Finale Soldiers builds without the group cooldown marker.
+- Kept the overlay application at v2.2.1; updated only the exporter addon.
+
+**Verification**: source-level and automated fixtures only. Passed 8 help clock and 30 roster
+fixtures. Not yet live-tested — check early checkpoint withdrawal and cooldown completion.
 
 ## Overlay HUD v2.2.1 - 2026-09-08: exclude campaign support NPCs
 

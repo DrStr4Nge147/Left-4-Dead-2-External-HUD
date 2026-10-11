@@ -9,6 +9,20 @@ every BBCode tag the description field does, and a list that is not rendered is 
 list at all. [h1], [b] and [url] are fine.
 
 ================================================================================
+v2.4.0
+================================================================================
+
+[h1]v2.4.0 - See what your soldiers are carrying[/h1]
+
+- Soldier, follower and reinforcement cards now show a small icon of the weapon they carry.
+- Scoreboard and Basic cards draw it faintly behind the name; Minimalist draws a small icon beside the items.
+- It follows what they hold, falling back to their primary, then their secondary.
+- Fixed the reinforcement ring keeping the old stay timer after your squad withdraws early.
+
+[b]Update both the addon and application to v2.4.0.[/b]
+[url=https://github.com/DrStr4Nge147/Left-4-Dead-2-External-HUD/releases]Download the matching application[/url]
+
+================================================================================
 v2.3.0
 ================================================================================
 

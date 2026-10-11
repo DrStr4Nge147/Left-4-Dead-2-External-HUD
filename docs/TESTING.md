@@ -1,4 +1,15 @@
-# Testing — exporter v2.3.0 + overlay app v2.3.0
+# Testing — exporter v2.4.0 + overlay app v2.4.0
+
+## Soldier weapon icons (v2.4.0)
+
+Run `dotnet run --project overlay-app/OverlayHud.LayoutChecks`; it passed. Not yet live-tested.
+
+1. Install the v2.4.0 VPK and app, spawn Finale Soldiers carrying different weapons, one with melee.
+2. Basic scoreboard and Consistent HUD: confirm a faint silhouette behind each soldier's name and
+   that long names still trim as before.
+3. Consistent HUD Minimalist: confirm a small solid icon beside the item icons.
+4. Swap a soldier's weapon and switch to a secondary; confirm the icon follows what is in hand.
+5. Confirm original survivors and your own card show no icon, and the weapon panel is unchanged.
 
 ## Customizable roster checkboxes (v2.3.0)
 
@@ -22,6 +33,20 @@ rejects `-t`. Preserved customized `dist/config.json` while updating the binarie
 
 **Live-tested and confirmed working** 2026-09-14: independent roster checkbox selections worked in game with the matching v2.3.0 app and VPK.
 
+
+## Reinforcement cooldown (exporter v2.2.1, app v2.2.1)
+
+Run `./tools/Test-ExporterHelp.ps1 -SqExe C:/path/to/sq.exe` with Squirrel 3.x.
+Passed eight lifecycle fixtures; four failed before the fix. Uses production HelpJson
+with isolated state snapshots, without running the game.
+
+1. Call reinforcements, then enter a checkpoint before their stay timer expires.
+2. Confirm the ring immediately changes to grey and counts the configured cooldown.
+3. Let the cooldown finish while withdrawing soldiers remain visible; confirm READY.
+4. Repeat normal timed expiry and a squad with an incapacitated member when another leaves.
+
+Not yet live-tested. Verified the packed VPK v1 header and all five entries against source
+bytes and CRC32. The installed legacy vpk.exe does not support the attempted `-t` check.
 
 ## Campaign roster filtering (v2.2.1)
 
